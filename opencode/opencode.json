@@ -1,0 +1,193 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 32000
+  },
+  "provider": {
+    "dramallama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://aiapi.mattilsynet.no/v1"
+      },
+      "models": {
+        "code": {
+          "id": "drama/code-thinking",
+          "variants": {
+            "instruct-general": {
+              "temperature": 0.7,
+              "top_p": 0.8,
+              "top_k": 20,
+              "min_p": 0.0,
+              "presence_penalty": 1.5,
+              "repetition_penalty": 1.0
+            },
+            "instruct-reasoning": {
+              "temperature": 1.0,
+              "top_p": 1.0,
+              "top_k": 40,
+              "min_p": 0.0,
+              "presence_penalty": 2.0,
+              "repetition_penalty": 1.0
+            }
+          },
+          "tool_call": true,
+          "limit": {
+            "context": 250000,
+            "output": 8000
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        },
+        "thinking": {
+          "id": "drama/code-thinking",
+          "options": {
+            "chat_template_kwargs": {
+              "enable_thinking": true
+            }
+          },
+          "variants": {
+            "precise-coding": {
+              "temperature": 0.6,
+              "top_p": 0.95,
+              "top_k": 20,
+              "min_p": 0.0,
+              "presence_penalty": 0.0,
+              "repetition_penalty": 1.0
+            },
+            "general-tasks": {
+              "temperature": 1.0,
+              "top_p": 0.95,
+              "top_k": 20,
+              "min_p": 0.0,
+              "presence_penalty": 1.5,
+              "repetition_penalty": 1.0
+            }
+          },
+          "tool_call": true,
+          "limit": {
+            "context": 250000,
+            "output": 8000
+          },
+          "modalities": {
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "permission": {
+    "read": {
+      "**/.envrc": "deny",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/*.env": "deny",
+      "**/.netrc": "deny",
+      "**/*.pem": "deny",
+      "**/*.key": "deny",
+      "**/*.p12": "deny",
+      "**/*.pfx": "deny",
+      "**/*.crt": "deny",
+      "**/*.cer": "deny",
+      "**/.ssh/**": "deny",
+      "**/.ssh": "deny",
+      "**/id_rsa": "deny",
+      "**/id_ed25519": "deny",
+      "**/id_ecdsa": "deny",
+      "**/known_hosts": "deny",
+      "**/authorized_keys": "deny",
+      "**/.docker/config.json": "deny",
+      "**/.npmrc": "deny",
+      "**/.cargo/credentials": "deny",
+      "**/.cargo/credentials.toml": "deny",
+      "**/secrets/**": "deny",
+      "**/.git-credentials": "deny",
+      "**/*credentials*": "deny",
+      "**/*Credentials*": "deny",
+      "**/*password*": "deny",
+      "**/*Password*": "deny",
+      "**/*secret*": "deny",
+      "**/*Secret*": "deny",
+      "**/*.token": "deny"
+    },
+    "bash": {
+      "*": "allow",
+      "rm -rf *": "deny",
+      "sudo *": "deny",
+      "git push --force*": "deny",
+      "git reset --hard*": "deny",
+      "dd *": "deny",
+      "mkfs*": "deny",
+      ":(){ :|:& };:": "deny",
+      "curl * | sh": "deny",
+      "wget * | sh": "deny",
+      "chmod -R 777 *": "deny"
+    },
+    "edit": "allow",
+    "write": "allow"
+  },
+  "model": "github-copilot/claude-opus-4.7",
+  "plugin": [
+    "./plugins/searxng.mjs",
+    "./plugins/tracer.mjs"
+  ],
+  "agent": {
+    "build": {
+      "prompt": "{file:./prompts/build.md}"
+    },
+    "plan": {
+      "prompt": "{file:./prompts/plan.md}"
+    },
+    "moltke": {
+      "prompt": "{file:./agents/moltke.md}",
+      "mode": "subagent"
+    },
+    "hopper": {
+      "prompt": "{file:./agents/hopper.md}",
+      "mode": "subagent",
+      "model": "github-copilot/claude-opus-4.7"
+    },
+    "copernicus": {
+      "prompt": "{file:./agents/copernicus.md}",
+      "mode": "subagent"
+    },
+    "feynman": {
+      "prompt": "{file:./agents/feynman.md}",
+      "mode": "subagent"
+    },
+    "oracle": {
+      "prompt": "{file:./agents/oracle.md}",
+      "mode": "subagent"
+    },
+    "linus": {
+      "prompt": "{file:./agents/linus.md}",
+      "mode": "subagent",
+      "model": "github-copilot/claude-opus-4.7"
+    },
+    "gardener": {
+      "prompt": "{file:./agents/gardener.md}",
+      "mode": "subagent"
+    },
+    "automaton": {
+      "prompt": "{file:./agents/automaton.md}",
+      "mode": "subagent"
+    },
+    "turbo": {
+      "prompt": "{file:./agents/turbo.md}",
+      "mode": "subagent"
+    }
+  }
+}

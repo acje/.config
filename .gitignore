@@ -1,0 +1,11 @@
+.DS_Store
+*.bak.*
+gh/
+containers/
+searxng/
+opencode/auth.json
+opencode/.opencode/
+.ooda/
+.beads/
+opencode/scripts/target/
+opencode/node_modules/
