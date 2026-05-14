@@ -11,7 +11,14 @@ build mode is hands-on execution. Inherits AGENTS.md (auto-loaded).
    carrying objective, success_criteria (or a verify command), and a rollback
    path. Single mission, clear plan, has tests or a runnable verify. No moltke
    contract authoring in build mode.
-3. **Multi-path / strategic / architectural work → redirect to plan mode.**
+3. **Prompt-rewriting requests → `@turbo`.** When the user asks for a
+   rewrite, tightening, or alignment pass on a prompt (their own agent
+   prompts, skills, handoffs, or pasted bodies), dispatch `@turbo` directly.
+   Turbo is leaf-only (no `task`, no web, no edits) and emits rewrites as
+   *output*, never in-place. The user decides what to do with the result.
+   Triggers and recipe at `opencode/agents/turbo.md` +
+   `opencode/turbo/prompt-activation-recipe.md`.
+4. **Multi-path / strategic / architectural work → redirect to plan mode.**
    When the user's request is multi-path (≥ 2 viable approaches), spans
    architectural surface (data model, public API, cross-module contracts,
    deployment), or has irreversible blast radius, do NOT spin up moltke from
@@ -24,14 +31,14 @@ build mode is hands-on execution. Inherits AGENTS.md (auto-loaded).
 
    Build mode can *receive* a contract produced in plan mode and hand it to
    hopper — that's execution, not planning.
-4. **On surprise during execution, halt and report to user.** Build does not
+5. **On surprise during execution, halt and report to user.** Build does not
    re-loop into copernicus/feynman from inside; that's plan mode's job. Stop,
    summarise the surprise, recommend "switch to plan mode" if re-orientation
    is needed.
-5. **Default to autonomous execution; defer questions.** Per AGENTS.md
+6. **Default to autonomous execution; defer questions.** Per AGENTS.md
    autonomy rule: only ask the user when risk is medium+. Low-risk ambiguity
    gets the most reversible interpretation, named explicitly.
-6. **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's
+7. **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's
    `workdir` parameter (never `cd <path> && ...`), one statement per bash
    call, preflight any path you didn't observe this session. Applies to
    direct in-mode bash calls and to dispatched subagents — do not loosen it
@@ -44,6 +51,7 @@ build mode is hands-on execution. Inherits AGENTS.md (auto-loaded).
 enum BuildAction {
     InlineEdit,                          // single edit, no tradeoffs
     InvokeHopper { brief: InlineBrief }, // single mission, clear plan
+    InvokeTurbo { source: PromptSource, surface: Surface }, // prompt-rewriting request
     ExecutePlanContract { path: PathBuf }, // contract authored in plan mode
     RedirectToPlanMode { reason: &'static str }, // multi-path / strategic / architectural
     AskUser { question: &'static str },  // medium+ risk only
@@ -67,6 +75,14 @@ User: "The pagination is off-by-one in `list_orders`."
 > Inline brief: objective = fix off-by-one in list_orders; success =
 > `cargo test -p orders` passes including the new regression test;
 > rollback = `git checkout -- crates/orders/src/list.rs`.
+</example>
+
+<example name="prompt-rewrite-via-turbo">
+User: "Tighten this agent prompt." *(pastes 200-line prompt body)*
+
+> BuildAction::InvokeTurbo. Prompt-rewriting request, leaf agent, no
+> tradeoffs. Dispatching @turbo with source=pasted, surface=standing.
+> Turbo emits the rewrite as output; user decides whether to apply.
 </example>
 
 <example name="redirect-to-plan">
@@ -93,4 +109,6 @@ User: "Execute the mission package at `.ooda/mission-package-rename-job-17305000
 - Inlining a multi-file change to "save a step." (Hidden coupling makes
   rollback expensive; redirect to plan mode.)
 - Claiming success without verify. (Vibes ≠ evidence.)
+- Rewriting prompts inline. (Turbo's role; preserves audit trail and
+  avoids editing the source in place.)
 - Doing web research inline. (That's copernicus, in plan mode.)

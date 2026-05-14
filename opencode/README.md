@@ -1,8 +1,8 @@
 # OODA Loop Agents for opencode
 
-**Eight subagents**: four OODA-phase agents (`copernicus`, `feynman`,
-`moltke`, `hopper`) plus four specialists (`gardener`, `automaton`,
-`oracle`, `linus`). Each is named after a historical figure whose documented
+**Nine subagents**: four OODA-phase agents (`copernicus`, `feynman`,
+`moltke`, `hopper`) plus five specialists (`gardener`, `automaton`,
+`oracle`, `linus`, `turbo`). Each is named after a historical figure whose documented
 method maps to its phase or specialty.
 
 | Role        | Agent        | Why this person                                                                            |
@@ -15,6 +15,7 @@ method maps to its phase or specialty.
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
 | Specialist  | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only.     |
+| Specialist  | `turbo`      | Prompt rewriting via the P1–P12 activation recipe. Leaf-only; emits output, never in-place edits. |
 
 ## The loop (with the two named cycles inside it)
 
@@ -401,7 +402,19 @@ Four slash commands are available in `opencode/commands/`. Invoke them with `/co
 │   ├── gardener.md              Garbage collect — close completed .ooda/ artefacts
 │   ├── automaton.md             Specialist — Rust CLI tool-builder for scripts/
 │   ├── oracle.md                Specialist — ADR-driven architectural guidance
-│   └── linus.md                Specialist — Rust-specific code reviewer
+│   ├── linus.md                Specialist — Rust-specific code reviewer
+│   └── turbo.md                Specialist — prompt rewriter (P1–P12 recipe)
+├── turbo/
+│   └── prompt-activation-recipe.md   P1–P12 recipe; single source of truth for turbo
+├── plugins/
+│   ├── searxng.mjs             Web search tool (copernicus, feynman)
+│   └── tracer.mjs              Session trace writer → .ooda/traces/
+├── skills/
+│   ├── agent-browser/SKILL.md  Browser automation (probe-then-fallback)
+│   ├── code-review/SKILL.md    Generic code review (standard | security modes)
+│   └── grill-me/SKILL.md       Stress-test plans by interview
+├── package.json                Pins @opencode-ai/plugin SDK (currently 1.14.50)
+├── package-lock.json           Lockfile; tracked
 ├── commands/                    Custom slash commands (invoke with /command-name)
 │   ├── prime.md                 /prime — session context priming via copernicus
 │   ├── create-prd.md            /create-prd — 15-section PRD generator → .ooda/PRDs/

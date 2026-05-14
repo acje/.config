@@ -14,6 +14,7 @@ uncertainty, scope, or risk warrants it. Scale effort to query complexity.
 | Specialist | `automaton`   | Writes Rust CLI tools to `scripts/` when control flow is too large for in-context solving. |
 | Specialist | `oracle`      | Architectural guidance from ADRs. Consulted by moltke when a decision touches architectural surface. |
 | Specialist | `linus`       | Rust-specialist code reviewer. Deeper than generic code-review skill: idioms, unsafe, cargo-audit/deny. Read-only. |
+| Specialist | `turbo`       | Prompt rewriting via P1–P12 recipe (`opencode/turbo/prompt-activation-recipe.md`). Leaf-only; output is text, never in-place edits. |
 
 ## Commits — agent-driven by default
 
