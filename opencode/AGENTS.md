@@ -4,17 +4,19 @@ You have specialised subagents available via the Task tool, implementing Boyd's
 OODA loop plus specialist roles. Default to inlining; reach for subagents when
 uncertainty, scope, or risk warrants it. Scale effort to query complexity.
 
-| Phase      | Subagent      | Role                                                             |
-|------------|---------------|------------------------------------------------------------------|
-| Observe    | `copernicus`  | Gather evidence (incl. external research). Pure sensor.          |
-| Orient     | `feynman`     | Hypotheses + falsifiers, when ≥2 causal models exist.            |
-| Decide     | `moltke`      | Mission contract / package, when ≥2 viable approaches or stakes are high. Standing commander end-to-end. |
-| Act        | `hopper`    | Executes mission contracts; reports complete to moltke (execution loop). |
-| GC         | `gardener`    | Garbage collect. Delete completed `.ooda/` files, report unfinished. |
-| Specialist | `automaton`   | Writes Rust CLI tools to `scripts/` when control flow is too large for in-context solving. |
-| Specialist | `oracle`      | Architectural guidance from ADRs. Consulted by moltke when a decision touches architectural surface. |
-| Specialist | `linus`       | Rust-specialist code reviewer. Deeper than generic code-review skill: idioms, unsafe, cargo-audit/deny. Read-only. |
-| Specialist | `turbo`       | Prompt rewriting via P1–P12 recipe (`opencode/turbo/prompt-activation-recipe.md`). Leaf-only; output is text, never in-place edits. |
+| Agent         | Phase      | Primary output                          | Handoff target           | Bead label                          |
+|---------------|------------|-----------------------------------------|--------------------------|-------------------------------------|
+| `copernicus`  | Observe    | Evidence file + bd bead (pure sensor; no hypotheses) | feynman, moltke, or caller | `evidence`                  |
+| `feynman`     | Orient     | Ranked hypotheses + falsifiers          | moltke                   | `evidence` (orientation subtype)    |
+| `moltke`      | Decide     | Mission contract / package + pre-mortem | hopper (exec), feynman (re-orient), oracle (arch input) | mission epic + `mission:<id>` |
+| `hopper`      | Act        | Verified commits per TDD increment      | moltke (back-brief), linus (review-request) | `review-request`         |
+| `linus`       | Specialist | APPROVE / NEEDS WORK verdict on Rust review | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
+| `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
+| `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
+| `gardener`    | GC         | Reclamation report; closes mission epic when children closed | moltke → user | none                       |
+| `turbo`       | Specialist | Rewritten prompt text (leaf-only; never in-place edits) | user                | none                                |
+
+Conventions: rows are roster order, not invocation order. "Handoff target" is the agent that consumes the primary output; back-briefs route to moltke regardless (see § Back-brief protocol). Bead labels follow bd's `<dimension>:<value>` convention (see § Beads → Label conventions).
 
 ## Commits — agent-driven by default
 
