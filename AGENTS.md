@@ -8,8 +8,10 @@ that consumes the file still load it".
 
 Run `git ls-files` before assuming anything. Only these are versioned:
 
-- `opencode/` — opencode config, agent prompts, mode prompts, plugin
+- `opencode/` — opencode config, agent prompts, mode prompts, plugins, skills
 - `ghostty/config` — terminal config
+- `AGENTS.md` (this file) — root-level agent notes
+- `LICENSE` — MIT
 - `.gitignore`
 
 Gitignored and **must not be committed** (already covered, but worth
