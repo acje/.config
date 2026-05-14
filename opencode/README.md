@@ -11,7 +11,7 @@ figure whose documented method maps to its phase or specialty.
 | Orient      | `feynman`    | The Feynman Technique: explain simply, find gaps, stress-test against examples             |
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
 | Act         | `hopper`     | Speed and decisiveness in execution                                                        |
-| Review      | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only. Nested inside the execution loop. |
+| Act         | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only. Nested inside the execution loop. |
 | Specialist  | `gardener`   | Workspace cleanup after loop completes: delete completed `.ooda/` artefacts, surfaces unfinished tasks           |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
