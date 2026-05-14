@@ -1,9 +1,9 @@
 # OODA Loop Agents for opencode
 
-**Nine subagents**: four OODA-phase agents (`copernicus`, `feynman`,
-`moltke`, `hopper`) plus five specialists (`gardener`, `automaton`,
-`oracle`, `linus`, `turbo`). Each is named after a historical figure whose documented
-method maps to its phase or specialty.
+**Nine subagents**: five OODA-phase agents (`copernicus`, `feynman`,
+`moltke`, `hopper`, `linus`) plus four specialists (`gardener`,
+`automaton`, `oracle`, `turbo`). Each is named after a historical
+figure whose documented method maps to its phase or specialty.
 
 | Role        | Agent        | Why this person                                                                            |
 |-------------|--------------|--------------------------------------------------------------------------------------------|
@@ -11,35 +11,35 @@ method maps to its phase or specialty.
 | Orient      | `feynman`    | The Feynman Technique: explain simply, find gaps, stress-test against examples             |
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
 | Act         | `hopper`     | Speed and decisiveness in execution                                                        |
+| Review      | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only. Nested inside the execution loop. |
 | Specialist  | `gardener`   | Workspace cleanup after loop completes: delete completed `.ooda/` artefacts, surfaces unfinished tasks           |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
-| Specialist  | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only.     |
 | Specialist  | `turbo`      | Prompt rewriting via the P1–P12 activation recipe. Leaf-only; emits output, never in-place edits. |
 
 ## The loop (with the two named cycles inside it)
 
 ```text
-                              USER
-                            ┌───┴───┐
-                  plan mode │       │ build mode
-                 (strategic)│       │(direct execution;
-                                    │ contract to Hopper)
-                                    │ 
-                                    │
-   ┌──── STRATEGY LOOP ────┐        │      ┌── EXECUTION LOOP ──┐
-   │                       │        │      │                    │
-   │                       │        │      │                    │
-   │   Copernicus          │        │      │       Hopper       │
-   │      ▲ │              │        │      │        ▲ │         │
-   │      │ │ observations │        │      │contract│ │complete │
-   │ tasking│              │        │      │        │ │/surprise│
-   │      │ ▼              │        ▼      │        │ ▼         │
-   │    Feynman ───────────┼─► Moltke ◄────┼────────┘           │
-   │            hypotheses │        ▲      │                    │
-   │           + falsifiers│        │      │                    │
-   │                       │        │      │                    │
-   └───────────────────────┘        │      └────────────────────┘
+                                  USER
+                                ┌───┴───┐
+                      plan mode │       │ build mode
+                     (strategic)│       │(direct execution;
+                                │       │ contract to Hopper)
+                                │       │
+                                ▼       ▼
+                                └───────┘
+   ┌──── STRATEGY LOOP ────┐        │      ┌────── EXECUTION LOOP ──────┐
+   │                       │        │      │                            │
+   │   Copernicus          │        │      │      Hopper ◄──────┐       │
+   │      ▲ │              │        │      │        ▲ │         │       │
+   │      │ │ observations │        │      │contract│ │complete │review │
+   │ tasking│              │        │      │        │ │/surprise│ req/  │
+   │      │ ▼              │        ▼      │        │ ▼         │verdict│
+   │    Feynman ───────────┼─► Moltke ◄────┼────────┘           │       │
+   │            hypotheses │        ▲      │      Linus ────────┘       │
+   │           + falsifiers│        │      │   (review loop, nested)    │
+   │                       │        │      │                            │
+   └───────────────────────┘        │      └────────────────────────────┘
                                     │
                        back-briefs from any
                        subordinate route to Moltke
@@ -49,6 +49,7 @@ method maps to its phase or specialty.
                        │   Oracle      (ADR guidance)│
                        │   Automaton   (Rust CLI)    │
                        │   Gardener    (.ooda/ GC)   │
+                       │   Turbo       (prompt rewrite)│
                        └─────────────────────────────┘
 ```
 
@@ -91,15 +92,19 @@ agent directly during a mission, and the only role to which all subordinates
 - `oracle` — consulted by moltke during the Decide phase when a decision
   touches architectural surface (data model, public API, cross-module
   contracts, deployment topology). Surfaces relevant ADRs and any tensions.
-- `linus` — Rust-specialist code reviewer. Deeper than the generic
-  `code-review` skill: Rust idioms, unsafe soundness, cargo-audit/deny,
-  MSRV/edition. Read-only (no source edits; writes only to `.ooda/**`).
-  Generic / non-Rust review → `code-review` skill; Rust deep-dive → linus.
+- `gardener` — invoked by moltke on package complete to GC `.ooda/`
+  artefacts, close bd epics, and surface retained-open beads.
 - `automaton` — commissioned by any agent (most often hopper or copernicus)
   when a control-flow problem is too large for in-context solving (walking
   many files, deterministic transforms, graph traversals). Writes a small
   Rust CLI tool to `scripts/` and returns a tool description (purpose,
   inputs, output schema, exit-code semantics, performance envelope).
+- `turbo` — leaf-only specialist for prompt rewriting via the P1–P12
+  activation recipe (`opencode/turbo/prompt-activation-recipe.md`). Emits
+  output as text or `.ooda/` artefact; never edits prompt files in place.
+
+Linus is **not** a specialist — it sits inside the execution loop as the
+review counterpart to hopper. See § Three named loops above.
 
 **Back-briefs** route upward from any subordinate to moltke when an observation
 exceeds the current mission scope but is strategically relevant — load-bearing
@@ -153,6 +158,8 @@ under uncertainty, multi-file/irreversible work, cross-role gaps.
   command + tool description.
 - `gardener` — scan `.ooda/`, delete files with all tasks closed, retain
   files with open tasks, report to moltke.
+- `turbo` — single-pass rewrite + P1–P12 self-audit. No internal cycle
+  beyond the recipe pass. Leaf-only; never re-tasks another agent.
 
 ## Decomposition by coupling (Moltke)
 
@@ -346,8 +353,10 @@ For plan-mode-produced contracts:
 > @moltke decide between revert vs patch — orientation in the previous message
 > @hopper execute mission package bd-60 (artefact: .ooda/mission-package-ws-revert-1730000123.md)
 > @oracle survey ADR coverage of the event-store storage layer
+> @linus review the unsafe blocks in crates/ffi/
 > @automaton write a tool to find every .rs file whose tests block lacks #[cfg(test)]
 > @gardener clean up after package rename-getcwd-1730300000
+> @turbo rewrite my draft prompt for claude-opus with .ooda/ artefact output
 ```
 
 ### What good looks like
