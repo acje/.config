@@ -1,11 +1,39 @@
+# OS / editor cruft
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Backups
+*.bak
 *.bak.*
-gh/
-containers/
-searxng/
+
+# Top-level local scratch (anchored to repo root)
+/gh/
+/containers/
+/searxng/
+
+# Agent / tooling state
 opencode/auth.json
 opencode/.opencode/
 .ooda/
 .beads/
-opencode/scripts/target/
-opencode/node_modules/
+
+# Build / dep artefacts (generic, not path-pinned)
+node_modules/
+target/
+
+# Secrets belt-and-braces — mirrors highest-risk entries from
+# opencode.json permission.read denylist. .gitignore stops commits;
+# the denylist stops reads. Defence in depth.
+.env
+.env.*
+*.env
+.envrc
+.netrc
+*.pem
+*.key
+*.token
