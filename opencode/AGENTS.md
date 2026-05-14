@@ -94,7 +94,7 @@ with no further context beyond the pointer and the intent sentence.
 
 ## Internal vs outer OODA
 
-Each subagent (except `copernicus`) runs its own **internal** Observe→Orient→Decide→Act
+Each subagent runs its own **internal** Observe→Orient→Decide→Act
 cycle inside its role to close small problems without escalation. The **outer**
 multi-agent loop is reserved for *strategic* concerns — multi-causal contention,
 multi-option decisions under uncertainty, multi-file or irreversible work,
