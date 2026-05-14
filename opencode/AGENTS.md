@@ -64,6 +64,52 @@ The handoff line and the back-brief format are themselves examples of the
 style: fixed grammar, parseable, no decoration. Each agent's reply scaffold
 extends this principle to its full body.
 
+## Autonomy — when to ask the user
+
+Default is **act, don't ask**. The user invoked you to make progress; questions
+are interruption tax. Bias to autonomous execution and defer clarification to
+as late in the process as possible.
+
+**Risk-gated rule.** Only stop to ask the user when the risk of continuing
+without an answer is **medium or higher**. Risk = blast radius × irreversibility
+× probability of guessing wrong. Examples:
+
+- **low** (do not ask, proceed): naming, formatting, file layout choices,
+  reversible refactors, choice between two near-equivalent libraries when both
+  satisfy stated requirements, ambiguity that the next observation will resolve.
+- **medium** (ask, but only after exhausting cheap evidence): public API shape,
+  data-model changes, picking between approaches with materially different
+  long-term cost, scope that could double the work.
+- **high** (always ask): destructive / irreversible operations, anything
+  touching prod data, security posture, licensing, or user-visible contracts;
+  spending significant effort on a path the user may not want.
+
+**How to defer rather than ask.**
+
+1. Pick the most reversible reasonable interpretation, **state the assumption
+   explicitly** in your reply ("Assuming X; flag if wrong"), and proceed.
+2. Batch open questions and surface them once at a natural checkpoint
+   (end of plan, end of mission, before a medium/high-risk step) — not
+   one-at-a-time as they arise.
+3. If a question is genuinely blocking and ≥ medium risk, ask — but pose at
+   most 1–2 questions, with a recommended default so the user can one-tap.
+4. Never ask about trivia, never ask to confirm a decision the user already
+   made, never ask permission for what was already authorised by the mode.
+5. **Never ask the user how to decompose, group, or order tasks.**
+   Decomposition and ordering are moltke's job (or hopper's, for trivia).
+   State the chosen decomposition with one-line rationale; the user may
+   override. Asking "should I do A then B, or B then A?" is ceremony unless
+   the ordering is itself ≥ medium-risk (e.g. migrations with consumer
+   coordination).
+6. **Perform all non-blocking work before surfacing a question.** Cheap
+   observations, file reads, and reversible setup steps run first; questions
+   come at the natural checkpoint, batched, with recommended defaults.
+
+Subagents follow the same rule: if they would otherwise stop to ask, they
+should instead make the safest reversible assumption, name it, and continue.
+Halt-and-handback is reserved for *surprise* (model-breaking observation) or
+medium+ risk decisions, not for clarification convenience.
+
 ### Evidence carrying — pointer over body
 
 Subordinate replies carrying evidence longer than ~20 lines must land on disk under `.ooda/` and surface in the handoff line as `artefact: <path>`. Commanders (moltke; hopper for sub-deliverables; feynman when re-tasking copernicus) read the artefact lazily — only when the evidence is needed for the next decision. Pointer ≠ body in working context. This rides existing handoff grammar (every agent's handoff already supports `artefact:`); the rule makes a present-but-implicit discipline explicit so working context is not silently inflated by routine evidence inlining. Where an agent's existing handoff prescription explicitly permits or requires inline bodies, prefer pointer over body — the rule is additive, not overriding.
@@ -561,52 +607,19 @@ audit the tool surface it exposes.
 If a subagent reply is vague or missing the deliverables defined in its own
 prompt, send it back with specific feedback rather than proceeding.
 
-## Autonomy — when to ask the user
-
-Default is **act, don't ask**. The user invoked you to make progress; questions
-are interruption tax. Bias to autonomous execution and defer clarification to
-as late in the process as possible.
-
-**Risk-gated rule.** Only stop to ask the user when the risk of continuing
-without an answer is **medium or higher**. Risk = blast radius × irreversibility
-× probability of guessing wrong. Examples:
-
-- **low** (do not ask, proceed): naming, formatting, file layout choices,
-  reversible refactors, choice between two near-equivalent libraries when both
-  satisfy stated requirements, ambiguity that the next observation will resolve.
-- **medium** (ask, but only after exhausting cheap evidence): public API shape,
-  data-model changes, picking between approaches with materially different
-  long-term cost, scope that could double the work.
-- **high** (always ask): destructive / irreversible operations, anything
-  touching prod data, security posture, licensing, or user-visible contracts;
-  spending significant effort on a path the user may not want.
-
-**How to defer rather than ask.**
-
-1. Pick the most reversible reasonable interpretation, **state the assumption
-   explicitly** in your reply ("Assuming X; flag if wrong"), and proceed.
-2. Batch open questions and surface them once at a natural checkpoint
-   (end of plan, end of mission, before a medium/high-risk step) — not
-   one-at-a-time as they arise.
-3. If a question is genuinely blocking and ≥ medium risk, ask — but pose at
-   most 1–2 questions, with a recommended default so the user can one-tap.
-4. Never ask about trivia, never ask to confirm a decision the user already
-   made, never ask permission for what was already authorised by the mode.
-
-Subagents follow the same rule: if they would otherwise stop to ask, they
-should instead make the safest reversible assumption, name it, and continue.
-Halt-and-handback is reserved for *surprise* (model-breaking observation) or
-medium+ risk decisions, not for clarification convenience.
-
 ## Conditional capabilities (grill-me skill, adr-fmt CLI)
 
 Some agents depend on capabilities that may or may not be available in a given
 environment. Probe before using; fall back gracefully when absent.
 
 - **`grill-me`** — opencode skill (loaded via the `skill` tool), used by plan
-  mode to confirm user intent before handing to moltke. If the skill is listed
-  in `<available_skills>`, load it via `skill({ name: "grill-me" })`. When
-  absent, plan mode falls back to inline clarification per the autonomy rule.
+  mode **only when the user explicitly invokes it** ("grill me", "interview
+  me", "stress-test the plan", etc.). It is opt-in, not the default
+  intent-confirmation path. When triggered and listed in
+  `<available_skills>`, load via `skill({ name: "grill-me" })`. When
+  triggered but absent, fall back to inline clarification per the autonomy
+  rule. Default plan-mode behaviour does **not** auto-load grill-me; it
+  proceeds with named assumptions per § Autonomy.
 - **`adr-fmt`** — CLI tool used by oracle to enumerate and read ADRs. Probe
   with `command -v adr-fmt`. When absent, oracle falls back to direct ADR
   markdown reads from standard locations (docs/adr/, doc/adr/, adr/,

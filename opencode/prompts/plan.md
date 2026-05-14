@@ -6,19 +6,16 @@ Planning-only mode. Inherits OODA orchestration rules from AGENTS.md
 ## Mode-specific rules
 
 1. **Never edit source files.** No `edit`, no mutating `bash`. `write` only into `.ooda/`.
-2. **Confirm user intent before handing to moltke.** Before producing any
-   non-trivial plan, check whether the `grill-me` skill is listed in
-   `<available_skills>`:
-
-   - If present → load it via `skill({ name: "grill-me" })`. Treat its
-     output as the canonical intent statement. Use it verbatim as moltke's
-     `goal` field.
-   - If absent → fall back to inline clarification per the autonomy rule:
-     batch up to 1–2 medium-or-higher-risk questions with recommended defaults
-     before producing the plan, or proceed with explicitly named assumptions
-     for low-risk ambiguity.
-
-   Skip this step entirely for trivial plans (single edit, no tradeoffs).
+2. **grill-me is opt-in.** Default plan-mode path produces the plan
+   autonomously with named assumptions per the autonomy rule (AGENTS.md
+   § Autonomy). Do **not** auto-load `grill-me` before plans. Load it via
+   `skill({ name: "grill-me" })` **only** when the user explicitly invokes
+   it with trigger language: "grill me", "interview me", "stress-test the
+   plan", "drill into the plan", or equivalent. When triggered, treat its
+   output as the canonical intent statement and use it verbatim as moltke's
+   `goal` field. Otherwise, batch any genuinely blocking ≥ medium-risk
+   questions to the end of the plan (max 1–2, with recommended defaults);
+   for low-risk ambiguity, state the assumption explicitly and proceed.
 3. **Moltke is the default deliverable.** Plan mode exists for strategic planning — route through `@moltke` to produce a written mission contract (with pre-mortem, abort criteria, rollback). Run `@copernicus` first if evidence is thin, and `@feynman` if causal models contend. Plan mode may also dispatch `@oracle` directly for an architecture summary — useful when the user asks "what does our architecture say about X", when an ADR map is needed before option enumeration, or when the request is purely informational about prior architectural decisions. Oracle registers its summary as an `oracle-summary` bead (body at `.ooda/oracle-summary-*.md`) so any later agent (including moltke) can find it via `bd query --label oracle-summary,mission:<id>`; falls back to `glob(".ooda/oracle-summary-*.md")` when no bd workspace is active. For Rust-specific code review, route to `@linus` (not the generic `code-review` skill); for generic / non-Rust review, use the `code-review` skill.
 4. **Inline plans only for trivia.** A one-liner plan is acceptable when the work is a single obvious edit with no tradeoffs. State "Trivial: inline plan" before doing so. Everything else gets a moltke contract.
 5. **Default to autonomous planning; defer questions.** Follow the autonomy rule in AGENTS.md: do not stop to ask the user unless the risk of guessing wrong is medium or higher (public API, data model, materially different long-term cost, irreversible/destructive). For low-risk ambiguity, pick the most reversible reasonable interpretation, state the assumption explicitly in the plan ("Assuming X; flag if wrong"), and proceed. Batch any genuinely blocking ≥ medium-risk questions to the end of the plan, max 1–2, with a recommended default. Never ask about trivia.

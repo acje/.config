@@ -116,8 +116,10 @@ into one of `Acknowledge | AdjustIntent | ReDecompose | EscalateToUser`.
 
 Two opencode prompt modes orchestrate the agents differently:
 
-- **Plan mode** owns the full OODA loop. Confirms user intent (via `grill-me`
-  when available, falling back to inline clarification), then routes through
+- **Plan mode** owns the full OODA loop. Proceeds autonomously with named
+  assumptions per the autonomy rule (loads `grill-me` only when the user
+  explicitly invokes it: "grill me", "interview me", "stress-test"), then
+  routes through
   copernicus → feynman → moltke (→ oracle) to produce a mission contract or
   package. Never edits source.
 - **Build mode** is direct user-driven execution. Trivial → inline edit.
@@ -235,9 +237,11 @@ Some agents depend on capabilities that may or may not be available.
 Probe before using; fall back gracefully.
 
 - **`grill-me`** — opencode skill (loaded via the `skill` tool), used by
-  plan mode to confirm user intent before handing to moltke. Falls back to
-  inline clarification per the autonomy rule when the skill is not listed
-  in `<available_skills>`.
+  plan mode **only when the user explicitly invokes it** ("grill me",
+  "interview me", "stress-test the plan"). Opt-in, not the default
+  intent-confirmation path. When triggered but the skill is not listed in
+  `<available_skills>`, falls back to inline clarification per the autonomy
+  rule.
 - **`adr-fmt`** — CLI tool used by oracle to enumerate and read ADRs. Probe
   with `command -v adr-fmt`. Falls back to direct markdown reads from
   standard locations (`docs/adr/`, `doc/adr/`, `adr/`, `architecture/adr/`).
@@ -314,7 +318,7 @@ mkdir -p .ooda && echo ".ooda/" >> .gitignore
 > @plan migrate the event store from JSON to a binary format
 ```
 
-Plan mode probes `grill-me`, confirms intent, then routes:
+Plan mode proceeds with named assumptions (loads `grill-me` only on explicit user invocation), then routes:
 
 1. **copernicus** — gather evidence at the right tier. Returns inline summary + scratch path. If thin, expect a re-task from feynman.
 2. **feynman** — produce ranked hypotheses with falsifiers, stress-test the leader, name remaining unknowns. Re-task copernicus rather than guessing.
@@ -430,7 +434,7 @@ Four slash commands are available in `opencode/commands/`. Invoke them with `/co
 │   ├── create-rules.md          /create-rules — AGENTS.md generator for new projects
 │   └── validate.md              /validate — multi-toolchain build/lint/test runner
 └── prompts/
-    ├── plan.md                  Plan mode — full OODA loop + grill-me intent confirmation
+    ├── plan.md                  Plan mode — full OODA loop; grill-me opt-in
     └── build.md                 Build mode — direct user-driven execution
 ```
 
