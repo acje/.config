@@ -371,6 +371,31 @@ mid-run, that's a surprise: halt and re-loop to copernicus.
 For purely informational external questions, route to `copernicus` rather
 than answering from training data.
 
+## Model capability gotchas
+
+Agent-level sampler/thinking config is not always honoured. Two failure
+modes have been observed and are easy to repeat:
+
+- **Inert temperature.** Models with `capabilities.temperature: false`
+  (e.g. `claude-opus-4.7` via the github-copilot provider) silently
+  ignore agent-frontmatter `temperature:`. Editing it is a no-op on
+  those models; verify by inspecting `output.options` in a session
+  trace before claiming a tuning landed. Other models in the fleet
+  may still honour the same edit, so the agent file isn't necessarily
+  wrong — just don't expect uniform effect.
+- **Variant-locked thinking.** When a model exposes only a single
+  variant (e.g. opus-4.7's sole `medium` variant), thinking mode and
+  reasoning effort are pre-set by the variant and agent-level
+  `options:` blocks for `thinking` / `effort` do not override. Check
+  `model.variants` in `~/.cache/opencode/models.json` (or the provider
+  registry) before authoring agent options to enable/disable thinking;
+  if there's only one variant, the lever doesn't exist.
+
+General rule: a binary string in a tool or config is evidence the code
+*exists*, not evidence it is *reached* under the current provider/model
+combination. When tuning behaviour, confirm via a trace that the option
+made it into the request, not just into the file on disk.
+
 ## Tracing
 
 `opencode/plugins/tracer.mjs` records every plugin hook event to JSONL so
