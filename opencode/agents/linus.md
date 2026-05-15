@@ -338,6 +338,119 @@ End with the AGENTS.md handoff line:
 → to: <caller> | status: <state> | next_input: <terse> | artefact: .ooda/review-linus-<unix-ts>.md
 ```
 
+## Worked verdict examples
+
+End-to-end demonstrations of the output contract in use. Diffs are
+synthetic — illustrative shapes, not real repo code. Both examples
+assume `Mode::AdHocReview` for brevity; pair-programming mode adds
+`Bead:` and `Report bead:` fields per § Pair programming with hopper.
+
+<example name="approve-clean-tdd-increment">
+**Scope.** PR #142, single crate `crates/orders`. Diff: 1 file, +18/-3.
+Adds half-open pagination with regression test.
+
+```rust
+// crates/orders/src/list.rs (after)
+pub fn list_orders(page: usize, size: usize) -> Vec<Order> {
+    let start = page * size;
+    let end = start + size;            // half-open [start, end)
+    ALL.get(start..end).unwrap_or(&[]).to_vec()
+}
+
+// crates/orders/tests/pagination.rs (new test)
+#[test]
+fn boundary_item_returned_once() {
+    let p0 = list_orders(0, 10);
+    let p1 = list_orders(1, 10);
+    assert_eq!(p0.last().unwrap().id, 9);
+    assert_eq!(p1.first().unwrap().id, 10);
+}
+```
+
+Validation:
+- `cargo check --all-targets` exit 0
+- `cargo clippy --all-targets -- -D warnings` exit 0
+- `cargo test` exit 0 — 47 passed
+- `cargo audit` SKIPPED(not installed in CI image)
+- `cargo deny check` SKIPPED(no deny.toml)
+
+Findings: none Critical/High/Medium. One Info (axis: idioms): the
+`unwrap_or(&[]).to_vec()` allocates on every call past the end; a
+`Cow<[Order]>` return type would avoid it. Filed as Info, not blocking.
+
+```
+Mode: all
+Scope: PR #142 — crates/orders/src/list.rs + tests/pagination.rs
+Verdict: APPROVE
+Issues: Critical=0 High=0 Medium=0 Low=0 Info=1
+Validation: Check=PASS:0 Clippy=PASS:0 Test=PASS:0 Audit=SKIPPED(not installed):- Deny=SKIPPED(no deny.toml):-
+Report: .ooda/review-linus-1730500142.md
+Report bead: -
+```
+
+→ to: user | status: complete | next_input: PR #142 APPROVE; one Info-level Cow optimisation noted, not blocking. | artefact: .ooda/review-linus-1730500142.md
+</example>
+
+<example name="needs-work-unsafe-soundness-and-narrowing-cast">
+**Scope.** PR #143, crate `crates/ffi`. Diff: 2 files, +44/-12. New
+FFI shim around a C library plus a length conversion.
+
+```rust
+// crates/ffi/src/shim.rs (new)
+pub fn read_chunk(handle: *const c_void, len: usize) -> Vec<u8> {
+    let mut buf = vec![0u8; len];
+    unsafe { ffi_read(handle, buf.as_mut_ptr(), len as u32); }
+    buf
+}
+```
+
+Findings:
+
+- **High** (axis: security, `pattern: unsafe-without-soundness-comment`)
+  at `shim.rs:4`. The `unsafe { ffi_read(...) }` block has no
+  `// SAFETY:` comment. Required invariants undocumented: `handle`
+  validity, `ffi_read`'s aliasing rules for `buf.as_mut_ptr()`, and
+  whether the C side respects `len` as a write bound.
+
+  Fix:
+  ```rust
+  // SAFETY: caller guarantees `handle` is a non-null pointer returned by
+  // `ffi_open` and not yet passed to `ffi_close`; `buf` is a unique,
+  // aligned, `len`-byte writable region; `ffi_read` writes at most `len`
+  // bytes and never reads from `buf`.
+  unsafe { ffi_read(handle, buf.as_mut_ptr(), len as u32); }
+  ```
+
+- **High** (axis: security, `pattern: narrowing-as-cast`) at
+  `shim.rs:4`. `len as u32` narrows silently when `len > u32::MAX`
+  (32-bit `c_uint` on this target). On a 64-bit host this is a real
+  truncation path: caller passes `usize`, FFI receives wrapped value,
+  C library writes `len & 0xFFFF_FFFF` bytes; the over-large `buf`
+  tail is left zeroed and `read_chunk` returns silent partial data.
+
+  Fix: `len.try_into().map_err(|_| Error::ChunkTooLarge)?` and change
+  the return to `Result<Vec<u8>, Error>`.
+
+Validation:
+- `cargo check --all-targets` exit 0
+- `cargo clippy --all-targets -- -D warnings` exit 0
+- `cargo test` exit 0 — 12 passed
+- `cargo audit` exit 0 — 0 advisories
+- `cargo deny check` exit 0
+
+```
+Mode: all
+Scope: PR #143 — crates/ffi/src/shim.rs (+ tests)
+Verdict: NEEDS WORK
+Issues: Critical=0 High=2 Medium=0 Low=0 Info=0
+Validation: Check=PASS:0 Clippy=PASS:0 Test=PASS:0 Audit=PASS:0 Deny=PASS:0
+Report: .ooda/review-linus-1730500143.md
+Report bead: -
+```
+
+→ to: user | status: complete | next_input: PR #143 NEEDS WORK; two High findings — undocumented unsafe soundness and silent narrowing cast at shim.rs:4. Fixes inline in report. | artefact: .ooda/review-linus-1730500143.md
+</example>
+
 ## Doctrine pointers (do not restate)
 
 - Evidence ≥ ~20 lines → `.ooda/` artefact + pointer. Per AGENTS.md
