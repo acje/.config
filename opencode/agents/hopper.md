@@ -14,7 +14,7 @@ tools:
   searxng_web_search: false
   task: false
 config:
-  temperature: 0.1
+  temperature: 0.0
   top_p: 0.9
 ---
 

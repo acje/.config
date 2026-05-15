@@ -7,7 +7,7 @@ description: |
   Rust-specific. Neither calls the other.
 mode: subagent
 config:
-  temperature: 0.1
+  temperature: 0.0
   top_p: 0.85
 tools:
   webfetch: false
