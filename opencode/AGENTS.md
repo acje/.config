@@ -112,19 +112,50 @@ medium+ risk decisions, not for clarification convenience.
 
 ### Evidence carrying — pointer over body
 
-Subordinate replies carrying evidence longer than ~20 lines must land on disk under `.ooda/` and surface in the handoff line as `artefact: <path>`. Commanders (moltke; hopper for sub-deliverables; feynman when re-tasking copernicus) read the artefact lazily — only when the evidence is needed for the next decision. Pointer ≠ body in working context. This rides existing handoff grammar (every agent's handoff already supports `artefact:`); the rule makes a present-but-implicit discipline explicit so working context is not silently inflated by routine evidence inlining. Where an agent's existing handoff prescription explicitly permits or requires inline bodies, prefer pointer over body — the rule is additive, not overriding.
+Subordinate replies carrying evidence longer than ~20 lines must land in a
+durable store and surface in the handoff line as `artefact: <ref>` —
+`bd-NNN` for cross-agent evidence (preferred), `.ooda/<path>` only for
+single-agent within-turn scratch. Commanders (moltke; hopper for
+sub-deliverables; feynman when re-tasking copernicus) read the artefact
+lazily — only when the evidence is needed for the next decision.
+Pointer ≠ body in working context. This rides existing handoff grammar
+(every agent's handoff already supports `artefact:`); the rule makes a
+present-but-implicit discipline explicit so working context is not silently
+inflated by routine evidence inlining. Where an agent's existing handoff
+prescription explicitly permits or requires inline bodies, prefer pointer
+over body — the rule is additive, not overriding.
 
-**Cross-agent evidence must register a bd bead** (Bucket B — see § Beads). The producer agent:
+**Cross-agent evidence lives inside a bd bead.** Body goes in the bead's
+`description` field; metadata (labels, title) is the pointer surface. The
+producer agent uses the write-tmp / bd-load / rm-tmp pattern to keep the
+write trace-visible while avoiding `OPENCODE_TRACE_MAX_FIELD=4096`
+truncation of inline heredocs:
 
-1. Writes the raw body to `.ooda/` (e.g. `.ooda/observations-ci-failure-*.md`).
-2. Creates a bd task with labels `evidence` and `mission:<id>`, carrying a 3-line summary: `Summary:`, `Body:` (path to the `.ooda/` file), `Confidence:`.
-3. Returns `artefact: bd-NNN` in the handoff line — the bead id is the durable cross-session pointer.
+1. `write(".ooda/body-tmp-<slug>.md", "<full body>")` — transient
+   single-turn scratch, traced via the `write` tool call.
+2. `bd create "<title>" --type task --labels "evidence,mission:<id>"
+   --body-file .ooda/body-tmp-<slug>.md --json` — body becomes the bead
+   description in one atomic call.
+3. `rm .ooda/body-tmp-<slug>.md` — body now lives in bd; the tmp file
+   is redundant.
+4. Return `artefact: bd-NNN` in the handoff line. Commanders use
+   `bd show bd-NNN` to read the body lazily; `bd query --label evidence`
+   browses metadata without inlining bodies.
 
-Single-agent scratch (Bucket D) that does not cross agent boundaries may still use `artefact: <.ooda/ path>` directly — no bead required.
+For evidence < ~20 lines, skip the tmp file: `bd create "<title>" --type
+task --labels "evidence,mission:<id>" --description "<inline body>"`.
+Inline heredocs are fine when the body fits well under the trace
+truncation limit; use the tmp-file pattern when in doubt.
+
+Never write evidence bodies to `.ooda/` as the durable home. `.ooda/`
+is Bucket D only: single-agent within-turn scratch, tool stdout buffers,
+transient body-tmp files, briefs (see below), oracle raw `--context`
+dumps, tracer output.
 
 **This applies to `Task` invocations too.** A task prompt that inlines a full
-mission brief will be truncated in traces and inflates the calling agent's context.
-Write the brief to `.ooda/brief-<slug>.md` first, then pass the pointer:
+mission brief will be truncated in traces and inflates the calling agent's
+context. Briefs are single-turn dispatch payloads (Bucket D scratch);
+write the brief to `.ooda/brief-<slug>.md` first, then pass the pointer:
 
 ```
 # WRONG — inlines 4KB of contract; truncated in traces; inflates context
@@ -169,7 +200,7 @@ Use subagents when the work earns coordination overhead:
 - cause isn't obvious from one or two file reads → `copernicus`
 - need external/library/spec knowledge → `copernicus` (don't synthesise from training data)
 - two or more plausible causal models → `feynman`
-- decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd query --label oracle-summary,mission:<id>`; body file at `.ooda/oracle-summary-*.md` referenced from the bead)
+- decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd query --label oracle-summary,mission:<id>`; body lives in the bead's `description` field)
 - Rust code review (idioms, unsafe soundness, cargo-audit, cargo-deny, MSRV/edition) → `linus`. Generic / non-Rust / cross-language review → `code-review` skill. Linus and the skill are orthogonal; neither calls the other.
 - two or more viable approaches, or multi-file / irreversible / cross-module → `moltke`, then `hopper`
 - executing a non-trivial change with a clear plan → `hopper` directly
@@ -211,15 +242,17 @@ Hopper mid-mission: "I need to find every .rs file under crates/ whose tests blo
 ## How to invoke
 
 Call subagents via the Task tool. Inline communication is the default for small
-payloads. Cross-agent evidence belongs in Bucket B: write the body under
-`.ooda/`, register an evidence bead, and pass the bead id. Single-agent scratch
+payloads. Cross-agent evidence belongs in a bd bead (Bucket A): use the
+write-tmp / bd-load / rm-tmp pattern (§ Evidence carrying) so the body lives
+in the bead's `description` field, then pass the bead id. Single-agent scratch
 belongs in Bucket D: pass a `.ooda/` path only while it remains local to one
 agent's working context. Don't re-summarise large evidence through yourself
 (avoids the telephone game).
 
 Scratch files live under `.ooda/`:
-`observations-*.md`, `orientation-*.md`, `mission-*.md`, `mission-*.journal.md`.
-Each subagent decides when to spill to disk based on its own rules.
+`brief-*.md`, `body-tmp-*.md`, tool stdout buffers, `oracle-context-*.md`,
+`traces/`. No evidence bodies, no orientation artefacts, no review reports —
+those go in bd beads.
 
 On surprise or abort during Act, re-enter the loop at Copernicus or Feynman
 with the journal (or inline observations) as new evidence.
@@ -477,20 +510,22 @@ bd (`bd` CLI) provides per-repo `.beads/` databases for durable coordination,
 evidence indexing, and audit trails. Beads are the **primary** cross-agent
 memory layer; `.ooda/` retains only ephemeral single-agent scratch.
 
-### Four-bucket model
+### Three-bucket model
 
 All agent-produced state falls into exactly one bucket:
 
 | Bucket | What | Storage | Lifecycle |
 |---|---|---|---|
-| **A — Coordination** | Mission epics, sub-mission tasks, dependency edges, labels, status | bd epic + bd tasks | Created by moltke on mission emit; closed by gardener on package complete |
-| **B — Evidence handoff** | Cross-agent observation/orientation/summary artefacts | bd task (3-line summary + body path) + `.ooda/` body file | Created by producer (copernicus, feynman, oracle); body file deleted by gardener when owning bead is closed |
-| **C — Review loop** | Hopper ↔ linus code-review signalling | bd task with `review-request` / `review:approved` / `review:needs-work` labels | Created by hopper; relabeled and closed by linus on approval or rejection |
-| **D — Ephemeral scratch** | raw context dumps, tool stdout buffers | `.ooda/` files only — no bead | GC-eligible any time by gardener or manually |
+| **A — Coordination & evidence** | Mission epics, sub-mission tasks, cross-agent observation / orientation / summary artefacts, dependency edges, labels, status | bd epic + bd tasks; bodies live in the bead's `description` field | Created by moltke (epics, sub-tasks) or by evidence producers (copernicus, feynman, oracle); closed by gardener on package complete or by linus on review approval |
+| **C — Review loop** | Hopper ↔ linus code-review signalling | bd task with `review-request` / `review:approved` / `review:needs-work` labels; report body in the bead's `description` field | Created by hopper; relabeled and closed by linus on approval or rejection |
+| **D — Ephemeral scratch** | Briefs for Task dispatch, transient body-tmp files for the write/bd-load/rm pattern, tool stdout buffers (tee targets), oracle raw `--context` dumps, tracer output | `.ooda/` files only — no bead | GC-eligible any time by gardener or manually; never crosses an agent boundary |
 
-Bucket membership is exclusive. If it crosses agent boundaries, it belongs in
-A or B (bead-indexed). If it stays within one agent's working context and is
-disposable, it belongs in D (disk-only).
+Bucket membership is exclusive. If it crosses agent boundaries, it belongs
+in A (bead-indexed, body in description). If it stays within one agent's
+working context and is disposable, it belongs in D (disk-only). The
+review loop keeps its own bucket (C) because the label-state machine
+distinguishes it from generic coordination, but mechanically it is an
+A-shaped bead — body in description, no paired files.
 
 ### Database discovery
 
@@ -508,9 +543,9 @@ scratch or non-default workspace.
 | `review:approved` | Linus approved the increment |
 | `review:needs-work` | Linus rejected; hopper must fix and re-request |
 | `mission:<id>` | Bead belongs to mission `<id>` |
-| `evidence` | Bucket B — cross-agent evidence artefact |
+| `evidence` | Bucket A — cross-agent evidence artefact (body in description) |
 | `oracle-summary` | Oracle-produced ADR summary (subset of evidence) |
-| `review-report` | Linus full review report registered as Bucket B evidence |
+| `review-report` | Linus full review report registered as evidence |
 
 Labels follow bd's `<dimension>:<value>` convention for state dimensions.
 
@@ -528,17 +563,19 @@ bd create "Sub-mission 01: module_a" --type task --labels "mission:rename-getcwd
 Hopper closes each child task on verify-green: `bd close bd-43 --reason "verify exit 0"`.
 Gardener closes the epic when all children are closed.
 
-**Evidence bead (Bucket B).** Copernicus observes, writes body to disk, registers bead:
+**Evidence bead (Bucket A).** Copernicus observes, writes body to disk, registers bead:
 
 ```
-# 1. Write large body to .ooda/ (pointer-over-body)
-write(.ooda/observations-ci-failure-1730400000.md, "<raw evidence>")
-# 2. Register bd index bead with 3-line summary + body path
-bd create "CI failure: cannot find module foo" --type task --labels "evidence,mission:ci-fix-1730400000" --json
-bd comment bd-55 "Summary: missing import after dep rename.\nBody: .ooda/observations-ci-failure-1730400000.md\nConfidence: high"
+# 1. Write body to .ooda/ tmp file (traced via write tool call)
+write(.ooda/body-tmp-ci-failure-1730400000.md, "<raw evidence>")
+# 2. Load body into bead description atomically
+bd create "CI failure: cannot find module foo" --type task --labels "evidence,mission:ci-fix-1730400000" --body-file .ooda/body-tmp-ci-failure-1730400000.md --json
+# 3. Delete the tmp file — body now lives in bd
+rm .ooda/body-tmp-ci-failure-1730400000.md
 ```
 
-Handoff: `→ to: feynman | … | artefact: bd-55`
+Handoff: `→ to: feynman | … | artefact: bd-55`. Feynman reads the body
+via `bd show bd-55` only when the next decision requires it.
 
 **Review bead (Bucket C).** Unchanged from existing review loop — see § Review loop below.
 
@@ -571,13 +608,19 @@ pair programming:
 
 ### Pointer discipline with beads
 
-Large evidence stays under `.ooda/` as a body file (Bucket D storage); the bead
-(Bucket B) carries the path as a comment plus a 3-line summary — not the full body.
-This preserves pointer-over-body doctrine (§ Evidence carrying). The bead id itself
-is a durable pointer that outlives the session.
+Large evidence stays inside the bead as its `description` field; the bead id
+(`bd-NNN`) is the durable cross-session pointer. Handoff lines carry the bead
+id, not the body. Commanders use `bd query --label evidence` (metadata-only,
+no body inlining) to browse, and `bd show bd-NNN` only when the body is
+needed to decide the next step. This preserves pointer-over-body discipline
+(§ Evidence carrying) — the cost is paid once at decision time, not on every
+handoff. The `.ooda/` body-tmp file used to load the bead description (§
+write-tmp / bd-load / rm-tmp pattern) is transient single-turn Bucket D
+scratch and never appears in a handoff line.
 
-Handoff artefacts use `artefact: bd-NNN` (preferred for cross-agent evidence, Bucket B) and
-`artefact: <.ooda/ path>` for single-agent scratch (Bucket D) or raw bodies too large to index.
+Handoff artefacts use `artefact: bd-NNN` for cross-agent evidence (Bucket A,
+preferred) and `artefact: <.ooda/ path>` only for single-agent within-turn
+scratch (Bucket D).
 
 ### Audit trail
 

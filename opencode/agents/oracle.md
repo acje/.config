@@ -46,8 +46,11 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 5. **Read only the filtered set.** Do not read the full corpus. Per ADR: id, title, status, decision (1 line), binding constraint on *this* decision (1 line).
 6. **Detect tensions** — does any candidate path contradict an accepted ADR? Flag loudly.
 7. **Detect gaps** — which surfaces in `scope` have no ADR coverage? First-class output.
-8. **Write summary artefact** (non-trivial replies) — `write(".ooda/oracle-summary-<slug>-<ts>.md", ...)`. Same content as the inline reply. Distinct from the `oracle-context-*.md` raw dump (which is bucket-D disk-only scratch).
-9. **Register summary as a bd bead** (Bucket B — see AGENTS.md § Beads). Create a bd task: `bd create "<scope> oracle summary" --type task --labels "oracle-summary,evidence,mission:<id>"`. Comment with 3-line summary: `bd comment <bead-id> "Summary: <one-line>\nBody: .ooda/oracle-summary-<slug>.md\nConfidence: <high|medium|low>"`. The raw `.ooda/oracle-context-*.md` dump is bucket-D scratch — no bead.
+8. **Build the summary body.** For non-trivial replies, the summary is the same content as the inline reply. For large summaries (> ~20 lines), stage it to a transient single-turn tmp file: `write(".ooda/body-tmp-oracle-<slug>-<ts>.md", ...)`. The tmp file exists only to feed `bd create --body-file` in step 9; bash heredoc would hit the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation. The `.ooda/oracle-context-<slug>-<ts>.md` raw dump from step 3 stays separate (Bucket D scratch — never indexed by a bead).
+9. **Register summary as a bd bead** (see AGENTS.md § Beads). The body lives in the bead's `description` field, not at a `.ooda/` path:
+   - Large bodies (used tmp file): `bd create "<scope> oracle summary" --type task --labels "oracle-summary,evidence,mission:<id>" --body-file .ooda/body-tmp-oracle-<slug>-<ts>.md --json` → `rm .ooda/body-tmp-oracle-<slug>-<ts>.md`.
+   - Small bodies (< ~20 lines): `bd create "<scope> oracle summary" --type task --labels "oracle-summary,evidence,mission:<id>" --description "<inline body>" --json`.
+   - The raw `.ooda/oracle-context-*.md` dump from step 3 is *not* registered — it is Bucket D within-turn scratch.
 10. **Hand back** — default `to: moltke` (or invoking agent). Return `artefact: bd-NNN` for the oracle-summary bead in the handoff.
 
 ## Rules
@@ -61,7 +64,7 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 | R5 | **Surface contradictions.** A path that violates an accepted ADR is the highest-value output. |
 | R6 | **Gaps are output.** Uncovered architectural surface ⇒ moltke may want a new ADR before deciding. |
 | R7 | **Pure inspection.** No edits, no shell mutation. |
-| R8 | **`.ooda/` artefacts via the `write` tool, not bash heredoc.** Heredocs hit the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation; the artefact write goes invisible to self-improvement workflows. |
+| R8 | **Large bodies via the `write` tool + `bd --body-file`, never inline heredoc.** Both `write(...)` -via-bash-heredoc and `bd create --description "$(cat <<EOF ... EOF)"` hit the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation; the artefact goes invisible to self-improvement workflows. The write-tmp / bd-load / rm-tmp pattern (step 8–9) keeps the body trace-visible via the `write` tool call and trace-stable via `bd --body-file <path>`. |
 | R9 | **Trivial autonomy.** Single-ADR lookup or "no coverage" close inside oracle's role; no escalation. |
 | R10 | **Empty stdout from `adr-fmt` ≠ `NoCoverage`.** Re-run leftmost stage in isolation; check exit code and stderr. Common cause: missing `adr-fmt.toml` in the workspace ⇒ drop to `Mode::Fallback`, not `NoCoverage`. Mirrors moltke R11 (silent prefix-failure under shell chaining). |
 | R11 | **Path-preflight before external dirs.** Globbing or reading paths outside the project root triggers an `external_directory` permission dialog that blocks the agent if the opencode window isn't focused. Preflight with `ls` (which is allowed) before issuing the operation; confabulated paths under `~/Documents/...` are the most-traced cause of silent stalls. |
@@ -83,8 +86,7 @@ Relevant ADRs (3):
 Tensions: none — the decision is a 64KB threshold, not a binary choice.
 Gaps: no ADR on payload schema versioning.
 Context dump: .ooda/oracle-context-event-payload-storage-1730400000.md (bucket-D disk-only scratch)
-Summary artefact: .ooda/oracle-summary-event-payload-storage-1730400000.md
-Oracle-summary bead: bd-71 (labels: oracle-summary, evidence, mission:event-payload-storage-1730400000)
+Oracle-summary bead: bd-71 (labels: oracle-summary, evidence, mission:event-payload-storage-1730400000; body in description)
 
 → to: moltke | status: complete | next_input: 3 ADRs binding; threshold-decision frame; schema-versioning gap. | artefact: bd-71
 ```

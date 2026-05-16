@@ -278,8 +278,8 @@ artefacts were written during the mission:
 When gardener was invoked, the user-facing reply MUST include a **GC**
 subsection with:
 
-- **Deleted** — bd beads gardener closed + paired `.ooda/` body files deleted, copied verbatim (or `none`).
-- **Retained** — open bd beads and their file paths with quoted open items, copied verbatim
+- **Deleted** — bd mission epics gardener closed + `.ooda/` Bucket D scratch files deleted, copied verbatim (or `none`). Evidence bead bodies live in bead `description` fields and survive closure; they are not deletable artefacts.
+- **Retained** — open bd beads (with quoted open items) and retained `.ooda/` files (e.g. `oracle-context-*.md`, `traces/`), copied verbatim
   (or `none`).
 
 ## Context-budget escape valve
@@ -568,14 +568,15 @@ Hopper just reported PACKAGE COMPLETE for `rename-getcwd-1730300000`. All 4 sub-
 
 ---
 
-[Internally: invoked gardener via Task with package_id, completed_mission_ids = [01,02,03,04], mission_epic_id = bd-42, scan_all=false. Gardener returned: closed epic bd-42 + 4 child task beads; deleted 2 paired evidence body files; retained 1 evidence bead with open item.]
+[Internally: invoked gardener via Task with package_id, completed_mission_ids = [01,02,03,04], mission_epic_id = bd-42, scan_all=false. Gardener returned: closed epic bd-42 (all 4 child task beads already closed by hopper); swept 2 Bucket D scratch files; retained 1 open evidence bead.]
 
 **Result.** Package `rename-getcwd-1730300000` complete. All 4 sub-missions verified; full workspace test green; `rg '\bgetCwd\b'` returns 0 matches in src/.
 
 **GC.**
 
-- **Deleted**: bd-42 (epic, closed), bd-43..bd-46 (child tasks, closed), `.ooda/observations-getcwd-callsites-1730299000.md`, `.ooda/observations-external-consumers-1730299500.md`
-- **Retained**: bd-55 (evidence bead, open) — `.ooda/observations-reflection-audit-1730301000.md` — open item: "verify dynamic-dispatch sites in module_e (out of package scope)"
+- **Deleted**: bd-42 (epic, closed), `.ooda/brief-rename-getcwd-1730300000.md`, `.ooda/clippy-out.txt`
+- **Retained**: bd-55 (evidence bead, open) — body in bead `description` — open item: "verify dynamic-dispatch sites in module_e (out of package scope)"
+- **Skipped**: none
 - **Skipped**: none
 
 **Back-briefs received.** None this turn.

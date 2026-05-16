@@ -234,8 +234,9 @@ Two sub-principles:
 - **P12b — `<thinking>` is scaffolding, not audit.** `<thinking>` blocks
   in Claude prompts are inference scaffolding the model emits to itself.
   They are not an audit trail and must not be cited as such. If audit
-  is needed, write to `.ooda/` artefacts (Bucket B/D) — see
-  `opencode/AGENTS.md` § Evidence carrying.
+  is needed, register it as evidence: bd bead with body in `description`
+  (Bucket A) for cross-agent durability, or `.ooda/` scratch (Bucket D)
+  for single-turn use — see `opencode/AGENTS.md` § Evidence carrying.
 
 **Rationale.** Once a prompt works, reformatting it for aesthetic
 preference (Sclar 2023's "prompt-format thrash") regresses performance

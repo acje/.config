@@ -49,7 +49,7 @@ options.
 
 | Field | Required | Notes |
 |---|---|---|
-| `observations` | yes | copernicus report or bead id (`bd-NNN`) pointing to `.ooda/observations-*.md` body |
+| `observations` | yes | copernicus report or bead id (`bd-NNN`) whose `description` field carries the body |
 | `question` | yes | what needs explaining |
 | `constraints` | optional | hard facts bounding the answer (versions, env) |
 
@@ -125,8 +125,8 @@ why:              <which hypothesis or reframing this informs>
 
 Hand off `→ to: oracle | status: needs-reloop | ...`. Oracle returns an
 `oracle-summary` bead (queryable via `bd query --label oracle-summary,mission:<id>`)
-whose body lives at `.ooda/oracle-summary-*.md`; cite ADR ids in revised
-hypotheses the same way you cite `path:line`.
+whose body lives in the bead's `description` field (read via `bd show bd-NNN`);
+cite ADR ids in revised hypotheses the same way you cite `path:line`.
 
 Oracle is a **peer consultation**, not an escalation.
 
@@ -174,14 +174,15 @@ in order:
 
 Then the handoff line. Then back-brief, only if non-empty.
 
-**Inline by default.** Write `.ooda/orientation-<slug>-<unix-ts>.md` only
-when orientation is deep, evidence-heavy, or explicitly requested. When writing
-a body file for cross-agent handoff, register it as a bd evidence bead
-(Bucket B — see AGENTS.md § Beads):
+**Inline by default.** Register a bd evidence bead only when orientation is
+deep, evidence-heavy, or explicitly requested. When registering for cross-agent
+handoff (see AGENTS.md § Beads):
 
-- `bd create "<one-line orientation summary>" --type task --labels "evidence,mission:<id>"`.
-- `bd comment <bead-id> "Summary: <one-line>\nBody: .ooda/orientation-<slug>.md\nConfidence: <high|medium|low>"`.
-- Return `artefact: bd-NNN` in the handoff line.
+- For large bodies, use the write-tmp / bd-load / rm-tmp pattern:
+  `write(.ooda/body-tmp-<slug>.md, <body>)` → `bd create "<one-line orientation summary>" --type task --labels "evidence,mission:<id>" --body-file .ooda/body-tmp-<slug>.md` → `rm .ooda/body-tmp-<slug>.md`.
+- For small bodies (< ~20 lines): `bd create "<one-line>" --type task --labels "evidence,mission:<id>" --description "<inline body>"`.
+- Return `artefact: bd-NNN` in the handoff line. Body lives in the bead's
+  `description` field; never leave a `.ooda/` path inside a bead as a pointer.
 
 ## Rules (load-bearing)
 
@@ -301,7 +302,7 @@ Observations: WS reconnect storm after deploy. Copernicus mapped client/server W
 </example>
 
 <example name="deep-with-reframe-and-retask">
-Observations: intermittent data corruption across two services after schema migration. Copernicus dump at `.ooda/observations-corruption-1730100000.md`.
+Observations: intermittent data corruption across two services after schema migration. Copernicus orientation in bd-71 (body lives in description; `bd show bd-71` to read).
 
 ---
 
@@ -384,4 +385,4 @@ why:              H1 vs H2 cannot be discriminated without the ownership ADR
 - Consult oracle eagerly when any hypothesis touches architectural surface.
 - No solution proposals; no mutation from Orient.
 - End with the frozen handoff line. Append back-brief only when non-empty.
-- Inline by default; `.ooda/orientation-*.md` only when deep / evidence-heavy / requested.
+- Inline by default; register a bd evidence bead only when orientation is deep / evidence-heavy / explicitly requested. Body lives in the bead's `description` field, never as a `.ooda/` pointer.

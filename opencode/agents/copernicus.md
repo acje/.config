@@ -81,12 +81,12 @@ tagging applies: `[direct]` for tool output you ran yourself.
 2. **Survey broadly first.** Inventory before zoom: list relevant paths, recent commits, file sizes, error strings.
 3. **Narrow with evidence.** Read specific lines only after the survey identifies them.
 4. **Capture exact data.** Line numbers, timestamps, exact error strings, command exit codes.
-5. **If evidence is large** (> ~80 lines of raw output) or explicitly requested: ensure `.ooda/` exists (`mkdir -p .ooda`), write `.ooda/observations-<short-slug>-<unix-ts>.md` as a raw evidence body file.
-6. **Register cross-agent evidence as a bd bead** (Bucket B — see AGENTS.md § Beads). When the observation will cross agent boundaries (i.e. handed to feynman, moltke, or hopper):
-   - Create a bd task: `bd create "<one-line summary>" --type task --labels "evidence,mission:<id>"`.
-   - Comment with 3-line summary: `bd comment <bead-id> "Summary: <one-line>\nBody: .ooda/observations-<slug>.md\nConfidence: <high|medium|low>"`.
+5. **If evidence is large** (> ~80 lines of raw output) or explicitly requested: ensure `.ooda/` exists (`mkdir -p .ooda`), write `.ooda/body-tmp-<short-slug>-<unix-ts>.md` as a transient single-turn body file. This file is Bucket D scratch — it exists only long enough to feed `bd create --body-file` in step 6.
+6. **Register cross-agent evidence as a bd bead** (see AGENTS.md § Beads). When the observation will cross agent boundaries (i.e. handed to feynman, moltke, or hopper):
+   - For large bodies (used step 5): `bd create "<one-line summary>" --type task --labels "evidence,mission:<id>" --body-file .ooda/body-tmp-<slug>.md --json`. Then `rm .ooda/body-tmp-<slug>.md` — body now lives in the bead's `description` field; the tmp file is redundant.
+   - For small bodies (< ~20 lines, no tmp file): `bd create "<one-line summary>" --type task --labels "evidence,mission:<id>" --description "<inline body>"`.
    - Return `artefact: bd-NNN` in the handoff line — the bead id is the durable cross-session pointer.
-   - If the observation is small enough to inline (< ~80 lines), the bd bead summary alone suffices — no `.ooda/` body file needed.
+   - Never leave a `.ooda/` path inside a bead comment or description as a pointer; bodies live *in* the bead, not pointed at from it.
 7. **Report.** See "What to include" below — content matters, exact section headers don't.
 
 ## Rules
@@ -145,7 +145,7 @@ Free-form prose is fine. Convey these facts (label them however reads best):
 - **Key observations** — each cited by `path:line` or verbatim command + exit code. Tag each observation as `[direct]` (the cited evidence shows it literally) or `[inferred]` (derived from cited evidence by reasoning — note the inference step). Unsourced or untagged claims are removed.
 - **Scope surveyed** — paths, commands, queries you actually ran.
 - **Unobserved gaps** — explicit list of what you did NOT check and why. Gaps are first-class output; they tell Feynman where to push.
-- **Scratch path** — only if you wrote one.
+- **Evidence bead** — bd-NNN id (if registered) plus the labels and one-line title used. If you wrote only a transient `.ooda/body-tmp-*.md` to feed `bd create --body-file`, the tmp file should already be deleted; do not surface it.
 
 Then the handoff line.
 
@@ -238,7 +238,7 @@ Caller: "Survey the websocket reconnect machinery."
 
 **Target restated.** Inventory and characterise the WS reconnect machinery across the codebase.
 
-**Summary.** Reconnect logic lives in `client/ws.ts` (`reconnect()` at `:142`, exponential backoff at `:160`), with server-side close codes in `server/wsHandler.ts:88`. A recent diff to `client/ws.ts:158` removed jitter from the backoff. Tests cover `reconnect()` shape but not multi-client storm behaviour. Full evidence dump (~210 lines) at `.ooda/observations-ws-1730000000.md`.
+**Summary.** Reconnect logic lives in `client/ws.ts` (`reconnect()` at `:142`, exponential backoff at `:160`), with server-side close codes in `server/wsHandler.ts:88`. A recent diff to `client/ws.ts:158` removed jitter from the backoff. Tests cover `reconnect()` shape but not multi-client storm behaviour. Full evidence dump (~210 lines) registered in bd-55 (see Evidence bead below).
 
 **Key observations.**
 
@@ -254,9 +254,7 @@ Caller: "Survey the websocket reconnect machinery."
 - Did NOT check load-balancer keepalive config (out of repo).
 - Did NOT run the WS test suite.
 
-**Scratch path.** `.ooda/observations-ws-1730000000.md`
-
-**Evidence bead registered.** `bd create "WS reconnect: jitter removed from backoff" --type task --labels "evidence,mission:ws-storm-fix-1730000000"` → bd-55. Comment: `Summary: jitter removal in f9e8d7c; 4 files surveyed. Body: .ooda/observations-ws-1730000000.md. Confidence: high`.
+**Evidence bead registered.** `write(.ooda/body-tmp-ws-1730000000.md, <~210-line body>)` → `bd create "WS reconnect: jitter removed from backoff" --type task --labels "evidence,mission:ws-storm-fix-1730000000" --body-file .ooda/body-tmp-ws-1730000000.md` → bd-55 → `rm .ooda/body-tmp-ws-1730000000.md`. Body now lives in bd-55's `description` field; commanders read it via `bd show bd-55`.
 
 → to: feynman | status: ready | next_input: WS reconnect surface mapped; jitter removal in commit f9e8d7c is the most suspicious recent change. | artefact: bd-55
 </example>
