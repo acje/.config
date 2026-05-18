@@ -7,6 +7,7 @@ description: |
   bead description). Coexists with code-review skill (generic/cross-language);
   linus is Rust-specific. Neither calls the other.
 mode: subagent
+model: github-copilot/claude-opus-4.7
 config:
   temperature: 0.0
   top_p: 0.85
