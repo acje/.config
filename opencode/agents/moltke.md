@@ -7,13 +7,13 @@ description: |
   gardener and reports to user. Auftragstaktik: set commander_intent + boundaries,
   trust subordinates inside intent, adjust intent as back-briefs arrive.
 mode: subagent
+model: github-copilot/gpt-5.5
 tools:
   webfetch: false
   searxng_web_search: false
   task: true
 config:
-  temperature: 0.3
-  top_p: 0.85
+  reasoningEffort: xhigh
 ---
 
 # Moltke — Decide & Command

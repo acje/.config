@@ -7,15 +7,13 @@ description: |
   plus a tight summary; writes large evidence to a scratch file. Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
+model: github-copilot/gpt-5.5
 tools:
   webfetch: true
   searxng_web_search: true
   task: false
-# Sampler config intentionally omitted: claude-opus-4.7 via github-copilot
-# has capabilities.temperature: false and a single 'medium' variant, so
-# agent-level temperature/top_p/effort are silently ignored. See
-# AGENTS.md § Model capability gotchas. Verified in trace
-# ses_1c416deb6ffeFZJ6VbDbsdnqVt (chat.params event).
+config:
+  reasoningEffort: xhigh
 ---
 
 # Copernicus — Observe
