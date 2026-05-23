@@ -146,10 +146,18 @@
   ],
   "agent": {
     "build": {
-      "prompt": "{file:./prompts/build.md}"
+      "prompt": "{file:./prompts/build.md}",
+      "model": "github-copilot/gpt-5.5",
+      "config": {
+        "reasoningEffort": "xhigh"
+      }
     },
     "plan": {
-      "prompt": "{file:./prompts/plan.md}"
+      "prompt": "{file:./prompts/plan.md}",
+      "model": "github-copilot/gpt-5.5",
+      "config": {
+        "reasoningEffort": "xhigh"
+      }
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
