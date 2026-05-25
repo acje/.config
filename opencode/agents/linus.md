@@ -185,32 +185,38 @@ pub fn parse(input: &str) -> Result<Config, ParseError> { ... }
 ```
 </example>
 
-<example name="comment-not-standalone-why">
-**Trigger.** Code comment that (a) restates *what* the code does rather
-than *why*, (b) cites an external reference the reader may not have
-(`see ADR-0014`, `per ticket #123`, `as discussed in PR #456`,
-`refs JIRA-…`), or (c) sprawls beyond one or two lines without earning it.
-Doc-comments (`///`, `//!`) with `# Errors` / `# Panics` / `# Safety` are
-out of scope here — covered by `missing-error-docs-on-pub-result` and
-`unsafe-without-soundness-comment`. `// SAFETY:` blocks are also out of
-scope.
-**Check.** Does the comment name a non-obvious constraint, invariant, or
-tradeoff a future reader cannot recover from the code itself, *and* stand
-alone without the external link?
-**Fix.** Rewrite as a terse standalone *why*-comment (one or two lines).
-Inline the one-sentence reason instead of pointing at an ADR / ticket /
-PR. If nothing non-obvious is worth saying, delete the comment. ADR ids
-belong in commit messages, not in code.
+<example name="plain-comment-instead-of-doc-comment">
+**Trigger.** Any `//` line comment or `/* … */` block comment in `*.rs`
+source. Per AGENTS.md § House style — Rust comments and hopper R15, the
+only permitted in-source prose is **Rust doc comments**: `///` on items,
+`//!` on modules / crates. This rule is absolute; there is no
+standalone-`//`-why exception, no `// SAFETY:` exception, no
+`#[allow(...)]`-justification-comment exception.
+**Check.** Does the file contain any `//` or `/* … */` comment? Treat
+each one as a finding.
+**Fix.** Lift the rationale into the enclosing item's `///` doc comment
+(or the module's `//!` doc comment for module-scoped notes). Use a
+structured section when one fits: `# Safety` for unsafe preconditions,
+`# Errors` / `# Panics` for `Result` / panic paths, `# Examples` for
+usage. Prefer linking the ADR (`See [ADR-0014](path).`) over restating.
+If nothing non-obvious is worth saying, delete the comment. If the code
+needs a `//` why-comment to be readable, the code is wrong: rename,
+extract, or restructure until it reads as its own explanation.
 
 ```rust
-// smell — restates what; points outside
-// Loop over orders and skip cancelled ones (see ADR-0014).
-for o in orders.iter().filter(|o| !o.cancelled) { ... }
-
-// idiomatic — terse standalone why
+// smell — plain `//` comment in source
 // Cancelled orders share ids with their replacements; including both
 // double-counts revenue.
 for o in orders.iter().filter(|o| !o.cancelled) { ... }
+
+// idiomatic — rationale lifted into the enclosing item's doc comment
+/// Sum revenue across active orders.
+///
+/// Cancelled orders share ids with their replacements; including both
+/// would double-count revenue. See [ADR-0014](docs/adr/0014-order-ids.md).
+fn active_revenue(orders: &[Order]) -> Money {
+    orders.iter().filter(|o| !o.cancelled).map(|o| o.total).sum()
+}
 ```
 </example>
 
@@ -219,7 +225,9 @@ Other quality checks:
   when callers need them.
 - Test layout — `#[cfg(test)] mod tests` colocated for unit; `tests/` for
   integration; `proptest` / `quickcheck` for invariant-heavy code.
-- `#[allow(...)]` without an adjacent comment justifying it.
+- `#[allow(...)]` without an adjacent `///` doc comment on the enclosing
+  item justifying it (per AGENTS.md § House style — Rust comments;
+  plain `//` justifications are themselves a finding).
 - `dbg!` / `println!` / commented-out code on non-binary paths.
 - Feature cfg hygiene — does the crate still compile with
   `--no-default-features`, and per-feature?
@@ -230,22 +238,34 @@ Other quality checks:
 
 <example name="unsafe-without-soundness-comment">
 **Trigger.** New or modified `unsafe { ... }` block.
-**Check.** Is there a `// SAFETY: ...` comment naming the invariants the
-caller relies on (alignment, validity, aliasing, lifetime)? Is the unsafe
-scope minimal?
-**Fix.** Document the soundness argument; shrink the block to the smallest
-operation that needs it. Always raise as a finding (rule 2) even when the
-argument is correct — human attention required.
+**Check.** Does the enclosing item's `///` doc comment carry a `# Safety`
+section naming the invariants the caller relies on (alignment, validity,
+aliasing, lifetime)? Is the unsafe scope minimal? Per AGENTS.md § House
+style — Rust comments and hopper R15, the soundness argument lives in
+the doc comment, **not** in a `// SAFETY:` block at the call site.
+**Fix.** Document the soundness argument in the enclosing item's `///`
+`# Safety` section; shrink the `unsafe { ... }` block to the smallest
+operation that needs it. Always raise as a finding (rule 2) even when
+the argument is correct — human attention required.
 
 ```rust
-// smell
-let val = unsafe { *ptr };
-
-// idiomatic
+// smell — soundness argument as a `//` comment at the call site
 // SAFETY: `ptr` is non-null (checked at L23), points to an initialised
 // `T` owned by `self` for the lifetime of `&self`, and no `&mut` to the
 // same location can exist while we hold `&self`.
 let val = unsafe { *ptr };
+
+// idiomatic — soundness lifted into the enclosing item's `# Safety` section
+/// Read the value at `self.ptr`.
+///
+/// # Safety
+///
+/// `self.ptr` must be non-null, point to an initialised `T` owned by
+/// `self` for the lifetime of `&self`, and no `&mut` to the same
+/// location may exist while `&self` is held.
+unsafe fn read_value(&self) -> T {
+    unsafe { *self.ptr }
+}
 ```
 </example>
 
@@ -289,7 +309,7 @@ Other security checks:
 | `Box<dyn Error>` in public API | `thiserror`-derived enum | callers can match variants; downstream error chains stay structured |
 | `.clone()` reflexively | `&` borrow / `Cow<'_, T>` / `Arc<T>` | clone hides ownership intent and costs; the right abstraction names it |
 | `x as SmallerInt` (narrowing `as`) | `x.try_into()?` / `checked_*` / `wrapping_*` | `as` silently truncates; the alternatives surface overflow at the type level |
-| Comment restating *what* / pointing at `ADR-…` / ticket / PR | Terse standalone *why*-comment (1–2 lines) inlining the reason, or delete | external links rot and readers may not have them; a future reader needs the rationale in the file |
+| Comment restating *what* / pointing at `ADR-…` / ticket / PR / any `//` or `/* … */` comment in `*.rs` | Lift rationale into the enclosing item's `///` doc comment (or module `//!`); link the ADR from there; or delete if nothing non-obvious is worth saying | doc comments are checked by `cargo doc` / `cargo test --doc` and surface in tooling; plain comments drift silently; per AGENTS.md § House style — Rust comments and hopper R15 |
 
 ## Validation
 

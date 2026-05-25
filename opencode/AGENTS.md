@@ -307,6 +307,28 @@ Empty stdout from an evidence-producing or state-changing pipeline (`cargo`,
 the leftmost stage in isolation. Pure search pipelines (`rg | grep`) are
 exempt; empty output there is a valid no-match.
 
+## House style — Rust comments
+
+**Fleet-wide rule.** In Rust source (`*.rs`), the only permitted in-source
+prose is **Rust doc comments**: `///` on items, `//!` on modules / crates.
+Plain `//` line comments and `/* … */` block comments are not written by
+any agent. This applies to every agent that edits `.rs` files —
+`hopper`, `automaton`, `linus` (when suggesting fixes), and any other
+agent producing Rust source.
+
+Rationale: doc comments are checked by `cargo doc` and `cargo test --doc`
+and surface in tooling; plain comments drift silently. Durable rationale
+belongs in ADRs (linked from the doc comment), in commit messages, or in
+bd beads — not as `//` annotations that escape review.
+
+Shape and exceptions (TODO / FIXME, `// SAFETY:`, "why" annotations, ADR
+links, doctests, panic / error / safety sections) are specified
+authoritatively in `agents/hopper.md` § R15. Other agent prompts must
+not contradict R15; linus enforces it during review.
+
+Removing pre-existing non-doc comments while editing a file is in-scope
+as a `tidy:` change (separate commit per § Commits).
+
 ## When to call automaton
 
 Any agent (including hopper and gardener) may call `automaton` when it hits a
