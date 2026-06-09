@@ -137,12 +137,16 @@
       "chmod -R 777 *": "deny"
     },
     "edit": "allow",
-    "write": "allow"
+    "write": "allow",
+    "external_directory": {
+      "~/tmp/**": "allow"
+    }
   },
   "model": "github-copilot/claude-opus-4.7",
   "plugin": [
     "./plugins/searxng.mjs",
-    "./plugins/tracer.mjs"
+    "./plugins/tracer.mjs",
+    "./plugins/graphify.js"
   ],
   "agent": {
     "build": {

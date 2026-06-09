@@ -653,3 +653,21 @@ environment. Probe before using; fall back gracefully when absent.
 Agents must state which mode they ran in (capability-available vs. fallback)
 so the caller knows whether output reflects authoritative tooling or a
 best-effort scan.
+
+## graphify
+
+Structural knowledge graph at `graphify-out/graph.json`.
+
+When the user types `/graphify`, invoke the `skill` tool with
+`skill: "graphify"` first.
+
+Use graphify for structural questions:
+- `graphify query "<q>"` — symbols + neighbours matching the question.
+- `graphify explain "<symbol>"` — one node and its edges.
+- `graphify affected "<symbol>" --depth 3` — blast-radius before refactor.
+- `graphify path "<A>" "<B>"` — shortest path; intra-module only.
+
+Use `rg`/`grep` for textual searches, the `adr-context` skill for ADR
+questions, and read files directly for definitions at specific locations.
+After code changes, `graphify update .` (or commit so the post-commit hook
+fires).
