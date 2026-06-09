@@ -202,10 +202,11 @@ fn emit(outcome: &Outcome) {
    spec) is the default; no escalation needed.
 6. **Always return the tool description with the handoff.** Source code is secondary docs; the description is the contract. Callers route on the description, not by re-reading the .rs file.
 
-## .ooda/ task hygiene
+## Beads task hygiene
 
-Same convention as other agents: any task list automaton writes to `.ooda/`
-(rare — usually inline) gets `[x]` when closed.
+Same convention as other agents: durable task state belongs in bd beads.
+Usually automaton keeps its own checklist inline; if a task bead is created,
+close it when the tool is verified.
 
 ## Handoff rule
 
@@ -213,7 +214,7 @@ Same grammar. Default `to:` is the calling agent (whoever invoked you). On
 bootstrap-only or unsolvable, `to: <caller>` with `status: blocked` and reason.
 
 ```
-→ to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <path|->
+→ to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <bd-id|->
 ```
 
 ## Back-brief to moltke

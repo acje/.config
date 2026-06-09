@@ -178,11 +178,10 @@ Then the handoff line. Then back-brief, only if non-empty.
 deep, evidence-heavy, or explicitly requested. When registering for cross-agent
 handoff (see AGENTS.md § Beads):
 
-- For large bodies, use the write-tmp / bd-load / rm-tmp pattern:
-  `write(.ooda/body-tmp-<slug>.md, <body>)` → `bd create "<one-line orientation summary>" --type task --labels "evidence,mission:<id>" --body-file .ooda/body-tmp-<slug>.md` → `rm .ooda/body-tmp-<slug>.md`.
 - For small bodies (< ~20 lines): `bd create "<one-line>" --type task --labels "evidence,mission:<id>" --description "<inline body>"`.
+- For larger bodies: `bd create "<one-line orientation summary>" --type task --labels "evidence,mission:<id>" --json` to obtain the bead id, then `bd update <bd-id> --description-stdin` and feed the body in on stdin. The body lands in the bead's `description` field without touching the working tree.
 - Return `artefact: bd-NNN` in the handoff line. Body lives in the bead's
-  `description` field; never leave a `.ooda/` path inside a bead as a pointer.
+  `description` field; never stage it to a `.ooda/` path as a durable pointer.
 
 ## Rules (load-bearing)
 
@@ -211,18 +210,18 @@ handoff (see AGENTS.md § Beads):
     call, preflight any path you didn't observe this session. Silent
     short-circuit on a bad `cd` path is a known stall cause.
 
-## .ooda/ task hygiene
+## Beads task hygiene
 
-Any task list / sub-mission / checkbox you write to `.ooda/` must be closed
-(`[x]`, `status = "completed"`, or **COMPLETED** tag) by you the moment it's
-done. Open items at handoff signal incomplete work to the gardener.
+Mission, sub-mission, and orientation task state lives in bd, not in
+`.ooda/`. Close beads on completion (`bd close <id> --reason ...`); open
+beads at handoff signal incomplete work to the gardener.
 
 ## Handoff line (frozen grammar)
 
 End every response with exactly:
 
 ```
-→ to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <path|->
+→ to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <bd-id|->
 ```
 
 | Field | Values |
@@ -230,7 +229,7 @@ End every response with exactly:
 | `to` | agent name or `user` (typically `moltke`, `copernicus`, `oracle`) |
 | `status` | `ready` (orientation complete) / `needs-reloop` (re-task issued) / `blocked` / `complete` |
 | `next_input` | one compact line; for re-tasks, summarise the brief |
-| `artefact` | `bd-NNN` for cross-agent orientation evidence, `.ooda/` path for single-agent scratch, or `-` |
+| `artefact` | `bd-NNN` for cross-agent orientation evidence, or `-` |
 
 ## Back-brief to moltke
 
