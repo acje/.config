@@ -10,7 +10,7 @@
     "dramallama": {
       "npm": "@ai-sdk/openai-compatible",
       "options": {
-        "baseURL": "https://aiapi.mattilsynet.no/v1"
+        "baseURL": "http://127.0.0.1:8787/v1"
       },
       "models": {
         "code": {
