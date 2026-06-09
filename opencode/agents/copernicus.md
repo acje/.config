@@ -7,7 +7,7 @@ description: |
   plus a tight summary; writes large evidence to a scratch file. Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
-model: github-copilot/gpt-5.5
+model: github-copilot/claude-opus-4.7
 tools:
   webfetch: true
   searxng_web_search: true

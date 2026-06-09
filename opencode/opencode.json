@@ -147,14 +147,14 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gpt-5.5",
+      "model": "github-copilot/claude-opus-4.7",
       "config": {
         "reasoningEffort": "xhigh"
       }
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/gpt-5.5",
+      "model": "github-copilot/claude-opus-4.7",
       "config": {
         "reasoningEffort": "xhigh"
       }
@@ -178,7 +178,8 @@
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/claude-opus-4.7"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",

@@ -5,6 +5,7 @@ description: |
   decide in line with prior commitments. Uses adr-fmt when available;
   falls back to direct ADR markdown reads. Informs, never decides.
 mode: subagent
+model: github-copilot/claude-opus-4.7
 tools:
   webfetch: false
   searxng_web_search: false
