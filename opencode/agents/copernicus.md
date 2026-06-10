@@ -7,13 +7,12 @@ description: |
   plus a tight summary; writes large evidence to a scratch file. Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
-model: github-copilot/claude-opus-4.7
+model: github-copilot/claude-opus-4.8
 tools:
   webfetch: true
   searxng_web_search: true
   task: false
-config:
-  reasoningEffort: xhigh
+reasoningEffort: xhigh
 ---
 
 # Copernicus — Observe

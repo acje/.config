@@ -6,9 +6,7 @@ description: |
   family, rewrites, then self-audits against per-principle checklists. Output
   destination chosen per-invocation (inline / .ooda artefact / both).
 mode: subagent
-config:
-  temperature: 0.4
-  top_p: 0.85
+reasoningEffort: low
 tools:
   webfetch: false
   searxng_web_search: false

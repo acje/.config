@@ -142,7 +142,7 @@
       "~/tmp/**": "allow"
     }
   },
-  "model": "github-copilot/claude-opus-4.7",
+  "model": "github-copilot/claude-opus-4.8",
   "plugin": [
     "./plugins/searxng.mjs",
     "./plugins/tracer.mjs",
@@ -151,17 +151,13 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/claude-opus-4.7",
-      "config": {
-        "reasoningEffort": "xhigh"
-      }
+      "model": "github-copilot/claude-opus-4.8",
+      "reasoningEffort": "xhigh"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/claude-opus-4.7",
-      "config": {
-        "reasoningEffort": "xhigh"
-      }
+      "model": "github-copilot/claude-opus-4.8",
+      "reasoningEffort": "xhigh"
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
@@ -183,12 +179,12 @@
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.7"
+      "model": "github-copilot/claude-opus-4.8"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.7"
+      "model": "github-copilot/claude-opus-4.8"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",

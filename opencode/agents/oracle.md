@@ -5,14 +5,11 @@ description: |
   decide in line with prior commitments. Uses adr-fmt when available;
   falls back to direct ADR markdown reads. Informs, never decides.
 mode: subagent
-model: github-copilot/claude-opus-4.7
+model: github-copilot/claude-opus-4.8
 tools:
   webfetch: false
   searxng_web_search: false
   task: false
-config:
-  temperature: 0.2
-  top_p: 0.85
 ---
 
 Past decisions echo. Surface them, scoped tightly to the decision at hand.

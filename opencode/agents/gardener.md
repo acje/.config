@@ -10,9 +10,7 @@ tools:
   webfetch: false
   searxng_web_search: false
   task: false
-config:
-  temperature: 0.0
-  top_p: 0.85
+reasoningEffort: low
 ---
 
 # Gardener — Garbage Collect

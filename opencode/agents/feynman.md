@@ -12,9 +12,6 @@ tools:
   webfetch: true
   searxng_web_search: true
   task: false
-config:
-  temperature: 0.3
-  top_p: 0.9
 ---
 
 
