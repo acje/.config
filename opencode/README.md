@@ -23,8 +23,8 @@ figure whose documented method maps to its phase or specialty.
                                   USER
                                 ┌───┴───┐
                       plan mode │       │ build mode
-                     (strategic)│       │(direct execution;
-                                │       │ contract to Hopper)
+                  (orient only; │       │ (owns the full
+                   no execution)│       │  OODA loop)
                                 │       │
                                 ▼       ▼
                                 └───────┘
@@ -116,19 +116,21 @@ into one of `Acknowledge | AdjustIntent | ReDecompose | EscalateToUser`.
 
 Two opencode prompt modes orchestrate the agents differently:
 
-- **Plan mode** owns the full OODA loop. Proceeds autonomously with named
+- **Plan mode** is orient-only. Proceeds autonomously with named
   assumptions per the autonomy rule (loads `grill-me` only when the user
   explicitly invokes it: "grill me", "interview me", "stress-test"), then
-  routes through
-  copernicus → feynman → moltke (→ oracle) to produce a mission contract or
-  package. Never edits source.
-- **Build mode** is direct user-driven execution. Trivial → inline edit.
-  Non-trivial single-path → hopper with an inline brief. Strategic /
-  multi-path / architectural / irreversible → redirects the user back to
-  plan mode rather than spinning up moltke.
+  routes through `copernicus → feynman (→ oracle)` to produce a written
+  plan as text output. Never edits source. Never dispatches moltke —
+  moltke lives in build mode.
+- **Build mode** owns the full OODA loop. Trivial → inline edit. Turbo
+  prompt rewrites → `@turbo` directly. Everything else → `@moltke`, which
+  authors the mission contract, drives the execution loop ↔ hopper (with
+  the nested review loop ↔ linus for Rust), and invokes gardener on
+  MISSION/PACKAGE COMPLETE.
 
-Build mode can *receive* a plan-mode-produced contract and hand it to
-hopper — that's execution, not planning.
+Build mode also accepts a plan-mode-produced plan as input: hand the plan
+(file path, pasted body, or bd bead id) to moltke, which turns it into a
+mission contract or package.
 
 ## Internal vs outer OODA
 
@@ -312,7 +314,7 @@ mkdir -p .ooda && echo ".ooda/" >> .gitignore
 
 ## Usage
 
-### Plan mode (full loop, recommended for non-trivial work)
+### Plan mode (orient only; produces a written plan)
 
 ```
 > @plan migrate the event store from JSON to a binary format
@@ -322,10 +324,10 @@ Plan mode proceeds with named assumptions (loads `grill-me` only on explicit use
 
 1. **copernicus** — gather evidence at the right tier. Returns inline summary + scratch path. If thin, expect a re-task from feynman.
 2. **feynman** — produce ranked hypotheses with falsifiers, stress-test the leader, name remaining unknowns. Re-task copernicus rather than guessing.
-3. **moltke** — consult oracle if architectural surface is touched; enumerate options; run a pre-mortem; judge coupling; emit either a single TOML mission contract or a `[mission_package]` with `[[missions]]` array.
-4. Hand off to build mode (or stay in plan if more orientation is needed).
+3. **oracle** — optional, when architectural surface is touched: ADR summaries, binding constraints, gaps.
+4. Plan mode writes the plan (goal, evidence, options, stakes, success criteria, risks, open questions) and hands it back. The user takes it to build mode for execution.
 
-### Build mode (direct execution)
+### Build mode (full OODA loop; default for non-trivial work)
 
 ```
 > @build fix the off-by-one in list_orders pagination
@@ -336,17 +338,17 @@ Build mode picks one of:
 ```rust
 enum BuildAction {
     InlineEdit,                              // single edit, no tradeoffs
-    InvokeHopper { brief: InlineBrief },     // single mission, clear plan
-    ExecutePlanContract { path: PathBuf },   // contract from plan mode
-    RedirectToPlanMode { reason: &'static str }, // multi-path / strategic
+    InvokeMoltke { brief: MissionBrief },    // default for non-trivial; moltke drives end-to-end
+    InvokeTurbo { source: PromptSource, surface: Surface }, // prompt-rewriting request
+    ExecutePlan { plan_ref: PlanRef },       // plan-mode artefact → moltke turns into contract
     AskUser { question: &'static str },      // medium+ risk only
 }
 ```
 
-For plan-mode-produced contracts:
+For plan-mode-produced plans:
 
 ```
-> @build execute mission package bd-42 (artefact: .ooda/mission-package-rename-job-1730500000.md)
+> @build execute plan at .ooda/plan-rename-job-1730500000.md
 ```
 
 ### Single phase (rare; advanced)
