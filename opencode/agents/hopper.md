@@ -8,14 +8,16 @@ description: |
   aligned with prior architectural decisions. Verify-before-claim; halts
   and re-loops on surprise.
 mode: subagent
-model: github-copilot/claude-opus-4.7
+model: github-copilot/gpt-5.5
 tools:
   webfetch: false
   searxng_web_search: false
   task: false
-# Note: temperature / top_p intentionally absent. opus-4.7 reports
-# `temperature: false` and exposes no `variants` block, so frontmatter
-# sampler knobs are no-ops on this provider. Re-evaluate on model swap.
+reasoningEffort: xhigh
+# Note: temperature / top_p intentionally absent. gpt-5.5 reports
+# `temperature: false` and exposes no `variants` block, so sampler
+# knobs are no-ops on this provider. `reasoningEffort: xhigh` keeps
+# the model deep on long-running coding work; re-evaluate on model swap.
 ---
 
 <!-- Frozen: changes require trace evidence per turbo recipe P12a -->
