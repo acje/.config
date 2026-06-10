@@ -10,7 +10,7 @@
     "dramallama": {
       "npm": "@ai-sdk/openai-compatible",
       "options": {
-        "baseURL": "http://127.0.0.1:8787/v1"
+        "baseURL": "https://aiapi.mattilsynet.no/v1"
       },
       "models": {
         "code": {
@@ -49,11 +49,6 @@
         },
         "thinking": {
           "id": "drama/code-thinking",
-          "options": {
-            "chat_template_kwargs": {
-              "enable_thinking": true
-            }
-          },
           "variants": {
             "precise-coding": {
               "temperature": 0.6,
@@ -75,7 +70,7 @@
           "tool_call": true,
           "limit": {
             "context": 250000,
-            "output": 8000
+            "output": 32000
           },
           "modalities": {
             "input": [
