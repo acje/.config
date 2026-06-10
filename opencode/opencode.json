@@ -192,6 +192,11 @@
     "turbo": {
       "prompt": "{file:./agents/turbo.md}",
       "mode": "subagent"
+    },
+    "dramallama": {
+      "prompt": "{file:./prompts/build.md}",
+      "model": "dramallama/code",
+      "mode": "primary"
     }
   }
 }
