@@ -148,7 +148,7 @@ On mission load, the contract carries a `mission_epic_id` (bd epic created by mo
 
 On each non-trivial Rust TDD increment (post-green, pre-commit):
 
-1. Create review-request bead with the diff context + change rationale in the bead's `description` field. For small diffs (< ~20 lines): `bd create "Review: <one-line summary>" --type task --labels review-request --description "<inline context>" --json`. For larger diffs: `bd create "Review: <one-line summary>" --type task --labels review-request --json` to get the bead id, then `bd update <bd-id> --description-stdin` and feed the body in on stdin. Do not stage the body under `.ooda/`; the bead `description` is the durable home.
+1. Create review-request bead with the diff context + change rationale in the bead's `description` field. For small diffs (< ~20 lines): `bd create "Review: <one-line summary>" --type task --labels review-request --description "<inline context>" --json`. For larger diffs: `bd create "Review: <one-line summary>" --type task --labels review-request --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. Do not stage the body under `.ooda/`; the bead `description` is the durable home.
 2. Continue with other in-scope work while linus picks up out-of-band via `bd ready --json --label review-request`. If a review must be solicited within the turn, emit a back-brief to moltke requesting linus dispatch; otherwise poll the bead's labels.
 3. Linus reviews, comments APPROVE or NEEDS WORK, relabels accordingly, and on APPROVE also closes the paired review-report evidence bead.
 4. On `review:approved`: proceed to commit. Record: `bd audit record --kind tool_call --actor hopper --issue-id <id> --tool-name "commit" --exit-code 0`.

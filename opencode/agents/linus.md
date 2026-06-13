@@ -72,7 +72,7 @@ uses label-based signaling:
 5. Linus builds the full review body (see `## Report` shape).
 6. Linus registers the full report as an evidence bead (Bucket A in the three-bucket model):
    - For small reports (≤ ~20 lines): `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --description "<inline body>" --json`.
-   - For larger reports: `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --description-stdin` and feed the body in on stdin. The body lands directly in the bead's `description` field.
+   - For larger reports: `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. The body lands directly in the bead's `description` field.
    - If no mission id is available, use labels `evidence,review-report` and name the missing mission id in the body.
 7. Linus writes verdict on the review-request bead:
    - **APPROVE:** `bd comment <id> "APPROVE: <one-line summary>"` + `bd label remove <id> review-request` + `bd label add <id> review:approved` + `bd audit record --kind label --actor linus --issue-id <id> --tool-name "review" --exit-code 0`. Then `bd close <report-bead-id> --reason "review:approved"` to close the paired review-report evidence bead created in step 6, and `bd close <id> --reason "review:approved"` to close the review-request bead itself (the body lives in the bead's description and survives closure).
@@ -98,7 +98,7 @@ create mission beads, close mission beads, edit source, or commit.
 5. **Report** — build the full review body per `## Report` shape and
    register it as a `review-report` evidence bead. The body lives in
    the bead's `description` field, loaded via `--description` (inline) or
-   `bd update --description-stdin` (larger bodies).
+   `bd update --stdin` (larger bodies).
 6. **Reply** in the fixed output contract + handoff line.
 
 ## Review patterns
@@ -351,7 +351,7 @@ apply rule 3 (Surprise) — do not proceed.
 The full review body lives in the review-report evidence bead's `description`
 field (Bucket A). Small bodies (≤ ~20 lines) go inline via
 `--description "<body>"`; larger bodies are loaded via
-`bd update <bd-id> --description-stdin` to bypass inline heredoc trace
+`bd update <bd-id> --stdin` to bypass inline heredoc trace
 truncation. The body never touches the working tree.
 
 Body shape:
@@ -388,7 +388,7 @@ End with the AGENTS.md handoff line:
 ## Doctrine pointers (do not restate)
 
 - Evidence body lives in the review-report bead `description` (inline
-  via `--description`, or `bd update --description-stdin` for larger
+  via `--description`, or `bd update --stdin` for larger
   bodies); handoff carries `bd-NNN`. Per AGENTS.md § Evidence carrying
   — pointer over body.
 - Bash hygiene per AGENTS.md § Bash hygiene (workdir, one statement per call, path preflight).

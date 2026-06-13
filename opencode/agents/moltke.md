@@ -283,7 +283,7 @@ The user-facing reply MUST include a **GC** subsection with:
 If you have absorbed ≥ ~5 subordinate Task completions in a single invocation
 and the package is incomplete, write a resume checkpoint to a bd bead
 (`bd create "resume: <package_or_mission_id>" --type task --labels
-"mission:<id>,resume-checkpoint" --description-stdin` with body fed in on
+"mission:<id>,resume-checkpoint" --stdin` with body fed in on
 stdin) containing:
 
 (a) `commander_intent` verbatim

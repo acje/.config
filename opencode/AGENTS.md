@@ -133,8 +133,8 @@ producer agent has two equivalent options:
    trace truncation limit (`OPENCODE_TRACE_MAX_FIELD=4096`, ~80 lines):
    `bd create "<title>" --type task --labels "evidence,mission:<id>"
    --description "<full body>" --json`.
-2. **`bd update --description-stdin`** — for larger bodies, pipe the body
-   in via stdin or set it via `bd update <id> --description-stdin` after
+2. **`bd update --stdin`** — for larger bodies, pipe the body
+   in via stdin or set it via `bd update <id> --stdin` after
    create, so it lands directly in the bead description without an
    inline heredoc hitting the trace limit. The body never touches the
    working tree.
@@ -240,7 +240,7 @@ Hopper mid-mission: "I need to find every .rs file under crates/ whose tests blo
 Call subagents via the Task tool. Inline communication is the default for small
 payloads. Cross-agent evidence belongs in a bd bead (Bucket A): the body lives
 in the bead's `description` field (loaded via `--description` or
-`bd update --description-stdin`), and the bead id is the pointer. Don't
+`bd update --stdin`), and the bead id is the pointer. Don't
 re-summarise large evidence through yourself (avoids the telephone game).
 
 The working tree under `.ooda/` is reserved for runtime tracing (see § Tracing). No agent doctrine in this document instructs you to stage agent-coordination payloads through `.ooda/`.
@@ -544,7 +544,7 @@ Labels follow bd's `<dimension>:<value>` convention for state dimensions.
 
 Moltke creates epics (`--type epic`) + sub-task children with `bd dep add child epic`.
 Evidence producers create tasks with `--labels evidence,mission:<id>` and put the body
-in `--description` (or `bd update --description-stdin` for bodies > 4KB to avoid trace
+in `--description` (or `bd update --stdin` for bodies > 4KB to avoid trace
 truncation). Handoff lines carry `artefact: bd-NNN`; readers fetch the body via
 `bd show bd-NNN` only when the next decision needs it. See `bd --help` for full CLI.
 

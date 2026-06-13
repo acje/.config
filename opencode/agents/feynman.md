@@ -176,7 +176,7 @@ deep, evidence-heavy, or explicitly requested. When registering for cross-agent
 handoff (see AGENTS.md § Beads):
 
 - For small bodies (< ~20 lines): `bd create "<one-line>" --type task --labels "evidence,mission:<id>" --description "<inline body>"`.
-- For larger bodies: `bd create "<one-line orientation summary>" --type task --labels "evidence,mission:<id>" --json` to obtain the bead id, then `bd update <bd-id> --description-stdin` and feed the body in on stdin. The body lands in the bead's `description` field without touching the working tree.
+- For larger bodies: `bd create "<one-line orientation summary>" --type task --labels "evidence,mission:<id>" --json` to obtain the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. The body lands in the bead's `description` field without touching the working tree.
 - Return `artefact: bd-NNN` in the handoff line. Body lives in the bead's
   `description` field; never stage it to a `.ooda/` path as a durable pointer.
 
