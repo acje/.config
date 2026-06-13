@@ -383,7 +383,7 @@ Example:
 
 ## Beads task hygiene
 
-Sub-mission completion is recorded via `bd close <id>` on the child task bead (Bucket A). Mission state lives in bd; `.ooda/` holds only tracer output (see AGENTS.md § Tracing).
+Sub-mission completion is recorded via `bd close <id>` on the child task bead (Bucket A). Mission state lives in bd; `.ooda/` holds only tracer output and the narrow Tier-2 escape hatch described in AGENTS.md § Beads.
 
 Review-request beads (relabeled `review:approved`) follow the same close-on-done discipline. Open beads at handoff signal incomplete work.
 

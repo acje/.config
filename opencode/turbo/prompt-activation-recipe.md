@@ -61,8 +61,8 @@ first. All three are candidates for deletion.
 ### P3 — Evidence extraction
 
 Inlined evidence (logs, transcripts, file dumps, long examples) becomes
-pointers to `.ooda/` artefacts or external paths. The prompt body stays
-load-bearing only.
+pointers to bd beads, user-facing `.ooda/` artefacts, or external paths. The
+prompt body stays load-bearing only.
 
 **Rationale.** Evidence is read once at design time, then forever costs
 context budget on every invocation. Pointer-over-body (see
@@ -235,8 +235,8 @@ Two sub-principles:
   in Claude prompts are inference scaffolding the model emits to itself.
   They are not an audit trail and must not be cited as such. If audit
   is needed, register it as evidence: bd bead with body in `description`
-  (Bucket A) for cross-agent durability, or `.ooda/` scratch (Bucket D)
-  for single-turn use — see `opencode/AGENTS.md` § Evidence carrying.
+  (Bucket A) for cross-agent durability; `.ooda/` is only the narrow Tier-2
+  escape hatch described in `opencode/AGENTS.md` § Beads.
 
 **Rationale.** Once a prompt works, reformatting it for aesthetic
 preference (Sclar 2023's "prompt-format thrash") regresses performance
@@ -248,8 +248,8 @@ treat the model's internal scratch as a log.
 - [ ] Frozen sections marked (e.g. `<!-- Grammar frozen: … -->`).
 - [ ] Any change PR cites at least one trace excerpt as
       counter-factual.
-- [ ] `<thinking>` blocks not relied on for audit; audit goes to
-      `.ooda/`.
+- [ ] `<thinking>` blocks not relied on for audit; cross-agent audit goes to
+      a bd evidence bead.
 
 ---
 
@@ -303,7 +303,7 @@ retaining them.
 | Restating the user's question before answering | Wastes tokens; trains verbose openings | Skip restatement unless ambiguity demands it |
 | "I will now …" / "Let me …" pre-action narration | Filler; pattern-matched as politeness | Just act (per `opencode/AGENTS.md` § Communication style) |
 | Generic "follow best practices" | Unscoped; means nothing | Name the specific practice and its failure mode (P5, P6) |
-| `<thinking>` blocks cited as audit trail | Scaffolding, not log (P12b) | Audit goes to `.ooda/` artefacts |
+| `<thinking>` blocks cited as audit trail | Scaffolding, not log (P12b) | Cross-agent audit goes to bd evidence beads |
 | Long preamble before the load-bearing rules | Buries the signal (P1 violation) | Move rules to tail; restate at top if body > 5k tokens |
 
 ---
@@ -390,7 +390,7 @@ lines of context]
   objective: fix off-by-one in list_orders pagination
   success_criteria: cargo test -p orders passes (incl new regression test)
   rollback: git checkout -- crates/orders/src/list.rs
-  artefact: .ooda/observations-pagination-1730500000.md
+  artefact: bd-NNN
   commander_intent: half-open range discipline (per ADR-0014)
   abort_if: regression test cannot reproduce on main
 ```
@@ -405,7 +405,7 @@ lines of context]
 **Self-audit:**
 - P1  [ ] N/A — surface too small
 - P2  [x] removed 32 lines of dead prose
-- P3  [x] evidence extracted to .ooda/ artefact
+- P3  [x] evidence extracted to bd evidence bead
 - P4  [ ] N/A — handoff is one-shot, no compaction
 - P5  [x] no `must` rules in surface; N/A
 - P6  [x] `abort_if` paired with positive criteria

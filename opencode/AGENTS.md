@@ -243,7 +243,7 @@ in the bead's `description` field (loaded via `--description` or
 `bd update --stdin`), and the bead id is the pointer. Don't
 re-summarise large evidence through yourself (avoids the telephone game).
 
-The working tree under `.ooda/` is reserved for runtime tracing (see § Tracing). No agent doctrine in this document instructs you to stage agent-coordination payloads through `.ooda/`.
+`.ooda/` is the narrow Tier-2 escape hatch described in § Beads. Cross-agent bodies default to bd; any cross-agent material staged under `.ooda/` must still be indexed by a bead and handed off as `bd-NNN`, never as the file path.
 
 On surprise or abort during Act, re-enter the loop at Copernicus or Feynman
 with the journal (or inline observations) as new evidence.
@@ -455,17 +455,14 @@ the authoritative shape.
 ### Curation workflow
 
 You decide which traces matter. Copy interesting `.jsonl` files out of
-`.ooda/traces/` before `gardener` cleans them; everything left behind is
-GC-eligible. Don't commit traces — `.ooda/` is gitignored for a reason.
+`.ooda/traces/` if you want them long-term. Gardener does not curate or delete
+traces. Don't commit traces — `.ooda/` is gitignored for a reason.
 
-**Gardener doctrine for `.ooda/`-only sweeps.** Because `.ooda/` is fully
-gitignored, deletions under that tree produce no git diff and therefore no
-git commit is possible or expected from a pure `.ooda/` GC pass. The audit
-trail for such sweeps lives in bd's dolt history + `.beads/interactions.jsonl`,
-not in git. When a gardener prompt instructs "stage and commit deletions",
-treat that as a *precondition* — only commit when bd-state actually mutated
-(epic closures, label changes, orphan-bead cleanup). For pure `.ooda/`
-deletions, return the reclamation count and skip the commit step.
+**Doctrine for `.ooda/`-only sweeps.** Because `.ooda/` is fully gitignored,
+deletions under that tree produce no git diff and therefore no git commit is
+possible or expected. Pure `.ooda/` deletion sweeps are user-driven local
+cleanup, not gardener mission GC. Gardener's auditable work is bd-state
+mutation: epic closures, label changes, orphan-bead cleanup.
 
 ### Self-improvement workflow
 
@@ -501,7 +498,27 @@ you pick the runs that matter.
 
 bd (`bd` CLI) provides per-repo `.beads/` databases for durable coordination,
 evidence indexing, and audit trails. Beads are the **primary** cross-agent
-memory layer; `.ooda/` is reserved for runtime tracing (see § Tracing) and other non-agent-coordination scratch.
+memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
+(see § Tracing).
+
+### Canonical storage hierarchy
+
+1. **Tier 1 — PRIMARY.** bd bead `description` field. Default for all
+   cross-agent coordination bodies: briefs, contracts, evidence, reports,
+   summaries, and commit-message drafts. Pointer = `bd-NNN` in the handoff
+   line. Recipe: `printf %s "$BODY" | bd update bd-NNN --stdin` (or
+   `--body-file -`); never write the body to a file first.
+2. **Tier 2 — ESCAPE-HATCH.** `.ooda/` (gitignored), only when a body genuinely
+   cannot live in a bead: binary or oversized artefacts, tracer output
+   (`.ooda/traces/`), and user-facing generated docs such as turbo rewrites,
+   code-review reports, and PRDs. Cross-agent material staged here still needs
+   a bead pointer (`artefact: bd-NNN`); the file path is never itself a
+   cross-agent handoff artefact.
+3. **Tier 3 — NEVER.** `$TMPDIR` / `/var/folders/.../T/opencode`
+   (`var/folders|$TMPDIR|T/opencode`) is Bash-tool build/probe scratch only;
+   never a coordination-body destination, regardless of any tool-description
+   "pre-approved" affordance.
+
 ### Three-bucket model
 
 All agent-produced state falls into exactly one bucket:
@@ -510,14 +527,14 @@ All agent-produced state falls into exactly one bucket:
 |---|---|---|---|
 | **A — Coordination & evidence** | Mission epics, sub-mission tasks, cross-agent observation / orientation / summary artefacts, dependency edges, labels, status | bd epic + bd tasks; bodies live in the bead's `description` field | Created by moltke (epics, sub-tasks) or by evidence producers (copernicus, feynman, oracle); closed by gardener on package complete or by linus on review approval |
 | **C — Review loop** | Hopper ↔ linus code-review signalling | bd task with `review-request` / `review:approved` / `review:needs-work` labels; report body in the bead's `description` field | Created by hopper; relabeled and closed by linus on approval or rejection |
-| **D — Runtime tracing** | Tracer JSONL under `.ooda/traces/` (see § Tracing). Plugin-produced, not agent-produced; never coordination. | `.ooda/traces/` files only — no bead, no agent role | GC-eligible any time; curated by the user, not by agents |
+| **D — Runtime tracing + Tier-2 escape hatch** | Tracer JSONL under `.ooda/traces/` (see § Tracing), user-facing generated artefacts, and rare bead-indexed bodies that cannot live in bd. | `.ooda/` files; cross-agent bodies also have a Bucket A bead pointer | User-curated; gardener does not delete files |
 
-Bucket membership is exclusive. If it crosses agent boundaries, it belongs
-in A (bead-indexed, body in description). Bucket D is the tracer plugin's
-runtime output — agents do not produce coordination payloads in D. The
-review loop keeps its own bucket (C) because the label-state machine
-distinguishes it from generic coordination, but mechanically it is an
-A-shaped bead — body in description, no paired files.
+Bucket membership is exclusive for the coordination record. If it crosses agent
+boundaries, the record belongs in A (bead-indexed, body in description unless
+Tier 2 genuinely applies). A Tier-2 file is an adjunct indexed by the bead, not
+the cross-agent pointer. The review loop keeps its own bucket (C) because the
+label-state machine distinguishes it from generic coordination, but
+mechanically it is an A-shaped bead — body in description, no paired files.
 ### Database discovery
 
 Every agent that uses bd runs `bd where` at session start. If it exits
@@ -583,9 +600,9 @@ needed to decide the next step. This preserves pointer-over-body discipline
 handoff.
 
 Handoff artefacts use `artefact: bd-NNN` for cross-agent evidence (Bucket A).
-The only sanctioned `.ooda/` artefact references are tracing files
-(`.ooda/traces/...`); agent doctrine no longer routes coordination payloads
-through `.ooda/`.
+`.ooda/` paths are sanctioned for tracing, user-facing local outputs, and the
+narrow Tier-2 escape hatch. Cross-agent material staged through Tier 2 still
+hands off the bead id; never pass the file path as the cross-agent pointer.
 
 ### Audit trail
 
@@ -599,10 +616,10 @@ Hopper records TDD boundary events; linus records review verdicts via
 ### User-facing artefacts vs cross-agent evidence
 
 Generated artefacts that are user-facing local outputs (turbo prompt rewrites,
-generic `code-review` skill reports, PRD/source artefacts) are not agent
-coordination state and need no bead. The moment such an artefact becomes
-cross-agent handoff evidence, register an evidence bead (Bucket A) and pass
-the bead id; never pass disk paths across agents.
+generic `code-review` skill reports, PRD/source artefacts) may live under
+`.ooda/` and need no bead. The moment such an artefact becomes cross-agent
+handoff evidence, register an evidence bead (Bucket A) and pass the bead id;
+never pass disk paths across agents.
 
 ## MCP servers
 

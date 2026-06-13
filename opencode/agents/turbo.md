@@ -135,8 +135,8 @@ Turbo clarifies: surface=handoff, target=mixed, output=inline.
 Rewrite:
 
 - Collapses to 8-line terse-structured-text grammar (P2, P7).
-- Replaces inlined 25-line evidence dump with `artefact:
-  .ooda/observations-foo.md` pointer (P3).
+- Replaces inlined 25-line evidence dump with `artefact: bd-NNN` pointer
+  (P3).
 - Adds `commander_intent:` and `success_criteria:` fields (P11 — coupled
   decision needs full trace).
 - Names the verify command concretely: `cargo test -p orders` not "run

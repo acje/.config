@@ -12,7 +12,7 @@ figure whose documented method maps to its phase or specialty.
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
 | Act         | `hopper`     | Speed and decisiveness in execution                                                        |
 | Act         | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only. Nested inside the execution loop. |
-| Specialist  | `gardener`   | Workspace cleanup after loop completes: delete completed `.ooda/` artefacts, surfaces unfinished tasks           |
+| Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks                      |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
 | Specialist  | `turbo`      | Prompt rewriting via the P1–P12 activation recipe. Leaf-only; emits output, never in-place edits. |
@@ -48,7 +48,7 @@ figure whose documented method maps to its phase or specialty.
                        ┌── SPECIALISTS (on demand) ──┐
                        │   Oracle      (ADR guidance)│
                        │   Automaton   (Rust CLI)    │
-                       │   Gardener    (.ooda/ GC)   │
+                       │   Gardener    (bd-state GC) │
                        │   Turbo       (prompt rewrite)│
                        └─────────────────────────────┘
 ```
@@ -92,8 +92,8 @@ agent directly during a mission, and the only role to which all subordinates
 - `oracle` — consulted by moltke during the Decide phase when a decision
   touches architectural surface (data model, public API, cross-module
   contracts, deployment topology). Surfaces relevant ADRs and any tensions.
-- `gardener` — invoked by moltke on package complete to GC `.ooda/`
-  artefacts, close bd epics, and surface retained-open beads.
+- `gardener` — invoked by moltke on package complete to close bd epics
+  and surface retained-open beads. `.ooda/traces/` curation is the user's job.
 - `automaton` — commissioned by any agent (most often hopper or copernicus)
   when a control-flow problem is too large for in-context solving (walking
   many files, deterministic transforms, graph traversals). Writes a small
@@ -155,13 +155,13 @@ under uncertainty, multi-file/irreversible work, cross-role gaps.
 - `oracle` — read-only ADR survey + tension report. No internal cycle
   beyond its single workflow.
 - `linus` — Rust-specialist review along three axes (idioms, quality,
-  security). Runs cargo check/clippy/test/audit/deny, writes report to
-  `.ooda/review-linus-<ts>.md`. Read-only; halts on pre-existing build
+  security). Runs cargo check/clippy/test/audit/deny, registers a
+  `review-report` evidence bead. Read-only; halts on pre-existing build
   break (Surprise).
 - `automaton` — write tool, build, smoke-test, hand back tool path + run
   command + tool description.
-- `gardener` — scan `.ooda/`, delete files with all tasks closed, retain
-  files with open tasks, report to moltke.
+- `gardener` — query bd mission/evidence beads, close completed epics,
+  surface retained-open beads, report to moltke.
 - `turbo` — single-pass rewrite + P1–P12 self-audit. No internal cycle
   beyond the recipe pass. Leaf-only; never re-tasks another agent.
 
@@ -205,7 +205,7 @@ The handoff line and the back-brief format are themselves examples of the
 style: fixed grammar, parseable, no decoration.
 
 ```
-→ to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <path|->
+→ to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <bd-id|->
 
 ↑ back-brief to moltke
   scope: <OutsideMission | PackageLevel | SystemLevel>
@@ -225,8 +225,8 @@ generation.
 3. **Effort budget scales to complexity** — every agent has explicit tiers (trivial / standard / deep) with tool-call ceilings.
 4. **Canonical few-shot examples** — every agent ends with at least one trivial and one complex worked example.
 5. **Start broad, narrow down** — encoded in copernicus and feynman workflows.
-6. **Just-in-time context via filesystem + beads** — large evidence is written to `.ooda/` body files and indexed by a bd bead carrying a 3-line summary; handoffs pass the bead id (`bd-NNN`), not the body. Avoids the "telephone game" through the orchestrator.
-7. **Compaction & note-taking** — moltke creates a bd epic per mission; hopper closes child task beads on verify-green; gardener closes the epic and prunes paired `.ooda/` body files when missions complete.
+6. **Just-in-time context via beads** — large evidence lives in the bd bead `description`; `.ooda/` is only the narrow escape hatch for bodies that genuinely cannot live in a bead, still bead-pointed. Handoffs pass the bead id (`bd-NNN`), not the body or path. Avoids the "telephone game" through the orchestrator.
+7. **Compaction & note-taking** — moltke creates a bd epic per mission; hopper closes child task beads on verify-green; gardener closes the epic and surfaces retained-open beads when missions complete. Gardener does not prune `.ooda/` files.
 8. **Token-efficient tool design** — automaton writes a Rust CLI rather than simulating a for-loop in tokens.
 9. **End-state evaluation** — hopper's "Result vs intent" check is grounded in moltke's `success_criteria`, not adherence to prescribed steps.
 10. **Interleaved thinking between tool calls** — feynman's stress-test loop and hopper's verify-after-each-step enforce this.
@@ -254,26 +254,30 @@ best-effort scan.
 
 ## The `.ooda/` directory
 
-Agents write artefacts here. Gardener prunes completed missions. Add it to
-`.gitignore` unless you want missions journaled in git.
+`.ooda/` is gitignored tracing plus the narrow escape hatch for local outputs
+and bodies that genuinely cannot live in a bd bead. Cross-agent observations,
+orientation, mission contracts, journals, and oracle summaries live in bd bead
+`description` fields by default. If cross-agent material is staged under
+`.ooda/`, it still needs a bead pointer; handoffs pass `bd-NNN`, never the file
+path. Gardener does not delete `.ooda/` files; users curate traces and local
+artefacts.
 
 ```
 .ooda/
-├── observations-<slug>-<ts>.md      # Copernicus broad-tier evidence dumps
-├── orientation-<slug>-<ts>.md       # Feynman deep-orientation dumps
-├── mission-<slug>-<ts>.md           # Moltke contracts (Hopper's input)
-├── mission-<slug>-<ts>.journal.md   # Hopper's append-only execution log
-└── oracle-summary-<slug>-<ts>.md    # Oracle survey-mode ADR summaries
+├── traces/<date>/<session>.jsonl    # Tracer plugin output
+├── turbo-<slug>-<ts>.md             # User-facing prompt rewrites
+├── review-<ts>.md                   # Generic code-review reports
+└── PRDs/<slug>.prd.md               # User-facing PRDs
 ```
 
 ```sh
 echo ".ooda/" >> .gitignore
 ```
 
-`.ooda/` task hygiene: any task list, sub-mission, or checkbox an agent
-writes is closed (`- [x]` / `status = "completed"` / `**COMPLETED**`) the
-moment it finishes. Gardener deletes files where every task is closed and
-retains files with open items, surfacing the open items back to moltke.
+Task hygiene lives in bd: any task list, sub-mission, or checklist an agent
+creates is represented by beads and closed (`bd close <id> --reason ...`) the
+moment it finishes. Gardener closes mission epics only when child beads are
+closed and surfaces retained-open beads back to moltke.
 
 ## The `scripts/` directory (automaton's workspace)
 
@@ -308,7 +312,7 @@ cp AGENTS.md ~/.config/opencode/
 # or project-level
 mkdir -p .opencode/agents && cp agents/*.md .opencode/agents/
 
-# create the artefact directory
+# optional tracing / escape-hatch artefact directory
 mkdir -p .ooda && echo ".ooda/" >> .gitignore
 ```
 
@@ -322,7 +326,7 @@ mkdir -p .ooda && echo ".ooda/" >> .gitignore
 
 Plan mode proceeds with named assumptions (loads `grill-me` only on explicit user invocation), then routes:
 
-1. **copernicus** — gather evidence at the right tier. Returns inline summary + scratch path. If thin, expect a re-task from feynman.
+1. **copernicus** — gather evidence at the right tier. Returns inline summary + evidence bead id when large. If thin, expect a re-task from feynman.
 2. **feynman** — produce ranked hypotheses with falsifiers, stress-test the leader, name remaining unknowns. Re-task copernicus rather than guessing.
 3. **oracle** — optional, when architectural surface is touched: ADR summaries, binding constraints, gaps.
 4. Plan mode writes the plan (goal, evidence, options, stakes, success criteria, risks, open questions) and hands it back. The user takes it to build mode for execution.
@@ -348,16 +352,16 @@ enum BuildAction {
 For plan-mode-produced plans:
 
 ```
-> @build execute plan at .ooda/plan-rename-job-1730500000.md
+> @build execute plan in bd-60
 ```
 
 ### Single phase (rare; advanced)
 
 ```
 > @copernicus tier=moderate observe the websocket reconnect machinery
-> @feynman depth=standard orient on observations bead bd-55 (body: .ooda/observations-ws-1730000000.md)
+> @feynman depth=standard orient on observations bead bd-55
 > @moltke decide between revert vs patch — orientation in the previous message
-> @hopper execute mission package bd-60 (artefact: .ooda/mission-package-ws-revert-1730000123.md)
+> @hopper execute mission package bd-60
 > @oracle survey ADR coverage of the event-store storage layer
 > @linus review the unsafe blocks in crates/ffi/
 > @automaton write a tool to find every .rs file whose tests block lacks #[cfg(test)]
@@ -370,8 +374,8 @@ For plan-mode-produced plans:
 - Copernicus reports include `Tool calls used: 8/15` and a non-empty `Unobserved (gaps)`. Re-tasks are first-class, not failure.
 - Feynman reports always have ≥ 2 hypotheses with falsifiers, a stress-test walk-through, and (when needed) an explicit re-task brief to copernicus.
 - Moltke contracts always have a pre-mortem, `rollback_plan`, and a one-sentence **coupling judgement**. Oracle is consulted (or explicitly skipped with reason) when architectural surface is touched.
-- Hopper's `Result vs intent` is backed by an exit-0 verify command, not vibes. Every mission has a journal file; sub-missions are checkbox-closed when their `verify_commands` go green.
-- Gardener reports clean GC outcomes (`deleted: [...]`, `retained: [...]`) per package; back-briefs accumulating retention as a system-level signal.
+- Hopper's `Result vs intent` is backed by an exit-0 verify command, not vibes. Every mission has bd child tasks; sub-missions are closed when their `verify_commands` go green.
+- Gardener reports clean bd-state GC outcomes (`closed_epics: [...]`, `retained_open_beads: [...]`) per package; back-briefs accumulating retention as a system-level signal.
 - Automaton always returns a tool description (purpose / inputs / output schema / exit codes / determinism / performance) alongside the run command.
 
 ## Role discipline (doctrine, not permissions)
@@ -386,7 +390,7 @@ role-creep. The role separation is doctrinal:
 - `linus` reviews Rust code (read-only; no edits, no decisions).
 - `oracle` informs about architecture (no decisions).
 - `automaton` builds tools (no business logic).
-- `gardener` cleans (never edits, only deletes or skips).
+- `gardener` closes bd state (never edits the working tree or deletes files).
 
 An agent stepping outside its role is a doctrine violation even though the
 permission allows it. Trivial in-role tasks may be closed without escalation.
@@ -414,7 +418,7 @@ Four slash commands are available in `opencode/commands/`. Invoke them with `/co
 │   ├── feynman.md               Orient — ranked hypotheses + falsifiers + stress-test
 │   ├── moltke.md                Decide / supreme commander — mission command, two-loop owner
 │   ├── hopper.md               Act — verify-before-claim execution
-│   ├── gardener.md              Garbage collect — close completed .ooda/ artefacts
+│   ├── gardener.md              Garbage collect — close completed bd epics
 │   ├── automaton.md             Specialist — Rust CLI tool-builder for scripts/
 │   ├── oracle.md                Specialist — ADR-driven architectural guidance
 │   ├── linus.md                Specialist — Rust-specific code reviewer

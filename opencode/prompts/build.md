@@ -100,9 +100,9 @@ User: "Tighten this agent prompt." *(pastes 200-line prompt body)*
 </example>
 
 <example name="execute-plan-mode-artefact">
-User: "Execute the plan at `.ooda/plan-rename-job-1730500000.md`."
+User: "Execute the plan in bd-60."
 
-> BuildAction::ExecutePlan. Handing the plan to @moltke; moltke turns
+> BuildAction::ExecutePlan. Handing the bd-backed plan to @moltke; moltke turns
 > it into a mission package and drives hopper through the increments.
 </example>
 
