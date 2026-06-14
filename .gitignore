@@ -21,6 +21,7 @@ opencode/auth.json
 opencode/.opencode/
 .ooda/
 .beads/
+/opencode-usage.csv
 
 # Build / dep artefacts (generic, not path-pinned)
 node_modules/
