@@ -121,6 +121,11 @@ needed for the next decision. Pointer ≠ body in working context. This
 rides existing handoff grammar (every agent's handoff already supports
 `artefact:`); the rule makes a present-but-implicit discipline explicit
 so working context is not silently inflated by routine evidence inlining.
+Do not re-`bd show` the same bead while its body is still in live context and
+no `bd update` / relabel / close / reopen touched that bead; tight-cluster
+re-shows of unchanged in-context bead bodies are `Outcome::Waste`. C1 FORCED
+exemption: lazy reads after bead churn, across compaction / prune boundaries,
+or across large work phases remain correct re-hydration — do not collapse them.
 Where an agent's existing handoff prescription explicitly permits or
 requires inline bodies, prefer pointer over body — the rule is additive,
 not overriding.
@@ -276,8 +281,9 @@ Three rules earn their keep:
 
 1. **Use the bash tool's `workdir` parameter for directory context.** Never
    `cd <path> && <command>` — a bad path short-circuits the `&&` silently and
-   the real command never runs, producing empty/misleading output that is a
-   recurring stall cause. `workdir` fails loudly at the tool layer.
+   the real command never runs, producing empty/misleading output that stalls
+   the loop and forces wasteful re-runs. `workdir` fails loudly at the tool
+   layer.
 
    ```
    GOOD: bash(command="cargo test", workdir="crates/foo")
@@ -287,11 +293,32 @@ Three rules earn their keep:
    Applies to **every** agent with bash access — no exceptions for "just one
    quick command".
 2. **One statement per bash call.** Chain via parallel tool-calls in one
-   message, not via `&&` / `;` / `||` / `|` spanning two commands. Keeps
-   each call independently traceable and replayable.
-3. **Verify any path you didn't observe in this session before passing it
+   message, not via `&&` / `;` / `||` / `|` spanning two commands. `... | grep`
+   against a failed left side can produce silent empty/misleading output,
+   hiding the real failure and triggering wasted re-runs. Pure search pipelines
+   are allowed only when the leftmost command is itself search (`rg`, `jq`) and
+   not evidence-producing build/state tooling.
+3. **File inspection belongs to dedicated tools.** Use `glob` for file search,
+   `grep` for content search, `read` for file contents, and `apply_patch` /
+   edit tools for edits. Do not invoke `find`, `grep`, `cat`, `head`, `tail`,
+   `sed`, or `awk` via `bash` for those jobs; bash wrappers around inspection
+   hide tool-layer evidence and invite silent prefix failures.
+4. **Verify any path you didn't observe in this session before passing it
    to a tool.** Use `glob` or `read` for preflight. Confabulated paths
    produce misleading silent failures deep in tool chains.
+5. **Read wider once; do not re-read overlap in live context.** Before reading a
+   path, check whether the same or an overlapping offset+limit range is already
+   in live context this session. If yes, re-reading that range is
+   `Outcome::Waste`; read a wider window once instead of many tiny repeated
+   slices. C1 FORCED exemption: re-reading after a compaction / prune boundary,
+   or after the file was edited this session, is forced re-hydration and is
+   correct.
+6. **Do not re-run identical git state probes without intervening mutation.**
+   Repeating `git status` / `git diff` when no state-changing command occurred
+   since the last identical run is `Outcome::Waste`. C1 FORCED exemption: keep
+   re-checks after real mutations (`git add`, commit, apply, checkout, stash,
+   reset, or equivalent) because they re-confirm changed tree state and are
+   correct.
 
 Empty stdout from an evidence-producing or state-changing pipeline (`cargo`,
 `pytest`, build tools) is `Outcome::Surprise`, not a clean result — re-run
