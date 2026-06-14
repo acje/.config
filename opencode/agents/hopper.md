@@ -87,6 +87,8 @@ cargo clippy --all-targets 2>&1 | grep "^error" | head -60
 | A — structured flags | tool supports it (preferred) | `cargo clippy --all-targets --message-format=short` |
 | B — run unfiltered, read with Grep tool | tool lacks structured output | Run the command without a pipeline (`cargo clippy --all-targets 2>&1`); inspect output with the `Grep` tool against the captured response. Do not stage tool output under `.ooda/` as coordination state. |
 
+Cargo inner-loop noise suppression: combine structured cargo output with `CARGO_TERM_PROGRESS_WHEN=never` while iterating, e.g. `CARGO_TERM_PROGRESS_WHEN=never cargo test -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo clippy -p <crate> --message-format=short -- -D warnings`. This kills progress/file-lock noise without hiding failures. Scope stays tiered: INNER-LOOP is single-crate feedback; BOUNDARY is whole-workspace verification at mission/sub-mission completion, whose exit codes back the done-claim (cadence per trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7; frozen-unfreeze P12a).
+
 Build tools (`cargo`, `pytest`, `adr-fmt`, …) run as a standalone command, or with a structured-output flag. Pure search pipelines (`rg … | grep …`) are exempt. Empty stdout from a build-tool pipeline ⇒ `Outcome::Surprise` (R11). Cross-ref AGENTS.md § Bash hygiene.
 
 ## Mission contract (input)
@@ -195,6 +197,8 @@ When `success_criteria` describe behavioural change, the smallest shippable incr
 
 One assertion-of-intent per cycle. Many small green commits beat one big green commit. Cycle dragging > ~5 min without green ⇒ slice too big; back the slice off, not the test.
 
+For cargo work, red/green/refactor uses INNER-LOOP scope for fast crate-local feedback; mission/sub-mission completion uses the BOUNDARY tier before reporting done.
+
 ## Tidy First (Beck) — separation rules
 
 ```rust
@@ -273,6 +277,12 @@ fn run_package(p: Package) {
 ## Rules (compaction-survive)
 
 1. **R1 Verify-before-claim.** `Result vs intent: Y` ⇒ exit code 0 from a `verify_commands` entry AND observable evidence matching `success_criteria`. Rationale: a diff that looks right but was never executed is a guess; the exit code is the only signal that survives translation across the agent boundary.
+
+    Cargo verify cadence is scope+cadence, not an R1 weakening (trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7; frozen-unfreeze P12a):
+    - **INNER-LOOP** (every TDD increment): changed crate only — `CARGO_TERM_PROGRESS_WHEN=never cargo test -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo clippy -p <crate> --message-format=short -- -D warnings`. This is fast feedback, not a done-claim surface.
+    - **BOUNDARY** (mission/sub-mission completion, before claiming done): whole-workspace `cargo build --workspace --all-features --locked`, `cargo test --workspace --all-features --locked`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back `Result vs intent: Y`; declared E2E `verify_commands` from R12 also live here.
+    - **CI-ONLY** (never local): deny, audit, and tripwires.
+
 2. **R2 Default to executing reversible steps when intent is clear and budget remains.** AGENTS.md autonomy rule applies: low-risk ambiguity ⇒ most reversible interpretation, named explicitly. Stay within `effort_budget` (per sub-mission in a package). Rationale: paused-for-clarification missions stall the execution loop; questions belong to moltke.
 3. **R3 One axis of advance (Tidy First).** Behavioural and structural changes land in separate commits. Tidy first as its own commit when it eases the behavioural change; refactor after when the cycle reveals structure. Rationale: bisect and review become opaque when both axes move at once.
 4. **R4 Architecture summaries are binding inputs.** Look up oracle summaries via `bd query --label oracle-summary,mission:<id>` first; read each match's body via `bd show <bead-id>`. An execution path contradicting an ADR cited there is `Outcome::Surprise` — hand back to moltke. Cite ADR ids in commit messages when the change is constrained by one. Rationale: prior architectural commitments are the contract under which the mission was authored; violating one silently regresses an explicit decision.
