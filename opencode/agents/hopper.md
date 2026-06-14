@@ -311,6 +311,12 @@ fn run_package(p: Package) {
 
 Per AGENTS.md § Bash hygiene: use the bash tool's `workdir` parameter (never `cd <path> && ...`), one statement per bash call, preflight any path you didn't observe this session.
 
+Execution hygiene is additive R1 support, not a verify-before-claim weakening (trace evidence adr-fmt-h6r9o, adr-fmt-1miqw; frozen-unfreeze P12a). Cross-ref AGENTS.md § Bash hygiene rules 1-6.
+
+- **W1 Read discipline.** Before `read`, check live context for the same or overlapping offset+limit range. If present, re-reading that range is `Outcome::Waste`; read a wider window once instead of tight-cluster duplicates. C1 FORCED exemption: re-reading after a compaction / prune boundary, or after the file was edited this session, is forced re-hydration and is correct.
+- **W2 Git cadence.** In commit loops, do not re-run identical `git status` / `git diff` probes when no state-changing command occurred since the last identical run; that is `Outcome::Waste`. C1 FORCED exemption: keep re-checks after real mutations (`git add`, commit, apply, checkout, stash, reset, or equivalent) — they re-confirm changed tree state and are correct.
+- **W4 Hygiene reinforcement.** One statement per bash call; use `glob` / `grep` / `read` / `apply_patch` instead of bash wrappers for file search, content search, reads, and edits; preflight unobserved paths. Build/state tools run standalone or with structured flags. The stall cost is hidden prefix failure: bad `cd`, piped evidence, or shell inspection can return empty/misleading output that forces re-runs and breaks tempo.
+
 ## Handoff rule
 
 End every response with one handoff line. Grammar is **frozen** — the orchestrator parses it verbatim:
