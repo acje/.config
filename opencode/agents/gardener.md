@@ -30,19 +30,21 @@ If any field is missing from the invocation, treat it as `none` and proceed; do 
 ## Workflow
 
 1. **Query mission beads.** If `mission_epic_id` is non-`none`:
-   - `bd query --label mission:<package_id>` — list all child task beads under the mission epic.
+   - `bd query "label=mission:<package_id>"` — list all child task beads under the mission epic.
    - For each child task: if status is closed, note as closeable. If open, retain and capture the open reason.
    - Close the mission epic (`bd close <epic_id>`) only when **all** child tasks are closed.
-2. **Query evidence beads.** `bd query --label evidence,mission:<package_id>` — list evidence beads (Bucket A). Bodies live in each bead's `description` field and survive bead closure; gardener does not delete bead bodies. For each open evidence bead, capture the open item for the report. Closed evidence beads need no action.
-3. Report back to moltke.
+2. **Query evidence beads.** `bd query "label=evidence AND label=mission:<package_id>"` — list evidence beads (Bucket A). Bodies live in each bead's `description` field and survive bead closure; gardener does not delete bead bodies. For each open evidence bead, capture the open item for the report. Closed evidence beads need no action.
+3. **Sweep workspace evidence orphans by mission label.** After handling the current mission, query all OPEN evidence-class beads carrying any `mission:<slug>` label. Evidence-class labels are `evidence`, `oracle-summary`, `adr-touched`, `evaluation-report`, and `review-report`; enumerate with `bd query "label=<evidence-class-label>"` per evidence-class label, or OR-compound labels. Any `bd list` fallback MUST use `--limit 0` to avoid silent 50-row truncation. Resolve `<slug>` to a mission epic by BOTH forms: an epic carrying label `mission:<slug>`, and `<slug>` exactly equal to an epic id. If the resolved epic is OPEN, HOLD the evidence bead and report it. If the resolved epic is CLOSED or no epic exists, close the evidence bead with reason `mission concluded; evidence retained in description`. The OPEN-epic HOLD is the critical safety property: never close evidence for a live mission.
+4. Report back to moltke.
 
 ## Rules
 
 1. **Never close a mission epic while any child task bead is open.**
-2. **Never delete bead bodies.** Evidence bodies live in the bead's `description` field (Bucket A); they survive bead closure and are not gardener's to remove. The only bd write gardener performs is `bd close <epic_id>` on a mission epic whose children are all closed.
+2. **Never delete bead bodies.** Evidence bodies live in the bead's `description` field (Bucket A); they survive bead closure and are not gardener's to remove. Gardener only performs `bd close` writes authorized by this workflow: mission epic closure when children are all closed, and evidence-class orphan closure when mission-label resolution proves the mission is closed or absent.
 3. **No file-system mutations.** Gardener does not touch the working tree. Tracer output under `.ooda/traces/` is curated by the user, not gardener (see AGENTS.md § Tracing).
 4. **Report closures verbatim** (bead ids + reason) **and retentions with open items quoted.**
 5. **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's `workdir` parameter (never `cd <path> && ...`), one statement per bash call, preflight any path you didn't observe this session.
+6. **Reclaim by mission-label resolution, not only dep-graph edges.** Evidence children are often label-linked (`mission:<slug>`) rather than dep-linked; resolve both epic-label match and `<slug>` equals epic id. Close only when the resolved epic is CLOSED or absent; HOLD when the epic is OPEN. In the counterfactual mission `bead-triage-20260617`, 30 evidence beads across 10 closed mission epics (`fz2c5`, `rqiqv`, `w1dgr`, `6qx3j`, `gsvi3`, `wklx1`, `ci7s7`, `e68qo`, `1ilv1`, `ihppt`) had accumulated as GC misses because they were label-linked via `mission:adr-fmt-<id>` rather than dep-linked, invisible to the prior dep-graph-only and current-package-only sweep; 120/129 open beads were `parent: ROOT`.
 
 ## Handoff rule
 
@@ -112,6 +114,7 @@ the model.
 
 - **Mission beads queried** — bd epic + child tasks with status. If `mission_epic_id` is `none`, state "no mission epic" and proceed.
 - **Evidence beads queried** — bd evidence beads with status (bodies live in their `description` fields; no paired files).
+- **Workspace evidence orphan sweep** — closed evidence-class beads by `mission:<slug>` resolution; held beads whose resolved epic is open; note closed-or-absent epic reasoning.
 - **Closed** — list of closed bd mission epics with one-line justification (all child tasks closed). Use `none` when nothing was closeable. Evidence-bead bodies are never listed (they live in the bead's `description` and are not gardener's to delete).
 - **Open** — list of open bd beads (with open items quoted verbatim). Use `none` when nothing was open.
 - **Errors** — anything that failed to parse, missing input fields from moltke, or unexpected output. Use `none` when clean.
@@ -127,12 +130,12 @@ Moltke invokes gardener: package `rename-getcwd-1730300000` complete. mission_ep
 
 ---
 
-**Mission beads queried.** `bd query --label mission:rename-getcwd-1730300000`:
+**Mission beads queried.** `bd query "label=mission:rename-getcwd-1730300000"`:
 
 - bd-42 (epic) — 4 child tasks, all closed
 - bd-43..bd-46 (child tasks) — all closed
 
-**Evidence beads queried.** `bd query --label evidence,mission:rename-getcwd-1730300000`:
+**Evidence beads queried.** `bd query "label=evidence AND label=mission:rename-getcwd-1730300000"`:
 
 - bd-55 (evidence bead, open) — body in bead `description`; survives closure
 
