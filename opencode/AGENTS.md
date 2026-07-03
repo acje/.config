@@ -13,7 +13,7 @@ uncertainty, scope, or risk warrants it. Scale effort to query complexity.
 | `linus`       | Specialist | APPROVE / NEEDS WORK verdict on Rust review | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
 | `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
-| `gardener`    | GC         | Reclamation report; closes mission epic when children closed | moltke → user | none                       |
+| `gardener`    | GC         | Reclamation report; closes mission epic + spent scaffolding when children closed | moltke → user | none                       |
 | `turbo`       | Specialist | Rewritten prompt text (leaf-only; never in-place edits) | user                | none                                |
 
 Conventions: rows are roster order, not invocation order. "Handoff target" is the agent that consumes the primary output; back-briefs route to moltke regardless (see § Back-brief protocol). Bead labels follow bd's `<dimension>:<value>` convention (see § Beads → Label conventions).
