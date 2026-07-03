@@ -26,6 +26,8 @@ Turn any folder of files into a navigable knowledge graph with community detecti
 /graphify <path> --graphml                            # export graph.graphml (Gephi, yEd)
 /graphify <path> --neo4j                              # generate graphify-out/cypher.txt for Neo4j
 /graphify <path> --neo4j-push bolt://localhost:7687   # push directly to Neo4j
+/graphify <path> --falkordb                           # generate graphify-out/cypher.txt for FalkorDB
+/graphify <path> --falkordb-push falkordb://localhost:6379   # push directly to FalkorDB
 /graphify <path> --mcp                                # start MCP stdio server for agent access
 /graphify <path> --watch                              # watch folder, auto-rebuild on code changes (no LLM needed)
 /graphify <path> --wiki                               # build agent-crawlable wiki (index.md + one article per community)
@@ -152,9 +154,9 @@ This step has two parts: **structural extraction** (deterministic, free) and **s
 **Before dispatching subagents:** check whether `GEMINI_API_KEY` or `GOOGLE_API_KEY` is set. If neither is set, print this one-liner to the user:
 > Tip: set `GEMINI_API_KEY` or `GOOGLE_API_KEY` to use Gemini for semantic extraction (`pip install 'graphifyy[gemini]'`).
 
-Print it once, then continue. If `GEMINI_API_KEY` or `GOOGLE_API_KEY` IS set, use `graphify.llm.extract_corpus_parallel(files, backend="gemini")` for semantic extraction instead of dispatching Claude subagents. The default Gemini model is `gemini-3-flash-preview`; set `GRAPHIFY_GEMINI_MODEL` or pass `--model` in headless CLI flows to override it.
+Print it once, then continue. If `GEMINI_API_KEY` or `GOOGLE_API_KEY` IS set, use `graphify.llm.extract_corpus_parallel(files, backend="gemini")` for semantic extraction instead of dispatching subagents. The default Gemini model is `gemini-3-flash-preview`; set `GRAPHIFY_GEMINI_MODEL` or pass `--model` in headless CLI flows to override it.
 
-> **No other API keys are read.** If `GEMINI_API_KEY`/`GOOGLE_API_KEY` are unset, fall straight through to Claude Code subagent dispatch (Part B below) — the host session itself is the LLM. graphify does **not** read `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or any other provider key from the environment. If a host agent prompts the user for `ANTHROPIC_API_KEY` to run extraction, that prompt is a misread of this skill — ignore it and dispatch subagents as written.
+> **No other API keys are read.** If `GEMINI_API_KEY`/`GOOGLE_API_KEY` are unset, fall straight through to `@mention` subagent dispatch (Part B below) — the host session itself is the LLM. graphify does **not** read `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or any other provider key from the environment. If a host agent prompts the user for an API key to run extraction, that prompt is a misread of this skill — ignore it and dispatch subagents as written.
 
 **Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Merge results in Part C as before.**
 
@@ -190,7 +192,7 @@ else:
 
 **Fast path:** If detection found zero docs, papers, and images (code-only corpus), skip Part B entirely and go straight to Part C. AST handles code - there is nothing for semantic subagents to do.
 
-**MANDATORY: You MUST use the Agent tool here. Reading files yourself one-by-one is forbidden - it is 5-10x slower. If you do not use the Agent tool you are doing this wrong.**
+**MANDATORY: You MUST dispatch subagents via `@mention` here. Reading files yourself one-by-one is forbidden - it is 5-10x slower. If you read the files inline instead of mentioning subagents you are doing this wrong.**
 
 Before dispatching subagents, print a timing estimate:
 - Load `total_words` and file counts from `graphify-out/.graphify_detect.json`
@@ -228,33 +230,44 @@ Load files from `graphify-out/.graphify_uncached.txt`. Split into chunks of 20-2
 
 **Step B2 - Dispatch ALL subagents in a single message (OpenCode)**
 
-> **OpenCode platform:** Uses `@mention` dispatch instead of the Agent tool. All mentions in a single message run in parallel.
+> **OpenCode platform:** Uses `@mention` dispatch instead of an Agent tool. Put every chunk mention in ONE response — that is the only way they run in parallel. One mention, wait, then another is sequential and defeats the purpose.
 
-Dispatch one `@mention` per chunk — ALL in the same response:
+> **Subagent type:** mention `@general` (or another agent with Write + Bash). Do NOT mention `@explore` — it is read-only and cannot write chunk files to disk, which silently drops extraction results. The subagent needs Write and Bash to land its chunk JSON at CHUNK_PATH.
+
+Dispatch one `@mention` per chunk — ALL in the same response. Concrete example for 3 chunks (all in one message, not three separate messages):
 
 ```
-@agent Chunk CHUNK_NUM of TOTAL_CHUNKS: [extraction prompt with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE substituted]
+@general Chunk 1 of TOTAL_CHUNKS: [extraction prompt; files 1-15]
 
-@agent Chunk 2 of TOTAL_CHUNKS: [next chunk]
+@general Chunk 2 of TOTAL_CHUNKS: [extraction prompt; files 16-30]
+
+@general Chunk 3 of TOTAL_CHUNKS: [extraction prompt; files 31-45]
 ```
 
-Wait for all agents to return. Parse each response as JSON. Accumulate nodes/edges/hyperedges across all results and write to `graphify-out/.graphify_semantic_new.json`. If the `@agent` path cannot write chunk files, fall back to the serial path that writes each `graphify-out/.graphify_chunk_NN.json` before merge.
+CHUNK_PATH must be an **absolute** path — derive it before dispatching so each subagent writes to a known location:
+
+```bash
+PROJECT_ROOT=$(cat graphify-out/.graphify_root)
+# Then for chunk N: CHUNK_PATH="${PROJECT_ROOT}/graphify-out/.graphify_chunk_0N.json"
+```
+
+Wait for all agents to return. The success signal is the chunk file on disk at CHUNK_PATH — parse each as JSON, accumulate nodes/edges/hyperedges, and write to `graphify-out/.graphify_semantic_new.json`.
 
 Subagent prompt template:
 
-See `references/extraction-spec.md` for the exact subagent prompt (JSON schema, node-ID rules, confidence rubric, hyperedge, and vision rules). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each agent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, and DEEP_MODE substituted.
+See `references/extraction-spec.md` for the exact subagent prompt (JSON schema, node-ID rules, confidence rubric, frontmatter, hyperedge, and vision rules). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each agent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, DEEP_MODE, and CHUNK_PATH substituted, and have it write the result to CHUNK_PATH.
 
 **Step B3 - Collect, cache, and merge**
 
 Wait for all subagents. For each result:
 - Check that `graphify-out/.graphify_chunk_NN.json` exists on disk — this is the success signal
 - If the file exists and contains valid JSON with `nodes` and `edges`, include it and save to cache
-- If the file is missing, the subagent was likely dispatched as read-only (Explore type) — print a warning: "chunk N missing from disk — subagent may have been read-only. Re-run with general-purpose agent." Do not silently skip.
+- If the file is missing, the subagent was likely dispatched read-only (`@explore`) — print a warning: "chunk N missing from disk — subagent may have been read-only. Re-run mentioning `@general`." Do not silently skip.
 - If a subagent failed or returned invalid JSON, print a warning and skip that chunk - do not abort
 
-If more than half the chunks failed or are missing, stop and tell the user to re-run and ensure `subagent_type="general-purpose"` is used.
+If more than half the chunks failed or are missing, stop and tell the user to re-run and ensure the chunk subagents are mentioned as `@general` (a read+write agent), not `@explore`.
 
-Merge all chunk files into `.graphify_semantic_new.json`. **After each Agent call completes, read the real token counts from the Agent tool result's `usage` field and write them back into the chunk JSON before merging** — the chunk JSON itself always has placeholder zeros. Then run:
+Merge all chunk files into `.graphify_semantic_new.json`. **If a subagent reports its token usage in its reply, write those counts back into the chunk JSON before merging** — the chunk JSON itself always has placeholder zeros, so without this the merged totals stay zero. When usage is not reported, leave the zeros; cost tracking degrades gracefully. Then run:
 ```bash
 $(cat graphify-out/.graphify_python) -c "
 import json, glob
@@ -469,9 +482,9 @@ graphify export html  # auto-aggregates to community view if graph > 5000 nodes
 # or: graphify export html --no-viz
 ```
 
-### Steps 6b-8 - Wiki, Neo4j, SVG, GraphML, MCP, benchmark (only on their flags)
+### Steps 6b-8 - Wiki, Neo4j, FalkorDB, SVG, GraphML, MCP, benchmark (only on their flags)
 
-These run only when their flag is present (`--wiki`, `--neo4j`/`--neo4j-push`, `--svg`, `--graphml`, `--mcp`) or, for the token-reduction benchmark, when `total_words` exceeds 5,000. A default run with no export flags skips all of them. See `references/exports.md` for each one. Run any `--wiki` export before Step 9 cleanup so `.graphify_labels.json` is still available.
+These run only when their flag is present (`--wiki`, `--neo4j`/`--neo4j-push`, `--falkordb`/`--falkordb-push`, `--svg`, `--graphml`, `--mcp`) or, for the token-reduction benchmark, when `total_words` exceeds 5,000. A default run with no export flags skips all of them. See `references/exports.md` for each one. Run any `--wiki` export before Step 9 cleanup so `.graphify_labels.json` is still available.
 
 ---
 

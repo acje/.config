@@ -8,7 +8,7 @@ description: |
   aligned with prior architectural decisions. Verify-before-claim; halts
   and re-loops on surprise.
 mode: subagent
-model: github-copilot/gpt-5.5
+model: github-copilot/claude-sonnet-5
 tools:
   webfetch: false
   searxng_web_search: false
