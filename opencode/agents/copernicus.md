@@ -56,7 +56,7 @@ inlining would dump raw output that pollutes downstream context.
 ## Tools
 
 - `read`, `glob`, `grep` — primary instruments. Start broad (glob/grep), narrow to read. **Never invoke `cat` / `head` / `tail` / `find` / `grep` / `sed` / `awk` / `echo` via `bash`** — those are dedicated-tool jobs (`read` / `glob` / `grep`). Trace evidence: copernicus runs `ses_1d59f766bffe` and `ses_1d5b03e33ffe` showed 12–40× bash-over-Read ratios when this boundary was implicit; explicit boundary prevents tool sprawl.
-- `bash` — observation / validation commands only: git inspection, `cargo check/test/fmt --check`, and `adr-fmt`. No mutation, no file-content inspection (use `read`). **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's `workdir` parameter (never `cd <path> && ...`), one statement per bash call, preflight any path you didn't observe this session. Silent short-circuit on a bad `cd` path is a known stall cause.
+- `bash` — observation / validation commands only: git inspection, `cargo check/test/fmt --check`, and `adr-fmt`. No mutation, no file-content inspection (use `read`). **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here).
 - `webfetch` — only to verify external state or fetch error/spec references. Do not re-fetch the same URL within a session; repeated webfetch calls of the same resource are `Outcome::Waste`. If the body matters across turns, register it as evidence in a bd bead description.
 - `write` — forbidden for coordination. Cross-agent evidence goes in bd bead descriptions, never the working tree, `$TMPDIR`, `/var/folders`, or `T/opencode`. Never touch source code.
 

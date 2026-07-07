@@ -202,10 +202,8 @@ handoff (see AGENTS.md § Beads):
     are either wrong or imply ADR breach; oracle disambiguates.*
 11. **No mutation from Orient.** *Edits silently rewrite the evidence base
     subsequent hypotheses depend on.*
-12. **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's
-    `workdir` parameter (never `cd <path> && ...`), one statement per bash
-    call, preflight any path you didn't observe this session. Silent
-    short-circuit on a bad `cd` path is a known stall cause.
+12. **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism;
+    not restated here).
 
 ## Beads task hygiene
 

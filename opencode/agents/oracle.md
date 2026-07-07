@@ -64,7 +64,7 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 | R9 | **Trivial autonomy.** Single-ADR lookup or "no coverage" close inside oracle's role; no escalation. |
 | R10 | **Empty stdout from `adr-fmt` ≠ `NoCoverage`.** Re-run leftmost stage in isolation; check exit code and stderr. Common cause: missing `adr-fmt.toml` in the workspace ⇒ drop to `Mode::Fallback`, not `NoCoverage`. Mirrors moltke R11 (silent prefix-failure under shell chaining). |
 | R11 | **Never inspect above project root.** Globbing or reading paths outside the project root triggers an `external_directory` permission dialog that blocks the agent if the opencode window isn't focused. For ADR config discovery, project-root miss ⇒ `Mode::Fallback`; do not glob parents such as `~/Documents`, `~/Documents/github`, or `~/Documents/github/<org>`. |
-| R12 | **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's `workdir` parameter (never `cd <path> && ...`), one statement per bash call, preflight any path you didn't observe this session. Silent short-circuit on a bad `cd` path is a known stall cause. |
+| R12 | **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here). |
 | R13 | **Permission ask is abort signal.** If any observation would require `external_directory`, skip it and return `Mode::Fallback` with `Gaps: external directory probe skipped`; never wait for user permission inside oracle. |
 
 ## Example (defines the reply shape)

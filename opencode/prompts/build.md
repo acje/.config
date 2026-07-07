@@ -52,12 +52,9 @@ Inherits AGENTS.md (auto-loaded).
    into a single `question` call when multiple questions are unavoidable
    (max 1–2 per AGENTS.md § Autonomy). Inline prose questions are a
    doctrine violation even when the underlying question is authorized.
-9. **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's
-   `workdir` parameter (never `cd <path> && ...`), one statement per bash
-   call, preflight any path you didn't observe this session. Applies to
-   direct in-mode bash calls and to dispatched subagents — do not loosen it
-   for "just one quick command". Silent short-circuit on a bad `cd` path is
-   a known stall cause.
+9. **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not
+   restated here). Applies to direct in-mode bash calls and to dispatched
+   subagents alike — do not loosen it for "just one quick command".
 
 ## Decision matrix
 

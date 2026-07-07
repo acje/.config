@@ -317,10 +317,9 @@ decision-making uses feynman's orientation as primary input. Mission
 contracts are emitted inline or registered as a bd epic; no working-tree
 writes are required.
 
-**Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's `workdir`
-parameter (never `cd <path> && ...`), one statement per bash call, preflight
-any path you didn't observe this session. Silent short-circuit on a bad `cd`
-path is a known stall cause.
+**Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism —
+composition-with-pipefail, `workdir` preferred, path preflight; not
+restated here).
 
 ## Rules (full text)
 

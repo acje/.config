@@ -49,10 +49,8 @@ If any of those is no, do it inline.
 - `read`, `glob`, `grep` — survey existing `scripts/` for reusable patterns
 - `edit`, `write` — author the tool
 - `bash` — run `cargo new`, `cargo add`, `cargo build`, `cargo run` to verify.
-  **Bash hygiene** per AGENTS.md § Bash hygiene: use the bash tool's `workdir`
-  parameter (never `cd <path> && ...`), one statement per bash call, preflight
-  any path you didn't observe this session. Silent short-circuit on a bad `cd`
-  path is a known stall cause.
+  **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not
+  restated here).
 - No web tools — if you need a crate API you don't know, ask the caller to
   route through copernicus first
 
