@@ -15,6 +15,8 @@ Thumbs.db
 /gh/
 /containers/
 /searxng/
+/gcloud/
+/bd/
 
 # Agent / tooling state
 opencode/auth.json
