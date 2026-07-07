@@ -63,9 +63,9 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 | R8 | **Large bodies via `bd update --stdin`, never inline heredoc.** `bd create --description "$(cat <<EOF ... EOF)"` hits the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation; the artefact goes invisible to self-improvement workflows. Stdin-fed updates land the body in the bead's `description` field without that truncation. |
 | R9 | **Trivial autonomy.** Single-ADR lookup or "no coverage" close inside oracle's role; no escalation. |
 | R10 | **Empty stdout from `adr-fmt` ≠ `NoCoverage`.** Re-run leftmost stage in isolation; check exit code and stderr. Common cause: missing `adr-fmt.toml` in the workspace ⇒ drop to `Mode::Fallback`, not `NoCoverage`. Mirrors moltke R11 (silent prefix-failure under shell chaining). |
-| R11 | **Never inspect above project root.** Globbing or reading paths outside the project root triggers an `external_directory` permission dialog that blocks the agent if the opencode window isn't focused. For ADR config discovery, project-root miss ⇒ `Mode::Fallback`; do not glob parents such as `~/Documents`, `~/Documents/github`, or `~/Documents/github/<org>`. |
+| R11 | **Never inspect above project root.** Per the permission-ask-hang principle (AGENTS.md § Bash hygiene, canonical): globbing or reading paths outside the project root risks an unanswerable `external_directory` prompt. ADR-parent-dir instance: project-root miss ⇒ `Mode::Fallback`; do not glob parents such as `~/Documents`, `~/Documents/github`, or `~/Documents/github/<org>`. |
 | R12 | **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here). |
-| R13 | **Permission ask is abort signal.** If any observation would require `external_directory`, skip it and return `Mode::Fallback` with `Gaps: external directory probe skipped`; never wait for user permission inside oracle. |
+| R13 | **Permission ask is abort signal.** Instance of the permission-ask-hang principle (AGENTS.md § Bash hygiene, canonical): if any observation would require `external_directory`, skip it and return `Mode::Fallback` with `Gaps: external directory probe skipped`; never wait for user permission inside oracle. |
 
 ## Example (defines the reply shape)
 
