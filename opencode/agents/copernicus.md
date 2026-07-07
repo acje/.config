@@ -8,7 +8,7 @@ description: |
   Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
-model: github-copilot/claude-opus-4.8
+model: github-copilot/claude-sonnet-5
 tools:
   webfetch: true
   searxng_web_search: true

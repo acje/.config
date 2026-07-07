@@ -346,6 +346,18 @@ If project clippy config is stricter than `-D warnings`, defer to it.
 If the first command (`cargo check --all-targets`) fails on baseline,
 apply rule 3 (Surprise) — do not proceed.
 
+**Availability-probe hygiene (known-stall — never violate).** When
+checking whether `cargo-audit` / `cargo-deny` are installed, issue **one
+`command -v` per bash call** — either two separate one-statement bash
+tool-calls (batched in a single message for parallelism) or skip the
+probe and let the `cargo audit` / `cargo deny check` invocation itself
+report absence. **Never** a `;`-joined or `&&`-joined combined probe such
+as `command -v cargo-audit; command -v cargo-deny` — that two-statement
+form hangs the linus subagent (observed stall, identical failure mode to
+the scratch-file `rm` below). Per AGENTS.md § Bash hygiene rule 2, one
+statement per bash call. This applies to every presence check, not just
+these two tools.
+
 ## Report
 
 The full review body lives in the review-report evidence bead's `description`
@@ -391,7 +403,8 @@ End with the AGENTS.md handoff line:
   via `--description`, or `bd update --stdin` for larger
   bodies); handoff carries `bd-NNN`. Per AGENTS.md § Evidence carrying
   — pointer over body.
-- Bash hygiene per AGENTS.md § Bash hygiene (workdir, one statement per call, path preflight).
+- Bash hygiene per AGENTS.md § Bash hygiene (workdir, one statement per call, path preflight). **One `command -v` per bash call** for tool-availability probes — a `;`-joined `command -v cargo-audit; command -v cargo-deny` is a known linus stall; split it or skip it (see § Validation).
+- **No scratch-file marshalling.** Never stage the review body, the diff, or the original description to `/tmp`, `$TMPDIR`, `/var/folders`, or `T/opencode` as intermediate files. Read the diff with `git diff` / `git show` to stdout; build the review body in-context and write it straight into the review-report bead `description` via `bd update <id> --stdin`. Staging report fragments to temp files and then batch-`rm`-ing them is a known linus stall (the `rm -f /var/folders/.../*.txt` step hangs). The bead `description` is the durable home; disk scratch is never a coordination surface.
 - Trivial in-role observations close inline; structural surprises
   escalate. Per AGENTS.md § Trivial autonomy.
 - Back-briefs to moltke for observations outside mission scope but

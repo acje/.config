@@ -165,11 +165,13 @@
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/claude-sonnet-5"
     },
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/claude-opus-4.8"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
@@ -183,15 +185,18 @@
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/claude-sonnet-5"
     },
     "automaton": {
       "prompt": "{file:./agents/automaton.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/claude-sonnet-5"
     },
     "turbo": {
       "prompt": "{file:./agents/turbo.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/claude-sonnet-5"
     },
     "dramallama": {
       "prompt": "{file:./prompts/build.md}",

@@ -298,6 +298,21 @@ Three rules earn their keep:
    hiding the real failure and triggering wasted re-runs. Pure search pipelines
    are allowed only when the leftmost command is itself search (`rg`, `jq`) and
    not evidence-producing build/state tooling.
+
+   This includes **tool-availability probes**: issue one `command -v` per bash
+   call (batch several as parallel tool-calls in one message), never a
+   `;`/`&&`-joined chain. The joined form is a known subagent stall — the
+   process hangs on the combined invocation even when every probed tool exists.
+
+   ```
+   GOOD: two tool-calls in one message —
+         bash(command="command -v cargo-audit")
+         bash(command="command -v cargo-deny")
+   BAD:  bash(command="command -v cargo-audit; command -v cargo-deny")
+   ```
+
+   When the probe only gates an optional step, prefer skipping it and letting
+   the real command (`cargo audit`, `cargo deny check`) report its own absence.
 3. **File inspection belongs to dedicated tools.** Use `glob` for file search,
    `grep` for content search, `read` for file contents, and `apply_patch` /
    edit tools for edits. Do not invoke `find`, `grep`, `cat`, `head`, `tail`,
