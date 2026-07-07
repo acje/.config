@@ -277,13 +277,43 @@ Permissions are uniform across all agents — see `opencode.json` `permission.ba
 Allow-by-default minus a small denylist of catastrophic commands. No `ask` state;
 no per-agent matrices. Run any allowed command without confirmation.
 
+### Permission-ask-hang (canonical mechanism)
+
+Named principle, cited elsewhere by name rather than re-described: an
+`ask`-class permission prompt (e.g. opencode's `external_directory` dialog,
+or any tool-layer confirmation gate) blocks a **headless subagent forever**
+when no human is watching the session — neither vendor tested implements
+an idle-timeout that auto-answers or auto-cancels the prompt. Evidence:
+opencode issue #35073 (sync subagents hang on ask-prompts — exact
+root-cause match); confirmed two-vendor no-idle-timeout.
+
+This is the general mechanism other doctrine cites by name — the
+ADR-parent-dir case (oracle `external_directory`, see `agents/oracle.md`
+R11/R13), the scratch-path allow-set (§ Beads → Canonical storage
+hierarchy, Tier 2b below), and any future case with the same "operation
+raises an ask-prompt, no human answers it, subagent hangs forever" shape.
+
+**Does not apply where no `ask`-class prompt is raised.** The original
+joined-`command -v` ban (`command -v a; command -v b`) attributed its
+observed stall to this mechanism, but `command -v` touches no path and
+raises no permission event — the stated mechanism does not apply to it
+(see § Bash hygiene rule 2). Probe P1 (joined `command -v` form) ran
+clean 3× this session with no reproduction. This is evidence the *stated
+cause* was wrong, not proof the joined form is safe in general — if a
+real trace resurfaces a stall on this shape, re-tighten the guidance
+rather than assume the probe result generalises forever.
+
 Three rules earn their keep:
 
-1. **Use the bash tool's `workdir` parameter for directory context.** Never
-   `cd <path> && <command>` — a bad path short-circuits the `&&` silently and
-   the real command never runs, producing empty/misleading output that stalls
-   the loop and forces wasteful re-runs. `workdir` fails loudly at the tool
-   layer.
+1. **Use the bash tool's `workdir` parameter for directory context,
+   preferred over `cd <path> && <command>`.** Corrected rationale (probe
+   P3): the shell is not silent on a bad `cd` — it prints `cd: no such
+   file or directory` to stderr, and `&&` means the second command never
+   runs. The risk is agent-side misreading (skimming past the stderr
+   line, or misreading "no command output" as "command ran and produced
+   nothing") rather than the shell silently swallowing the failure.
+   `workdir` still wins because it fails at the tool layer where the
+   caller cannot miss it, not because the shell hides anything.
 
    ```
    GOOD: bash(command="cargo test", workdir="crates/foo")
@@ -292,27 +322,61 @@ Three rules earn their keep:
 
    Applies to **every** agent with bash access — no exceptions for "just one
    quick command".
-2. **One statement per bash call.** Chain via parallel tool-calls in one
-   message, not via `&&` / `;` / `||` / `|` spanning two commands. `... | grep`
-   against a failed left side can produce silent empty/misleading output,
-   hiding the real failure and triggering wasted re-runs. Pure search pipelines
-   are allowed only when the leftmost command is itself search (`rg`, `jq`) and
-   not evidence-producing build/state tooling.
+2. **Composition is allowed; guard evidence-producing pipes with
+   `pipefail`.** The prior blanket "one statement per bash call" ban is
+   replaced by a shape distinction:
 
-   This includes **tool-availability probes**: issue one `command -v` per bash
-   call (batch several as parallel tool-calls in one message), never a
-   `;`/`&&`-joined chain. The joined form is a known subagent stall — the
-   process hangs on the combined invocation even when every probed tool exists.
+   - **Parallel tool-calls for independent operations** (e.g. two
+     unrelated `bash` calls, or `git status` + `git diff`) remain the
+     **default ergonomic** — batch them as separate tool-calls in one
+     message rather than joining with `&&` / `;`. This is about tempo and
+     clean per-call exit codes, not a silent-failure risk.
+   - **Literal shell composition for a sequential single logical unit**
+     (e.g. `git add -A && git commit -m "msg"`) is allowed — the
+     operations are one unit of work, and splitting them into separate
+     tool-calls buys nothing.
+   - **Pipes with an evidence-producing left stage** (`cargo … | grep`,
+     `pytest … | head`) MANDATE a `pipefail` guard: prefix with
+     `set -o pipefail;` (bash) or check `PIPESTATUS[0]` explicitly, so a
+     failing left stage cannot masquerade as a clean right-stage result.
+     Without the guard, `cmd_that_fails | grep pattern` exits 0 (grep's
+     code) even though `cmd_that_fails` exited non-zero — the single most
+     common silent-failure shape this doctrine guards against.
+   - **Empty stdout from an evidence-producing or state-changing pipeline
+     is still `Outcome::Surprise`** (preserved, and elevated: this is the
+     backstop that catches a `pipefail` guard you forgot, not a
+     replacement for one). Re-run the leftmost stage in isolation; capture
+     exit code and stderr. Pure search pipelines (`rg … | grep …`) stay
+     exempt — empty output there is a valid no-match, not a signal of
+     prefix failure.
+
+   **Tool-availability probes** (`command -v <tool>`): parallel tool-calls
+   remain the default ergonomic (batch as separate one-statement bash
+   tool-calls in one message). The prior absolute ban on the `;`/`&&`-joined
+   form is lifted — see Permission-ask-hang above: `command -v` raises no
+   permission event, so it does not hit the mechanism the ban originally
+   cited, and probe P1 ran the joined form clean 3× this session. This is
+   not a claim the joined form is safe in general, only that the stated
+   cause doesn't apply and the stall didn't reproduce; re-tighten if a real
+   trace resurfaces it. When the probe only gates an optional step, prefer
+   skipping it and letting the real command (`cargo audit`, `cargo deny
+   check`) report its own absence.
 
    ```
-   GOOD: two tool-calls in one message —
-         bash(command="command -v cargo-audit")
-         bash(command="command -v cargo-deny")
-   BAD:  bash(command="command -v cargo-audit; command -v cargo-deny")
+   GOOD (guarded pipe):    bash(command="set -o pipefail; cargo test 2>&1 | tee /tmp/out.log | grep -q 'test result: FAILED'")
    ```
 
-   When the probe only gates an optional step, prefer skipping it and letting
-   the real command (`cargo audit`, `cargo deny check`) report its own absence.
+   Guard example above uses `/tmp` only as the shell tool's own transient
+   redirect target within a single command (never read back cross-turn);
+   an artefact meant to outlive the command belongs in `.ooda/tmp/<mission_id>/`
+   or a bd bead per § Beads → Canonical storage hierarchy, not bare `/tmp`.
+
+   ```
+   GOOD (sequential unit): bash(command="git add -A && git commit -m 'msg'")
+   GOOD (independent ops, parallel tool-calls):
+                           bash(command="command -v cargo-audit")
+                           bash(command="command -v cargo-deny")
+   ```
 3. **File inspection belongs to dedicated tools.** Use `glob` for file search,
    `grep` for content search, `read` for file contents, and `apply_patch` /
    edit tools for edits. Do not invoke `find`, `grep`, `cat`, `head`, `tail`,
@@ -549,17 +613,38 @@ memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
    cross-agent coordination bodies: briefs, contracts, evidence, reports,
    summaries, and commit-message drafts. Pointer = `bd-NNN` in the handoff
    line. Recipe: `printf %s "$BODY" | bd update bd-NNN --stdin` (or
-   `--body-file -`); never write the body to a file first.
-2. **Tier 2 — ESCAPE-HATCH.** `.ooda/` (gitignored), only when a body genuinely
-   cannot live in a bead: binary or oversized artefacts, tracer output
-   (`.ooda/traces/`), and user-facing generated docs such as turbo rewrites,
-   code-review reports, and PRDs. Cross-agent material staged here still needs
-   a bead pointer (`artefact: bd-NNN`); the file path is never itself a
-   cross-agent handoff artefact.
-3. **Tier 3 — NEVER.** `$TMPDIR` / `/var/folders/.../T/opencode`
-   (`var/folders|$TMPDIR|T/opencode`) is Bash-tool build/probe scratch only;
-   never a coordination-body destination, regardless of any tool-description
-   "pre-approved" affordance.
+   `--body-file -`); never write the body to a file first. Unchanged by
+   the scratch tier below: ephemeral scratch is never a substitute for a
+   coordination body landing here.
+2. **Tier 2 — ESCAPE-HATCH.** `.ooda/` (gitignored). Two sanctioned uses:
+
+   - **(a) Bodies that cannot live in a bead** — binary or oversized
+     artefacts, tracer output (`.ooda/traces/`), and user-facing generated
+     docs such as turbo rewrites, code-review reports, and PRDs.
+     Cross-agent material staged here still needs a bead pointer
+     (`artefact: bd-NNN`); the file path is never itself a cross-agent
+     handoff artefact.
+   - **(b) Tier 2b — workspace-local ephemeral scratch**, at
+     `.ooda/tmp/<mission_id>/`: single-turn or single-mission intermediate
+     files (a diff staged before reading, a working file mid-transform),
+     self-cleaned by the producing agent before mission end. Being inside
+     the project root, this path never triggers the `external_directory`
+     permission check (see Permission-ask-hang above) that paths outside
+     the root risk. This is scratch, not coordination — cross-agent
+     coordination bodies still go through Tier 1 above; `.ooda/tmp/` is
+     never a substitute for the bd bead `description` field.
+3. **Tier 3 — NEVER (as coordination).** `$TMPDIR` / `/var/folders/.../T/opencode`
+   (`var/folders|$TMPDIR|T/opencode`) is never a coordination-body
+   destination, regardless of any tool-description "pre-approved"
+   affordance — that framing is unchanged. For ephemeral scratch
+   specifically, `.ooda/tmp/<mission_id>/` (Tier 2b) is the
+   workspace-relative default: it self-cleans and never raises a
+   permission prompt. `$TMPDIR/opencode` remains available only as a
+   **lower-preference fallback** — e.g. the bash tool's own build/probe
+   scratch affordance, or a turn where no mission id is yet known (probe
+   P2: a `$TMPDIR/opencode` round-trip ran clean this session, so the
+   fallback is not itself hazardous — it is simply not the default).
+   State the reason when falling back to it instead of Tier 2b.
 
 ### Three-bucket model
 
