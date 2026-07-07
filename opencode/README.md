@@ -432,7 +432,7 @@ Four slash commands are available in `opencode/commands/`. Invoke them with `/co
 │   ├── agent-browser/SKILL.md  Browser automation (probe-then-fallback)
 │   ├── code-review/SKILL.md    Generic code review (standard | security modes)
 │   └── grill-me/SKILL.md       Stress-test plans by interview
-├── package.json                Pins @opencode-ai/plugin SDK (currently 1.14.50)
+├── package.json                Pins @opencode-ai/plugin SDK (currently 1.17.15)
 ├── package-lock.json           Lockfile; tracked
 ├── commands/                    Custom slash commands (invoke with /command-name)
 │   ├── prime.md                 /prime — session context priming via copernicus
