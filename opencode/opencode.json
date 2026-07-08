@@ -134,7 +134,10 @@
     "edit": "allow",
     "write": "allow",
     "external_directory": {
-      "~/tmp/**": "allow"
+      "~/tmp/**": "allow",
+      "/tmp/**": "allow",
+      "/private/tmp/**": "allow",
+      "/var/folders/**": "allow"
     }
   },
   "model": "github-copilot/claude-opus-4.8",

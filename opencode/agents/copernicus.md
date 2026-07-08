@@ -13,7 +13,7 @@ tools:
   webfetch: true
   searxng_web_search: true
   task: false
-reasoningEffort: xhigh
+reasoningEffort: max
 ---
 
 # Copernicus — Observe

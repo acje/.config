@@ -13,11 +13,11 @@ tools:
   webfetch: false
   searxng_web_search: false
   task: false
-reasoningEffort: xhigh
-# Note: temperature / top_p intentionally absent. gpt-5.5 reports
+reasoningEffort: medium
+# Note: temperature / top_p intentionally absent. claude-sonnet-5 reports
 # `temperature: false` and exposes no `variants` block, so sampler
-# knobs are no-ops on this provider. `reasoningEffort: xhigh` keeps
-# the model deep on long-running coding work; re-evaluate on model swap.
+# knobs are no-ops on this provider. `reasoningEffort: medium` balances
+# depth against cost on long-running coding work; re-evaluate on model swap.
 ---
 
 <!-- Frozen: changes require trace evidence per turbo recipe P12a -->

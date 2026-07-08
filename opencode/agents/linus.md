@@ -11,7 +11,7 @@ tools:
   webfetch: false
   searxng_web_search: false
   task: false
-reasoningEffort: xhigh
+reasoningEffort: medium
 ---
 
 # Linus — Rust-specialist code reviewer
