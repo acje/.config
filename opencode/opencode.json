@@ -140,7 +140,10 @@
       "/tmp/**": "allow",
       "/private/tmp/**": "allow",
       "/var/folders/**": "allow",
-      "~/.cargo/registry/**": "allow"
+      "~/.cargo/registry/**": "allow",
+      "~/.config/opencode/skills/**": "allow",
+      "~/.agents/skills/**": "allow",
+      "~/.claude/skills/**": "allow"
     }
   },
   "model": "github-copilot/claude-opus-4.8",
