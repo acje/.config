@@ -6,6 +6,19 @@
 > Usability, and i18n are N/A for targets with no human-facing surface (e.g. a
 > pure backend library) — state N/A explicitly with a one-line reason.
 
+**Shard ownership.** This is the phase-7 evidence shard. It scores exactly the
+four dimensions below (Docs, Usability/UX, Accessibility, i18n/l10n).
+**Accessibility's home row is here** — the phase-1 shard reads a11y-as-design-
+intent context but does not score it (facet-ownership rule, SKILL.md § The 29
+dimensions); this shard scores a11y against the delivered surface.
+
+**Probe floor is mandatory.** A dimension may be scored `ABSENT` only after its
+probe floor below has been executed and its transcript recorded. `ABSENT` means
+"these specific probes returned nothing", never "I didn't find anything". For
+Accessibility and i18n, prefer `N/A` (with a one-line reason) over `ABSENT` when
+the target ships no human-facing surface — but run the probes first so the N/A
+is earned, not assumed.
+
 ## Docs
 
 Good documentation is a *contract that tracks the code*, not aspirational prose.
@@ -61,6 +74,13 @@ integrity, README walkthroughs, and stale cross-references recur heavily.
   reader needs a "why" comment to follow the code, treat the code as the defect
   (rename/extract/restructure); durable rationale belongs in ADR/commit, not
   inline prose.
+
+**Probe floor (mandatory before ABSENT):**
+- Locate the entry docs (`README*`, `ARCHITECTURE*`, `docs/`, `OPERATIONS*`) via `rg -l -i 'readme|architecture|operations'` / directory listing.
+- Grep public items for doc comments (`rg 'pub (fn|struct|enum|trait)'` vs preceding `///`/`/**` — sample the ratio).
+- Grep for diagrams and cross-references (`rg -i 'mermaid|```mermaid|C4|\.svg|\]\('` for intra-doc links).
+- Grep for missing-docs suppression (`rg 'allow\(missing_docs|missing_docs'`).
+- ABSENT only if the target has a public surface AND no README/API docs exist — record the transcript.
 
 **Anti-patterns to hunt:**
 - doc-drift — architecture/ops/README describes a past or aspirational state; API
@@ -129,6 +149,12 @@ are the UX surface. History here is MODERATE.
   the user cannot reach, or a documented capability with no working path, is a
   finding.
 
+**Probe floor (mandatory before ABSENT):**
+- Identify the user surface: CLI (`rg -i 'clap|argparse|commander|cobra|help'`), API (public facade), or GUI/HTML.
+- Grep for end-user error copy vs operator logs (`rg -i 'eprintln|error!|println.*error|user.*message'`; sample for jargon leakage).
+- Grep for a getting-started / quickstart path (`rg -l -i 'quickstart|getting.?started|usage|example'`).
+- ABSENT only if the target has a user/adopter surface AND these probes surfaced no UX affordance — record the transcript. (N/A if there is genuinely no human/adopter surface — state so.)
+
 **Anti-patterns to hunt:**
 - operator-jargon-in-end-user-error — internal type/variant names or diagnostic
   context leaking into a message a user reads.
@@ -173,6 +199,13 @@ POUR checks below. **These are best-practice-derived, not history-mined.**
   correctly — no broken/contradictory ARIA); custom controls degrade to an
   accessible baseline (e.g. `title=`/native attribute as a documented floor).
 
+**Probe floor (mandatory before ABSENT):**
+- First determine whether the target ships a human-facing visual/interactive surface (`rg -l -i '\.html|\.tsx|\.jsx|\.vue|\.svelte|template'`). If none → `N/A` with the one-line reason (run this probe to earn it).
+- If a surface exists: grep for text alternatives and semantics (`rg -i 'alt=|aria-|role=|<label|title='`).
+- Grep for colour-only signalling and contrast tells (`rg -i 'color:|background:|status.*color'` on status/severity markup).
+- Grep for keyboard/focus handling (`rg -i 'tabindex|onkeydown|:focus|hover'`).
+- ABSENT only if a user-facing surface exists AND these probes surfaced no a11y affordance — record the transcript.
+
 **Anti-patterns to hunt:**
 - mouse-only-control — an affordance (tooltip, menu, drag handle) with no
   keyboard or focus path.
@@ -215,6 +248,12 @@ best-practice-derived, not history-mined.**
   translation infrastructure) from a mere consistency defect (single-locale
   product with a stray string). Recommending a localization framework for a
   single-locale target is itself a scoping error.
+
+**Probe floor (mandatory before ABSENT):**
+- First determine locale scope: is this a deliberate single-locale target (then consistency, not framework, is the bar) or multi-locale? Check `rg -l -i 'locale|i18n|l10n|translat|lang='`.
+- Grep for externalized strings / translation resources (`rg -l -i '\.po|\.mo|messages\.|i18n/|locales/|gettext|fluent'`).
+- Grep for locale-aware formatting and a stray-language consistency check (`rg -i 'Intl\.|strftime|locale|toLocale'`; scan a user-facing surface for mixed-language strings).
+- Prefer `N/A` (one-line reason) over `ABSENT` for a no-user-text or deliberate single-locale target — but run the probes first so the N/A is earned. Record the transcript.
 
 **Anti-patterns to hunt:**
 - mixed-language-UI — a stray foreign-language string in an otherwise

@@ -7,8 +7,11 @@ description: Generic, shareable SDLC quality sweep of a codebase or crate. Score
 
 A generic, breadth-first SDLC quality sweep. It scores 29 dimensions across 7
 phases against **one target codebase** and produces a prioritised HTML report.
-The engine is target-agnostic and self-contained; three swappable data layers
-tune it:
+The evidence pass **fans out one subagent per SDLC phase** (seven parallel
+shards) so each shard gets a fresh full context budget for its ~4 dimensions
+rather than 29 dimensions competing in one window — the fix for run-to-run
+score nondeterminism. The engine is target-agnostic and self-contained; three
+swappable data layers tune it:
 
 - **Toolchain adapter** (`adapters/toolchains.md`) — maps the target's
   ecosystem to `{test, lint, audit, deny}` commands (rust / node / python / …).
@@ -38,9 +41,24 @@ a finding, not a pass.
 Corollary (the green-arbitration rule): **green WITHOUT evidence = under-looked;
 green WITH evidence = pass.** A dimension marked fine but carrying no cited
 artifact is a finding (look harder), not a pass. A dimension marked fine *with*
-a cited artifact is a genuine pass. A single concrete artifact **closes** a
-dimension — do not keep interrogating something that has already produced
-evidence.
+a cited artifact is a genuine pass.
+
+**Closing a dimension is state-dependent.** For a **binary** dimension (present
+or not — e.g. "a lockfile is committed", "the format carries a version tag") a
+single concrete artifact **closes** it; do not keep interrogating something that
+has already produced dispositive evidence. For a **graded** dimension (Testing,
+Security, Observability, Correctness, Reliability) a first hit does **not**
+close it — the dimension's probe floor must COMPLETE, so the score reflects
+coverage rather than first-touch luck. Which artifact you stumble on first is
+nondeterministic; requiring the floor to finish removes that variance.
+
+**ABSENT is earned, not defaulted.** A dimension may be scored `ABSENT` only
+after its **probe floor** (the mandatory minimum probe set in the phase
+reference — specific greps, conventional paths, adapter commands) has been
+executed and its transcript recorded. `ABSENT` means "these specific probes
+returned nothing", never "I didn't find anything". This converts
+ABSENT-by-exhaustion (the dominant source of run-to-run variance) into
+ABSENT-by-completed-checklist.
 
 ## When to run (and when NOT to)
 
@@ -186,13 +204,76 @@ hunt for*. Read the phase reference before that phase's evidence pass.
    *this* codebase's contract, not a generic one.
 4. Record the sweep timestamp, target, and ecosystem in the report header.
 
-### Phase 1 — Evidence pass (all 29 dimensions, equal rigour)
-Work phase by phase. **Before each phase, read its reference file**
-(`references/phase-<n>-*.md`) — it holds the concrete checks and named
-anti-patterns to hunt for that phase's dimensions. The reference is the
-authoritative check source; the list below is a fast summary, not a substitute.
-For every dimension, search for concrete presence-evidence. Use the
-toolchain-adapter row for the mechanical checks:
+### Phase 1 — Evidence pass (7 parallel phase shards, equal rigour)
+
+The evidence pass **fans out one subagent per SDLC phase** — seven shards, run
+in parallel. Each shard is a self-contained evidence job: it loads **exactly its
+own** `references/phase-<n>-*.md`, scores **only that phase's dimension
+cluster**, and returns a phase scorecard. A single agent scoring all 29
+dimensions in one context window is what makes the sweep nondeterministic (later
+dimensions starve as context saturates and default to under-looked `ABSENT`);
+per-phase fan-out gives each shard a fresh full budget for ~4 dimensions.
+
+Do **not** split by code region (dimensions are cross-cutting) or by individual
+dimension (29 shards = coordination overhead >> work, and evidence dedup is
+lost). Phase is the natural boundary — it is already the data-layer seam.
+
+**The seven shards and their scored dimension counts (sum = 29):**
+
+| Shard | Reference file | Scores |
+|---|---|---|
+| 1 | `references/phase-1-design.md` | 6 — API/schema, Architecture, **Type safety**, **API-versioning**, Compatibility, **Cost** |
+| 2 | `references/phase-2-implementation.md` | 5 — Refactor, Correctness, Error handling, Concurrency, Dead-code |
+| 3 | `references/phase-3-verification.md` | 4 — Testing, Lint/format/style, Performance, Chaos/soak |
+| 4 | `references/phase-4-security.md` | 3 — Security, Dependency/build, Supply-chain integrity |
+| 5 | `references/phase-5-release.md` | 6 — Operational resilience, Data lifecycle, Reliability, Delivery perf (DORA), Safety, Flexibility/portability |
+| 6 | `references/phase-6-observe.md` | 1 — Observability |
+| 7 | `references/phase-7-docs.md` | 4 — Docs, Usability/UX, **Accessibility**, i18n/l10n |
+
+**Facet-ownership rule (each dimension scored exactly once).** The four
+cross-phase facet dimensions are scored by **their home shard only**; the other
+shard reads the facet content for context but must NOT emit a score for it:
+
+| Facet dimension | Scored by (home) | Read-only context in |
+|---|---|---|
+| Type safety | Shard 1 (phase 1) | Shard 2 (phase 2) |
+| API-versioning & consumer contracts | Shard 1 (phase 1) | Shard 5 (phase 5) |
+| Cost / resource economics | Shard 1 (phase 1) | Shard 6 (phase 6) |
+| Accessibility (a11y) | Shard 7 (phase 7) | Shard 1 (phase 1) |
+
+The rule is one-directional and unambiguous: **a facet dimension belongs to the
+shard whose reference file carries its full dimension row and probe floor.**
+Shard 6 therefore scores only Observability (Cost is context there); Shard 2
+never scores Type safety; Shard 5 never scores API-versioning; Shard 1 never
+scores Accessibility. This guarantees 6+5+4+3+6+1+4 = 29 dimensions, none
+dropped, none doubled.
+
+**Each shard's contract (Result-shaped return).** A shard, for every dimension
+in its scored set, executes the dimension's **mandatory probe floor** from its
+reference file (specific greps, conventional paths, adapter commands), records
+the transcript, then decides state. It returns a phase scorecard:
+
+```
+phase: <n> — <name>
+dimensions: [ per dimension:
+  { name, state: PRESENT|PARTIAL|ABSENT|N/A,
+    evidence: <cited artifact — file:line / CI step / doc, required for PRESENT>,
+    probe_transcript: <what was searched / which adapter commands ran + exit codes> } ]
+```
+
+Use the toolchain-adapter row for the mechanical probes (`test`, `lint`,
+`audit`, `deny` — record exit codes, never fabricate). `PRESENT` **must** carry
+a concrete artifact; "looks fine" is never a pass. `ABSENT` is legal **only**
+after the dimension's probe floor has run and its transcript is recorded —
+`ABSENT` means "these specific probes returned nothing", never "I didn't look".
+
+**Merge step.** After all seven shards return, assemble the scorecards into one
+set of exactly 29 scored dimensions (verify each of the 29 appears once and only
+once — the facet-ownership table above is the checklist), dedup any evidence
+cited by more than one shard, then proceed to Phase 2 scoring and the report.
+
+For reference, the dimensions each shard hunts (the reference file is the
+authoritative check source; this is a fast summary, not a substitute):
 - Tests exist and run? (adapter `test` — record exit code, don't fabricate.)
 - Linter clean, house style honoured? (adapter `lint`.)
 - Dependency audit / deny present and passing? (adapter `audit`, `deny`.)
@@ -223,9 +304,13 @@ toolchain-adapter row for the mechanical checks:
 - …and the remaining dimensions from the list above.
 
 State explicitly for each: `PRESENT (evidence: file:line / CI step / doc)`,
-`PARTIAL (…)`, or `ABSENT — no evidence found`. `PRESENT` **must** carry a
-concrete artifact; "looks fine" is never a pass. A single concrete artifact
-closes a dimension — do not keep interrogating it.
+`PARTIAL (…)`, or `ABSENT — probes X, Y, Z returned nothing` (never a bare "no
+evidence found"). `PRESENT` **must** carry a concrete artifact; "looks fine" is
+never a pass. For **binary** dimensions a single concrete artifact closes the
+dimension. For **graded** dimensions (Testing, Security, Observability,
+Correctness, Reliability) the probe floor must COMPLETE even after a hit, so the
+score reflects coverage, not first-touch luck — do not stop at the first
+artifact.
 
 ### Phase 2 — Score & prioritise
 Score each of the 29 dimensions **once** (cross-phase concepts get one row with
@@ -265,7 +350,11 @@ dimension with its state, note, and cited evidence). Fill procedure:
    markers: `scorecard-row` per dimension, `finding` per prioritised finding
    (highest risk first), `validation-row` per adapter check, `phase-section`
    per phase with `dimension-detail` nested per dimension, `solid` per
-   evidence-backed PRESENT dimension.
+   evidence-backed PRESENT dimension. In each `dimension-detail`, fill
+   `{{DET_PROBE}}` with the dimension's **probe transcript** from its phase
+   shard — what was searched and which adapter commands ran with exit codes.
+   This is what makes two runs diffable: differing scores on the same target
+   become a visible defect in the transcript, not an invisible one.
 4. Use the state vocabulary verbatim in `data-state` so the CSS colours it:
    `PRESENT | PARTIAL | ABSENT | NA`. Severity classes: `high | medium | low`.
 5. Every `PRESENT` and every finding must carry a concrete artifact
@@ -290,8 +379,11 @@ The report template is `templates/report.html` — a self-contained HTML file
   (`risk = blast-radius × irreversibility × likelihood`), each with a cited
   artifact and a triage-shaped next step; and the validation run (adapter
   test / lint / audit / deny with exit codes — never fabricated).
-- **Detail** — per SDLC phase, one entry per dimension: state, note, and the
-  concrete evidence that decided the state.
+- **Detail** — per SDLC phase, one entry per dimension: state, note, the
+  concrete evidence that decided the state, and the **probe transcript** (what
+  was searched / which adapter commands ran with exit codes) that earned the
+  state — mandatory for every `ABSENT`, so absence is auditable and run-to-run
+  score variance is diffable.
 - **What's solid** — dimensions confirmed PRESENT with evidence, so the report
   is honest rather than a gap list.
 
@@ -320,9 +412,18 @@ Report: <report-dir>/quality-sweep-<target>-<timestamp>.html
   dimension gets the same rigour.
 - **Score each dimension once.** Cross-phase concepts (Type safety,
   API-versioning, Cost, Accessibility) are one scored row with a facet note,
-  never a duplicate row.
-- **Close on evidence.** A single concrete artifact closes a dimension and ends
-  the interrogation. Do not re-litigate.
+  never a duplicate row. Under the phase fan-out, each facet dimension is scored
+  by its **home shard only** (Type safety / API-versioning / Cost → shard 1;
+  Accessibility → shard 7); the other shard reads its context but emits no score.
+- **Close binary dimensions on evidence; complete graded dimensions.** A single
+  concrete artifact closes a genuinely *binary* dimension and ends the
+  interrogation. For *graded* dimensions (Testing, Security, Observability,
+  Correctness, Reliability) the probe floor must complete even after a hit, so
+  the score reflects coverage, not first-touch luck. Do not re-litigate a closed
+  binary dimension.
+- **ABSENT is earned.** No dimension is scored `ABSENT` until its mandatory
+  probe floor has run and its transcript is recorded. `ABSENT` = "these specific
+  probes returned nothing", never "I didn't look".
 - **Don't fabricate validation.** Tool missing → `SKIPPED` with a reason.
 - **Periodicity is a discovery trigger, not a cadence.** Route findings to your
   triage process signal-triggered; the sweep discovers, triage disposes.

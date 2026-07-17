@@ -4,6 +4,18 @@
 > checks mined from real improvement history. Evidence arbitrates: a check is
 > PRESENT only with a cited artifact; absence is a finding.
 
+**Shard ownership.** This is the phase-3 evidence shard. It scores exactly the
+four dimensions below (Testing, Lint/format/style, Performance, Chaos/fault
+injection & load/soak). No facet dimensions live here.
+
+**Probe floor is mandatory.** A dimension may be scored `ABSENT` only after its
+probe floor below has been executed and its transcript recorded — including the
+relevant toolchain-adapter command (`test`, `lint`) with its real exit code.
+`ABSENT` means "these specific probes returned nothing", never "I didn't find
+anything". Testing, Performance, and Chaos are graded dimensions: complete the
+probe floor even after a first hit, so the score reflects coverage, not
+first-touch luck.
+
 ## Testing
 
 Good testing proves behaviour, not implementation. Every test earns its keep by
@@ -50,6 +62,13 @@ of tests that pass vacuously.
 - Test-retirement hygiene: deleting mechanism-coupled tests is fine only when
   equivalent behavioural coverage is cited upstream; a net coverage drop with no
   replacement is a finding.
+
+**Probe floor (mandatory before ABSENT):**
+- Run the adapter `test` command; record exit code and pass/fail counts (never fabricate).
+- Locate test files (`rg -l '#\[test\]|#\[tokio::test\]|it\(|describe\(|def test_'` / conventional `tests/`, `__tests__/`, `*_test.*`).
+- Grep for red-first / regression-pin evidence (`rg -i 'regression|reproduc|red.?green'`; scan bugfix commits for paired tests).
+- Grep for property tests (`rg 'proptest|quickcheck|fast-check|hypothesis'`).
+- ABSENT only if the adapter `test` finds no tests AND no test files exist — record the transcript with the exit code. (Graded: finish the floor even after a hit.)
 
 **Anti-patterns to hunt:**
 - test-after-the-fix (no red proof) — test and fix land in one commit; no
@@ -104,6 +123,13 @@ the intent.)
   against an unchanged tree is waste, not diligence — re-run gates only after an
   intervening change.
 
+**Probe floor (mandatory before ABSENT):**
+- Run the adapter `lint` command; record exit code and whether warnings fail the build.
+- Locate lint/format config (`rg -l 'clippy|rustfmt|eslint|prettier|ruff|flake8|.editorconfig'` / conventional config files).
+- Grep for suppressions and their justification (`rg '#\[allow|eslint-disable|# noqa|# type: ignore'`).
+- Grep CI for a lint gate step (`rg -i 'lint|clippy|fmt.*check' .github/ .gitlab-ci.yml` or equivalent).
+- ABSENT only if no linter is configured AND the adapter `lint` reports no tool — record the transcript with the exit code.
+
 **Anti-patterns to hunt:**
 - blanket lint suppression — a file/crate-wide allow that silences a whole class
   of diagnostics instead of fixing or justifying per-site.
@@ -151,6 +177,12 @@ memory budgets) and a strong preference for provable bounds over vibes.
 - Measurement excludes noise: perf metrics filter out non-comparable events (e.g.
   long-lived connection lifetimes counted as request latency) so the number
   reflects the thing being optimized.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for benchmarks (`rg -l 'criterion|#\[bench\]|benchmark|bencher|hyperfine'` / conventional `benches/`).
+- Grep for committed baselines / perf budgets (`rg -i 'baseline|budget|p95|p99|latency|throughput'`).
+- Grep for profiling evidence or perf-specific build profiles (`rg -i 'flamegraph|perf|profil|\[profile'`).
+- ABSENT only if no benchmark, baseline, or perf target exists — record the transcript. (Graded: finish the floor even after a hit.)
 
 **Anti-patterns to hunt:**
 - benchmark without a baseline — a bench exists but nothing records or compares
@@ -204,6 +236,12 @@ two-writer race tests that assert exactly-one-wins.
 - Adverse tests are non-vacuous like any other: verify the injected fault is
   actually reached and the recovery assertion can fail — a crash-recovery test
   gated on an absent host artifact is vacuous-green.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for adverse-condition tests (`rg -l -i 'chaos|soak|fault.?inject|crash|sigkill|fuzz|loom|--count'`).
+- Grep for fuzz targets (`rg -l 'fuzz_target|cargo-fuzz|libfuzzer|jazzer'` / conventional `fuzz/`).
+- Grep for real-concurrency tests (barrier/latch-driven, not sequential-N) (`rg -i 'barrier|latch|two.?writer|concurrent'`).
+- ABSENT only if the target has a durability/concurrency/availability contract AND none of the above exist — the absence is itself the primary finding. Record the transcript. (Graded: finish the floor even after a hit.)
 
 **Anti-patterns to hunt:**
 - no adverse-condition test at all — a component with a durability/concurrency/

@@ -4,6 +4,19 @@
 > checks mined from real improvement history. Evidence arbitrates: a check is
 > PRESENT only with a cited artifact; absence is a finding.
 
+**Shard ownership.** This is the phase-6 evidence shard. It scores exactly
+**one** dimension: Observability. The **Cost / resource economics (runtime)**
+section below is facet context only — Cost's home row and score belong to the
+phase-1 shard (facet-ownership rule, SKILL.md § The 29 dimensions). Read the
+runtime-cost checks to inform the phase-1 Cost score if you are also that shard,
+but **do not score Cost in this shard**.
+
+**Probe floor is mandatory.** Observability may be scored `ABSENT` only after
+its probe floor below has been executed and its transcript recorded. `ABSENT`
+means "these specific probes returned nothing", never "I didn't find anything".
+Observability is a graded dimension: complete the probe floor even after a first
+hit, so the score reflects instrumentation coverage, not a single log line.
+
 ## Observability
 
 Good observability lets an operator diagnose a running system without reading
@@ -67,6 +80,13 @@ optimization: you cannot tune what you never observed.
   unverified. A capture harness proving a failure site emits ERROR with the
   expected field is the evidence.
 
+**Probe floor (mandatory before ABSENT):**
+- Grep for structured logging (`rg 'tracing|slog|log::|logrus|structlog|winston|zap'`).
+- Grep for metrics / tracing instrumentation (`rg -i 'metric|counter|gauge|histogram|span|opentelemetry|prometheus'`).
+- Grep for startup config-snapshot / readiness lines and honest shutdown (`rg -i 'ready|starting|config.*snapshot|shutdown|drain'`).
+- Grep for instrumentation-capture tests (`rg -l -i 'subscriber|test.*log|capture.*event'`).
+- ABSENT only if the target is a runnable system AND these probes surfaced no instrumentation — record the transcript. (Graded: finish the floor even after a hit.)
+
 **Anti-patterns to hunt:**
 - Free-text log with no structured keys — one prose string on a decision path; operator must read source to diagnose.
 - High-cardinality metric label — id/timestamp/correlation value on a metric label, exploding series count.
@@ -82,6 +102,11 @@ optimization: you cannot tune what you never observed.
 - Instrumentation in the wrong ring — metrics/tracing dep forced into a pure inner crate, breaching its dependency budget.
 
 ## Cost / resource economics (runtime)
+
+> **Facet context — not scored in this shard.** Cost's home row and score
+> belong to the phase-1 shard. The runtime checks below inform the phase-1 Cost
+> score (its phase-6 facet); do not emit a separate Cost score here. No probe
+> floor is attached because this shard does not score the dimension.
 
 (history-thin) Good runtime cost hygiene means actual spend, quota headroom,
 and resource utilisation are observed at runtime — not assumed from

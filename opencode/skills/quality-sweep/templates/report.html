@@ -65,6 +65,7 @@
   .sev.medium { background: rgba(210,153,34,.15); color: var(--medium); }
   .sev.low    { background: rgba(110,118,129,.18); color: var(--low); }
   .finding .why { color: var(--muted); }
+  .finding .probe { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
   .finding .next { margin-top: 4px; }
   .solid li { color: var(--present); }
   .solid li span { color: var(--ink); }
@@ -144,6 +145,10 @@
     <div class="why">{{DET_NOTE}}</div>
     <!-- Optional: cite the concrete artifact(s) that decided the state. -->
     <div>Evidence: <code>{{DET_EVIDENCE}}</code></div>
+    <!-- Probe transcript: what was searched / which adapter commands ran with
+         exit codes. MANDATORY for every ABSENT (proves the probe floor ran);
+         recommended for all states so two runs on one target are diffable. -->
+    <div class="probe">Probes: <code>{{DET_PROBE}}</code></div>
   </div>
   <!-- END dimension-detail -->
   <!-- END phase-section -->

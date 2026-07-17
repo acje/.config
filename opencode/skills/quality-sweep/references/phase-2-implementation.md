@@ -4,6 +4,18 @@
 > checks mined from real improvement history. Evidence arbitrates: a check is
 > PRESENT only with a cited artifact (file:line); absence is a finding.
 
+**Shard ownership.** This is the phase-2 evidence shard. It scores exactly the
+five dimensions below (Refactor/readability, Correctness, Error handling,
+Concurrency, Dead-code removal). **Type safety** surfaces at implementation
+level here as context only — its home row and score belong to the phase-1
+shard (facet-ownership rule, SKILL.md § The 29 dimensions). Do not score
+Type-safety in this shard.
+
+**Probe floor is mandatory.** A dimension may be scored `ABSENT` only after its
+probe floor below has been executed and its transcript recorded (what was
+searched / run, and the empty result). `ABSENT` means "these specific probes
+returned nothing", never "I didn't find anything".
+
 ## Refactor / readability
 
 Good: functions are cohesive single-responsibility units small enough to hold
@@ -35,6 +47,12 @@ is needed.
 - Are lint suppressions narrow and justified (`#[expect(lint, reason=...)]`
   over bare/blanket allows), and does each still fire? A blanket module-level
   allow is itself a finding.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for oversized-function / arg-count suppressions (`rg 'too_many_lines|too_many_arguments|excessive_bools|#\[allow'`).
+- Grep for duplicated blocks (search a distinctive line from a suspected copy across the tree; check sibling modules).
+- Check commit granularity: `git log --oneline -20` for structural+behavioural mixing tells.
+- ABSENT only if no source to read OR the probes surfaced no readability signal to score — record the transcript.
 
 **Anti-patterns to hunt:**
 - God function — one function owning multiple responsibilities / exceeding a
@@ -79,6 +97,12 @@ and docs describe CURRENT behaviour, not aspirational behaviour.
 - Are absent/malformed inputs handled deterministically (missing config,
   malformed file, unsupported feature, oversized body rejected before full
   processing)? Cite the guard.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for lossy casts (`rg ' as (u8|u16|u32|i32|usize|f32)'`) and classify each on a count/size path.
+- Grep for boundary/edge tests (`rg -i 'off.?by.?one|boundary|empty|overflow|saturating|checked_'`).
+- Grep for red→green reproduction evidence in bugfix commits (`git log --grep -i 'fix|bug' --oneline`; look for paired test additions).
+- ABSENT only if no source and no tests exist OR the probes surfaced nothing — record the transcript.
 
 **Anti-patterns to hunt:**
 - Truncating cast — `as`-cast that silently drops high bits on a count/size;
@@ -127,6 +151,12 @@ genuinely-unrecoverable, documented invariant).
 - Where a mutex/lock can be poisoned, is recovery explicit
   (recover-inner-value) rather than an `unwrap` that turns one panic into a
   cascade? Cite the lock site.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep production paths for `unwrap`/`expect`/`panic!`/index (`rg 'unwrap\(\)|expect\(|panic!|\[[0-9]' src/` excluding tests).
+- Grep for typed error taxonomy and propagation (`rg 'enum .*Error|thiserror|anyhow|Box<dyn.*Error>|\?;'`).
+- Grep for durable-write / success-on-failure tells (`rg -i 'return.*Ok|200|success' ` near persist/append/write paths).
+- ABSENT only if the target has no fallible operations (state so) OR the probes surfaced no error-handling surface — record the transcript.
 
 **Anti-patterns to hunt:**
 - Unwrap in production path — `unwrap`/`expect` reachable from non-test code on
@@ -183,6 +213,12 @@ tests.
   truncated-trailing-record recovery handled on replay? Kill-mid-write must not
   yield zero-byte/torn state.
 
+**Probe floor (mandatory before ABSENT):**
+- Grep for async + lock combos (`rg 'lock\(\)|Mutex|RwLock'` and check for `.await` within guard scope).
+- Grep for bounded channels / backpressure (`rg 'bounded|try_send|Semaphore|channel\('`).
+- Grep for concurrency regression tests (`rg -l -i 'concurren|race|winner|barrier'` in tests).
+- ABSENT only if the target is single-threaded with no async/shared state (state so) OR the probes surfaced nothing — record the transcript.
+
 **Anti-patterns to hunt:**
 - Lock held across await — sync/std guard alive across a suspension point;
   deadlock/contract risk; tell: guard binding outlives an `.await` in scope.
@@ -235,6 +271,12 @@ permanent mask over genuinely-removable items.
   copies?
 - Do "unused"-lint suppressions carry a reason and a plan, or are they permanent
   masks? A suppression that hides multiple real dead items is itself the finding.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for dead-code suppressions (`rg '#\[allow\(dead_code|unused'`).
+- Grep for commented-out code and stale markers (`rg '^\s*// .*(fn |let |= )|TODO|FIXME|HACK|MIGRATION|DEPRECATED'`).
+- Run the ecosystem's unused-dependency check if available (`cargo machete`/`cargo-udeps`, `depcheck`); else grep manifest deps against `src/`+tests references.
+- ABSENT only if a clean unused-scan ran AND the greps returned nothing — record the transcript. (A truly clean tree is PRESENT-with-evidence, not ABSENT.)
 
 **Anti-patterns to hunt:**
 - Allow-masked dead item — `#[allow(dead_code)]`/unused suppression over code

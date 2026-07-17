@@ -5,6 +5,21 @@
 > PRESENT only with a cited artifact (file:line / doc / ADR); absence is a
 > finding.
 
+**Shard ownership.** This is the phase-1 evidence shard. It scores exactly the
+six dimensions below — including the three cross-phase facet dimensions **Type
+safety**, **API-versioning & consumer contracts**, and **Cost / resource
+economics**, whose home row lives here (per the facet-ownership rule in
+SKILL.md § The 29 dimensions). The phase-2 shard reads Type-safety context but
+does not score it; phase-5 reads API-versioning context but does not score it;
+phase-6 reads Cost context but does not score it. This shard does **not** score
+Accessibility (its home row is the phase-7 shard).
+
+**Probe floor is mandatory.** A dimension may be scored `ABSENT` only after its
+probe floor below has been executed and its transcript recorded (what was
+searched / run, and the empty result). `ABSENT` means "these specific probes
+returned nothing", never "I didn't find anything". Record every probe
+transcript in the report's per-dimension probe-transcript field.
+
 ## API / schema design
 Good: the smallest public surface that expresses the domain; every exported
 symbol is a deliberate adopter affordance, not accidental leakage; primitives
@@ -32,6 +47,12 @@ are wrapped at the boundary and validated once.
 - Does the design state, up front, exactly which names are exposed now vs kept
   internal/advanced/test-only? Absence of an explicit minimal-surface proposal
   is a finding.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep the public surface for exported symbols (`rg '^\s*pub (fn|struct|enum|trait|type|const|mod|use)'` across `src/`, or the ecosystem's export marker).
+- Grep public signatures for bare-primitive params/returns (`rg 'pub fn .*(String|&str|u\d+|i\d+|bool)'`).
+- Check conventional API-surface docs: `lib.rs` / `mod.rs` re-export blocks, `README`/`docs/` API section, any `#[doc(hidden)]` markers.
+- ABSENT only if there is no public surface OR the probes above returned nothing to classify — record the transcript.
 
 **Anti-patterns to hunt:**
 - Stringly-typed public API — `pub fn …(x: String)` / `-> String` where a
@@ -71,6 +92,12 @@ declared dependency.
   structural polish from behavior/contract change.
 - Are decomposition boundaries information-hiding (fields tightened, behavior
   accessors added) rather than a single struct accumulating all state?
+
+**Probe floor (mandatory before ABSENT):**
+- Locate architecture docs: `rg -l -i 'architecture|hexagonal|layer|ring'` over `docs/`, `ARCHITECTURE.md`, `adr/`, `doc/`.
+- Map the module/crate DAG: read the workspace manifest (`Cargo.toml` `[workspace]`, `package.json` workspaces, or equivalent) and the top-level `mod`/import graph.
+- Grep for layer-violation tells (`rg 'use .*(runtime|adapter|infra)' ` inside the declared core module; `async fn` on a declared sync facade).
+- ABSENT only if no architecture doc AND no discernible module boundary exists — record the transcript.
 
 **Anti-patterns to hunt:**
 - God-struct app-state — one struct owning all sub-aggregates with public
@@ -113,6 +140,12 @@ are enums, not strings or bool-pairs.
   unrepresentable (opaque state handles / typestate) rather than checked at
   runtime?
 
+**Probe floor (mandatory before ABSENT):**
+- Grep for closed-set encodings: `rg 'enum '` (present?) vs stringly-typed state (`rg ': String' ` on state-ish fields) and bool-pair tells (`rg 'bool,\s*\n\s*.*: bool' `).
+- Grep for validated newtypes / fallible constructors (`rg 'struct \w+\(', 'impl TryFrom', 'fn new.*-> Result'`).
+- Grep for compile-fail / negative type tests (`rg -l 'compile_fail|trybuild'`).
+- ABSENT only if the target has no type system surface to score OR the probes returned nothing — record the transcript. (Facet: phase-2 enforcement; scored here once.)
+
 **Anti-patterns to hunt:**
 - Stringly-typed state — a `String` field standing in for a closed set.
 - Bool-pair state machine — two+ booleans encoding states that should be one
@@ -149,6 +182,12 @@ backup to the human-authored record.
 - Is automated API-stability checking treated as advisory (with its known gaps
   documented) and the human changelog as the authoritative gate — not the
   reverse?
+
+**Probe floor (mandatory before ABSENT):**
+- Look for a changelog: `rg -l -i 'changelog|releases|history'` (`CHANGELOG.md`, `RELEASES.md`, GitHub releases).
+- Grep for deprecation/semver discipline (`rg '#\[deprecated|@deprecated|semver|breaking'`, version field in the manifest).
+- Grep for automated API-diff tooling config (`cargo-semver-checks`, `api-extractor`, `.github` workflow steps).
+- ABSENT only if the target exposes a public/consumer surface AND none of the above exist — record the transcript. (Facet: phase-5 release mechanics; scored here once.)
 
 **Anti-patterns to hunt:**
 - Silent breaking change — public symbol/enum-variant/field removed with no
@@ -188,6 +227,12 @@ pinned by a stable hash and golden vectors.
 - When co-existing with an external transport/store, is the format-identity
   gate checked once up front (stream/file tagged with the expected schema hash)
   rather than assumed?
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for wire/serialization surface (`rg 'serde|Serialize|Deserialize|to_bytes|from_bytes|proto|schema'`).
+- Grep for golden/round-trip vectors and schema-hash pins (`rg -l 'golden|snapshot|schema_hash|round.?trip'`).
+- Grep for foreign-shape structs tested against captured payloads (`rg -l 'fixtures?|captured|testdata'`).
+- ABSENT only if the target has no cross-system interchange surface (state so) OR the probes returned nothing — record the transcript.
 
 **Anti-patterns to hunt:**
 - Ad-hoc field addition — new persisted field bolted on without a version bump
@@ -233,6 +278,12 @@ cost driver is measured, not guessed.
 - Is the cost of the verification/CI strategy itself considered — moving a
   rarely-failing check to CI saves local tokens, but a frequently-failing one
   moved to CI increases total round-trip cost?
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for capacity/budget constants (`rg -i 'max_|_limit|capacity|budget|quota|rate.?limit|MAX_'`).
+- Grep for externally-sized allocations with a cap (`rg 'with_capacity|reserve|Vec::with'` and check the size source).
+- Grep for decompression / body-size guards (`rg -i 'max.?bytes|body.?limit|decompress|content.?length'`).
+- ABSENT only if the target has no external spend/quota/allocation surface (state so) OR the probes returned nothing — record the transcript. (Facet: phase-6 runtime spend; scored here once.)
 
 **Anti-patterns to hunt:**
 - Unbounded external-input allocation — collection sized directly by remote

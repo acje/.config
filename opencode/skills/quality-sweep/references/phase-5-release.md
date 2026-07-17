@@ -6,6 +6,22 @@
 > performance (DORA) are N/A for targets with no safety-critical function or no
 > deployment pipeline respectively — state N/A explicitly with a one-line reason.
 
+**Shard ownership.** This is the phase-5 evidence shard. It scores exactly the
+six dimensions below (Operational resilience, Data lifecycle & migration safety,
+Reliability, Delivery performance (DORA), Safety/fail-safe, Flexibility/
+portability). **API-versioning & consumer contracts** surfaces here as release
+mechanics (deprecation windows, semver bumps) but its home row and score belong
+to the phase-1 shard (facet-ownership rule, SKILL.md § The 29 dimensions). Do
+not score API-versioning in this shard.
+
+**Probe floor is mandatory.** A dimension may be scored `ABSENT` only after its
+probe floor below has been executed and its transcript recorded. `ABSENT` means
+"these specific probes returned nothing", never "I didn't find anything".
+Reliability is a graded dimension: complete the probe floor even after a first
+hit. For Safety and DORA, prefer `N/A` with a one-line reason over `ABSENT` when
+the *concern* is genuinely inapplicable — but the probe floor still runs first
+so the N/A is earned, not assumed.
+
 ## Operational / runtime resilience
 
 Good looks like: every failure mode has a bounded, observable, and *reacted-to*
@@ -42,6 +58,13 @@ reaction (SLO bands: "fence firing as designed" vs "fence firing pathologically"
 - Timeouts on every outbound operation are bounded and return a typed
   "unavailable" error within that bound; in-memory state is unchanged after a
   timeout (test it).
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for retry/redelivery bounds (`rg -i 'max.?attempt|retry|backoff|timeout|budget'`).
+- Grep for admission control / load-shedding (`rg -i 'semaphore|admission|503|busy|shed|bounded'`).
+- Grep for graceful shutdown / signal handling (`rg -i 'sigterm|sigint|shutdown|drain|graceful'`).
+- Grep for degraded-mode tests (`rg -l -i 'degrade|read.?only|reconnect'`).
+- ABSENT only if the target is a long-running service AND these probes surfaced no resilience mechanic — record the transcript.
 
 **Anti-patterns to hunt:**
 - unbounded retry loop — no attempt cap or time budget; a stuck dependency spins forever.
@@ -89,6 +112,13 @@ and partial-write recovery paths are typed and tested, not implicit.
 - Auto-migration posture is explicit: does open-on-mismatch auto-migrate, or refuse?
   Refuse-and-require-explicit-migration is a valid choice but must be documented.
 
+**Probe floor (mandatory before ABSENT):**
+- Grep for version tags / schema hashes on persisted formats (`rg -i 'schema.?version|schema.?hash|version.?field|magic'`).
+- Grep for replay / round-trip migration tests (`rg -l -i 'replay|round.?trip|migrat|backward.?compat'`).
+- Grep for migration scripts / retention config (`rg -l -i 'migration|retention|backup|restore'` / conventional `migrations/`).
+- Grep for corruption-recovery tests (`rg -i 'corrupt|truncat|checksum'` in tests).
+- ABSENT only if the target persists state AND these probes surfaced no migration/lifecycle handling — record the transcript. (N/A if the target persists nothing — state so.)
+
 **Anti-patterns to hunt:**
 - schema change with no replay test — format changed, no proof old data loads.
 - silent misparse on version skew — old artifact read as new shape, no version guard.
@@ -132,6 +162,13 @@ tested property of every stateful component, not an afterthought.
   truncated fetch returns "unknown" (None), never "empty set" that would be read as
   a confident "nothing there" (the departed-everyone class of bug).
 
+**Probe floor (mandatory before ABSENT):**
+- Grep for a declared consistency/availability stance (`rg -l -i 'consisten|availab|partition|CAP|PACELC|SLO|uptime'`).
+- Grep for write-fencing / optimistic-concurrency (`rg -i 'fence|conflict|optimistic|version.*check|compare.?and'`).
+- Grep for crash-recovery admission-gate tests (`rg -l -i 'crash.?recover|restart.*consistent|frontier'`).
+- Grep for idempotency-under-redelivery (`rg -i 'idempoten|dedup|redeliver'`).
+- ABSENT only if the target is stateful/available-facing AND these probes surfaced no reliability evidence — record the transcript. (Graded: finish the floor even after a hit.)
+
 **Anti-patterns to hunt:**
 - silent divergence under partition — concurrent writers both succeed; state forks.
 - interleaved writes to one aggregate — no serialization; events interleave.
@@ -161,6 +198,12 @@ N/A when the target has no deployment pipeline.
 - Change-fail signal is observable: there is some way to tell a failed deploy from a
   healthy one (health/readiness probe, traffic-split state) rather than discovering
   failure from users.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for a deployment pipeline (`rg -l -i 'deploy|release|Dockerfile|k8s|helm|.github/workflows'`).
+- Grep for rollback path / version provenance (`rg -i 'rollback|revert|previous.*revision|git.?describe|VERSION'`).
+- Grep for artifact tag/digest capture and health probes (`rg -i 'digest|tag|liveness|readiness|healthz'`).
+- Prefer `N/A` (with a one-line reason) over `ABSENT` when the target has NO deployment pipeline — but run the probes first so the N/A is earned. Record the transcript.
 
 **Anti-patterns to hunt:**
 - no rollback path — no recorded prior-good release to revert to.
@@ -192,6 +235,12 @@ data boundaries; genuine physical-hazard safety is history-thin.
 - Destructive or irreversible operations require an explicit marker/guard (e.g.
   refuse-to-overwrite-without-marker, refuse-empty) with tests for both the refuse
   and the permit paths.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for fail-safe defaults (`rg -i 'fail.?closed|fail.?safe|fail.?open|refuse|reject'`).
+- Grep for decode-time invariant enforcement (`rg -i 'validate|NonZero|reject.*invalid'` at ingest).
+- Grep for destructive-op guards and specific-variant rejection tests (`rg -i 'overwrite|marker|confirm|is_err\('`).
+- Prefer `N/A` (one-line reason) over `ABSENT` for non-safety-critical, non-data-integrity targets — but run the probes first so the N/A is earned. Record the transcript.
 
 **Anti-patterns to hunt:**
 - fail-open where fail-closed is required — mismatch/uncertainty defaults to accept.
@@ -230,6 +279,12 @@ portability.
 - Undocumented operational surface is a finding: any config knob, env var, CLI flag,
   error code, or retry behaviour an operator would hit but that is absent from
   OPERATIONS.md / README.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for env-driven config (`rg -i 'env::var|process.env|getenv|os.environ'`).
+- Grep for hardcoded host/bind config that should be parameterized (`rg '0\.0\.0\.0|localhost:|127\.0\.0\.1|:\d{4}'`).
+- Grep for container/runtime portability (`rg -l -i 'Dockerfile|distroless|non-root|multi-stage'`) and cfg-gated platform code (`rg '#\[cfg\((unix|windows|target)'`).
+- ABSENT only if the target has a deployable/config surface AND these probes surfaced no portability evidence — record the transcript.
 
 **Anti-patterns to hunt:**
 - hardcoded host config — bind address, port, or dependency URL baked into the binary.

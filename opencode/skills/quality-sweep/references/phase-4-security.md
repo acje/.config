@@ -4,6 +4,18 @@
 > checks mined from real improvement history. Evidence arbitrates: a check is
 > PRESENT only with a cited artifact; absence is a finding.
 
+**Shard ownership.** This is the phase-4 evidence shard. It scores exactly the
+three dimensions below (Security, Dependency/build, Supply-chain integrity). No
+facet dimensions live here.
+
+**Probe floor is mandatory.** A dimension may be scored `ABSENT` only after its
+probe floor below has been executed and its transcript recorded — including the
+relevant toolchain-adapter command (`audit`, `deny`) with its real exit code.
+`ABSENT` means "these specific probes returned nothing", never "I didn't find
+anything". Security is a graded dimension: complete the probe floor even after a
+first hit, so the score reflects coverage across the trust boundaries, not a
+single lucky finding.
+
 ## Security
 
 Good looks like: every trust boundary validates on the way in, secrets never
@@ -47,6 +59,13 @@ enforces" is still required at the local boundary.
 - The review is framework-anchored: findings map to OWASP categories (broken
   access control, crypto failures, injection, …) or CISQ axes, with file:line
   citations, so coverage is auditable rather than impressionistic.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep trust boundaries for validation (`rg 'Deserialize|from_str|parse|validate|sanitiz'` at ingest sites).
+- Grep for path-traversal / injection guards (`rg '\.\.|canonicalize|percent|escape|prepared|parameteri'`).
+- Grep for secret handling (`rg -i 'secret|token|api.?key|password|zeroize|redact'`; check for hardcoded literals).
+- Grep for network-bind default (`rg '0\.0\.0\.0|bind\(|listen\('`).
+- ABSENT only if the target has a trust/network/secret surface AND these probes surfaced no security control — record the transcript. (Graded: finish the floor even after a hit.)
 
 **Anti-patterns to hunt:**
 - trust-the-input deserialization — `#[derive(Deserialize)]` writing private
@@ -107,6 +126,13 @@ reviewed as a deliberate act, not absorbed silently.
   is it pinned/vetted like a dependency? A floating CI tool version is a
   supply-chain surface.
 
+**Probe floor (mandatory before ABSENT):**
+- Run the adapter `audit` and `deny` commands; record exit codes (never fabricate).
+- Check for a committed lockfile and `--locked`/`--frozen` usage in CI (`rg -l 'Cargo.lock|package-lock.json|poetry.lock|--locked|--frozen'`).
+- Grep for advisory/deny gate config and whether it blocks (`rg -i 'audit|deny|continue-on-error' .github/ deny.toml`).
+- Grep for toolchain pin / MSRV (`rg -l 'rust-toolchain|rust-version|engines|.tool-versions'`).
+- ABSENT only if no lockfile, no audit/deny gate, and the adapter reports no tool — record the transcript with exit codes.
+
 **Anti-patterns to hunt:**
 - unpinned/floating dependency — no committed lockfile, no `--locked`, or
   toolchain channel unpinned; builds are not reproducible run-to-run.
@@ -156,6 +182,13 @@ reproducible builds — treat those as ASK-the-repo checks, not assumed-present.
   release? Are release artifacts signed / attested? Are builds reproducible
   (bit-for-bit from pinned inputs)? Absence of any of these is a finding to
   record, not to assume closed.
+
+**Probe floor (mandatory before ABSENT):**
+- Grep for SBOM generation (`rg -l -i 'sbom|cyclonedx|spdx|syft'`).
+- Grep for artifact signing / attestation (`rg -l -i 'cosign|sigstore|attest|provenance|slsa'`).
+- Grep for reproducible-build config and version-provenance threading (`rg -i 'reproducib|SOURCE_DATE_EPOCH|vergen|git.?describe'`).
+- Grep for license packaging and a dependency-review record (`rg -l -i 'LICENSE|license.*allow|dependency.*review'`).
+- ABSENT only after all four probes returned nothing — record each as an explicit open gap (history-thin ≠ assumed-closed).
 
 **Anti-patterns to hunt:**
 - silent dependency bump — version/feature change buried in an unrelated diff
