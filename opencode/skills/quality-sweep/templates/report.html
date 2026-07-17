@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!--
+  Quality Sweep report template.
+  Fill the {{TOKENS}} below; delete any optional block not used. The file is
+  self-contained (inline CSS, no external assets) so the report opens anywhere.
+
+  Row/finding/phase blocks are marked with BEGIN/END comments: repeat the block
+  once per item, then remove the comment markers from the final report.
+
+  State vocabulary (use verbatim in the `data-state` attribute so the CSS
+  colours it): PRESENT | PARTIAL | ABSENT | NA
+  Severity vocabulary for findings: HIGH | MEDIUM | LOW
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quality Sweep — {{TARGET}}</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --ink: #e6e8ec; --muted: #9aa3af;
+    --line: #262b35; --accent: #4c8bf5;
+    --present: #2ea043; --partial: #d29922; --absent: #f85149; --na: #6e7681;
+    --high: #f85149; --medium: #d29922; --low: #6e7681;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 24px 96px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  h3 { font-size: 15px; margin: 22px 0 8px; color: var(--accent); }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .meta span { margin-right: 18px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+  .verdict { font-size: 15px; }
+  .counts { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+  .pill {
+    display: inline-flex; align-items: baseline; gap: 6px;
+    padding: 6px 12px; border-radius: 999px; font-size: 13px;
+    background: #1e222b; border: 1px solid var(--line);
+  }
+  .pill b { font-size: 15px; }
+  .pill.present b { color: var(--present); }
+  .pill.partial b { color: var(--partial); }
+  .pill.absent  b { color: var(--absent); }
+  .pill.na      b { color: var(--na); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td.state { white-space: nowrap; font-weight: 600; }
+  [data-state="PRESENT"] { color: var(--present); }
+  [data-state="PARTIAL"] { color: var(--partial); }
+  [data-state="ABSENT"]  { color: var(--absent); }
+  [data-state="NA"]      { color: var(--na); }
+  code { background: #10131a; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
+  .finding { border-left: 3px solid var(--line); padding: 4px 0 4px 14px; margin: 14px 0; }
+  .finding.high   { border-left-color: var(--high); }
+  .finding.medium { border-left-color: var(--medium); }
+  .finding.low    { border-left-color: var(--low); }
+  .sev { font-size: 11px; font-weight: 700; letter-spacing: .05em; padding: 2px 7px; border-radius: 4px; }
+  .sev.high   { background: rgba(248,81,73,.15);  color: var(--high); }
+  .sev.medium { background: rgba(210,153,34,.15); color: var(--medium); }
+  .sev.low    { background: rgba(110,118,129,.18); color: var(--low); }
+  .finding .why { color: var(--muted); }
+  .finding .next { margin-top: 4px; }
+  .solid li { color: var(--present); }
+  .solid li span { color: var(--ink); }
+  footer { margin-top: 48px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Quality Sweep — {{TARGET}}</h1>
+  <div class="meta">
+    <span>Date: <b>{{DATE_ISO}}</b></span>
+    <span>Ecosystem: <b>{{ECOSYSTEM}}</b></span>
+    <span>Dimensions scored: <b>{{DIMS_SCORED}}</b> / 29</span>
+  </div>
+
+  <!-- ================= SUMMARY ================= -->
+  <h2>Summary</h2>
+
+  <div class="panel verdict">
+    {{VERDICT}}
+  </div>
+
+  <div class="counts">
+    <span class="pill present"><b>{{N_PRESENT}}</b> present</span>
+    <span class="pill partial"><b>{{N_PARTIAL}}</b> partial</span>
+    <span class="pill absent"><b>{{N_ABSENT}}</b> absent</span>
+    <span class="pill na"><b>{{N_NA}}</b> n/a</span>
+  </div>
+
+  <h3>Scorecard</h3>
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>Dimension</th><th>State</th><th>Evidence / gap</th></tr>
+    </thead>
+    <tbody>
+      <!-- BEGIN scorecard-row (repeat per dimension) -->
+      <tr>
+        <td>{{ROW_PHASE}}</td>
+        <td>{{ROW_DIMENSION}}</td>
+        <td class="state" data-state="{{ROW_STATE}}">{{ROW_STATE}}</td>
+        <td>{{ROW_EVIDENCE}}</td>
+      </tr>
+      <!-- END scorecard-row -->
+    </tbody>
+  </table>
+
+  <h3>Prioritised findings (risk-ordered)</h3>
+  <!-- BEGIN finding (repeat per finding, highest risk first) -->
+  <div class="finding {{FINDING_SEV_CLASS}}">
+    <div><span class="sev {{FINDING_SEV_CLASS}}">{{FINDING_SEV}}</span>
+      &nbsp;<b>{{FINDING_TITLE}}</b> — phase {{FINDING_PHASE}}, {{FINDING_DIMENSION}}</div>
+    <div class="why">{{FINDING_WHY}}</div>
+    <div class="next">Next step: {{FINDING_NEXT}}</div>
+  </div>
+  <!-- END finding -->
+
+  <h3>Validation run</h3>
+  <table>
+    <thead><tr><th>Check</th><th>Result</th><th>Exit code</th></tr></thead>
+    <tbody>
+      <!-- BEGIN validation-row (repeat: Tests / Lint / Audit / Deny / …) -->
+      <tr><td>{{VAL_CHECK}}</td><td>{{VAL_RESULT}}</td><td><code>{{VAL_EXIT}}</code></td></tr>
+      <!-- END validation-row -->
+    </tbody>
+  </table>
+
+  <!-- ================= DETAIL ================= -->
+  <h2>Detail — by SDLC phase</h2>
+
+  <!-- BEGIN phase-section (repeat per phase 1..7 that has content) -->
+  <h3>{{PHASE_NUMBER}} — {{PHASE_NAME}}</h3>
+  <!-- BEGIN dimension-detail (repeat per dimension in this phase) -->
+  <div class="finding">
+    <div><b>{{DET_DIMENSION}}</b>
+      &nbsp;<span class="state" data-state="{{DET_STATE}}">{{DET_STATE}}</span></div>
+    <div class="why">{{DET_NOTE}}</div>
+    <!-- Optional: cite the concrete artifact(s) that decided the state. -->
+    <div>Evidence: <code>{{DET_EVIDENCE}}</code></div>
+  </div>
+  <!-- END dimension-detail -->
+  <!-- END phase-section -->
+
+  <!-- ================= WHAT'S SOLID ================= -->
+  <h2>What's solid</h2>
+  <ul class="solid">
+    <!-- BEGIN solid (repeat: dimensions confirmed PRESENT with evidence) -->
+    <li><span>{{SOLID_DIMENSION}} — {{SOLID_EVIDENCE}}</span></li>
+    <!-- END solid -->
+  </ul>
+
+  <footer>
+    Generated by the quality-sweep skill. Evidence arbitrates every verdict:
+    a dimension is PRESENT only with a cited artifact; a green without evidence
+    is a finding, not a pass. Findings are discovery, not a mandate — route them
+    to your triage process.
+  </footer>
+
+</div>
+</body>
+</html>

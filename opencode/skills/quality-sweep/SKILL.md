@@ -1,17 +1,24 @@
 ---
 name: quality-sweep
-description: Generic, shareable SDLC quality sweep of a codebase or crate. Scores 29 equally-weighted quality dimensions across 7 SDLC phases and produces a prioritised, evidence-arbitrated report. Every verdict is decided by cited evidence, never by a prior. NOT a per-change gate — a standalone breadth-first sweep run on demand. Use when the user asks to "run a quality sweep", "SDLC quality audit", or "quality process", or wants a periodic codebase health check. For per-diff review use a dedicated code-review process instead.
+description: Generic, shareable SDLC quality sweep of a codebase or crate. Scores 29 equally-weighted quality dimensions across 7 SDLC phases and produces a prioritised, evidence-arbitrated HTML report (summary + per-phase detail) from a template. Every verdict is decided by cited evidence, never by a prior. NOT a per-change gate — a standalone breadth-first sweep run on demand. Use when the user asks to "run a quality sweep", "SDLC quality audit", or "quality process", or wants a periodic codebase health check. For per-diff review use a dedicated code-review process instead.
 ---
 
 # Quality Sweep
 
 A generic, breadth-first SDLC quality sweep. It scores 29 dimensions across 7
-phases against **one target codebase** and produces a prioritised report. The
-engine is target-agnostic and self-contained; one swappable data layer tunes it
-to the target's ecosystem:
+phases against **one target codebase** and produces a prioritised HTML report.
+The engine is target-agnostic and self-contained; three swappable data layers
+tune it:
 
 - **Toolchain adapter** (`adapters/toolchains.md`) — maps the target's
   ecosystem to `{test, lint, audit, deny}` commands (rust / node / python / …).
+- **Per-phase check references** (`references/phase-<n>-*.md`) — one file per
+  SDLC phase holding concrete, generalized checks and named anti-patterns for
+  that phase's dimensions. The engine defines *what* each dimension is; the
+  reference tells you *what concrete issues to hunt for*. Load the reference for
+  a phase before running its evidence pass.
+- **Report template** (`templates/report.html`) — a self-contained HTML
+  template (summary + per-phase detail) filled at report time.
 
 The 29 dimensions and the 7-phase model are fixed, and **all dimensions carry
 equal importance**. There is no weighting, ranking, or bias — the sweep looks
@@ -76,6 +83,11 @@ model and the 29-dimension membership are fixed, and every dimension is looked
 at with equal rigour. Each dimension is scored **once**; where a concept spans
 phases it carries a `(facet: …)` note under its primary phase instead of a
 second row.
+
+Each phase has a companion reference file (`references/phase-<n>-*.md`) that
+expands these one-line definitions into concrete checks and named anti-patterns.
+The definitions below say *what* each dimension is; the reference says *what to
+hunt for*. Read the phase reference before that phase's evidence pass.
 
 ### Phase 1 — Requirements / Design
 - **API / schema design** — public surface minimality, contracts, newtypes.
@@ -175,6 +187,10 @@ second row.
 4. Record the sweep timestamp, target, and ecosystem in the report header.
 
 ### Phase 1 — Evidence pass (all 29 dimensions, equal rigour)
+Work phase by phase. **Before each phase, read its reference file**
+(`references/phase-<n>-*.md`) — it holds the concrete checks and named
+anti-patterns to hunt for that phase's dimensions. The reference is the
+authoritative check source; the list below is a fast summary, not a substitute.
 For every dimension, search for concrete presence-evidence. Use the
 toolchain-adapter row for the mechanical checks:
 - Tests exist and run? (adapter `test` — record exit code, don't fabricate.)
@@ -232,61 +248,54 @@ Prioritise findings by **risk = blast-radius × irreversibility × likelihood**.
 (data-migration and API-versioning gaps are classic expensive-later failures).
 
 ### Phase 3 — Report
-Write the report to the configured report path (default `.ooda/`, gitignored):
-`<report-dir>/quality-sweep-<target>-<timestamp>.md`. Use the template below.
+Produce an **HTML report** from the template at `templates/report.html`. Write it
+to the configured report path (default `.ooda/`, gitignored):
+`<report-dir>/quality-sweep-<target>-<timestamp>.html`.
+
+The template is self-contained (inline CSS, no external assets) and has two
+parts: a **Summary** (verdict, state counts, scorecard, prioritised findings,
+validation run) and a **Detail** section (per-SDLC-phase, one entry per
+dimension with its state, note, and cited evidence). Fill procedure:
+
+1. Read `templates/report.html`.
+2. Replace every `{{TOKEN}}` with the swept value. Header tokens: `{{TARGET}}`,
+   `{{DATE_ISO}}`, `{{ECOSYSTEM}}`, `{{DIMS_SCORED}}`; summary tokens:
+   `{{VERDICT}}`, `{{N_PRESENT}}`/`{{N_PARTIAL}}`/`{{N_ABSENT}}`/`{{N_NA}}`.
+3. Repeat each marked block once per item, then delete its `BEGIN/END` comment
+   markers: `scorecard-row` per dimension, `finding` per prioritised finding
+   (highest risk first), `validation-row` per adapter check, `phase-section`
+   per phase with `dimension-detail` nested per dimension, `solid` per
+   evidence-backed PRESENT dimension.
+4. Use the state vocabulary verbatim in `data-state` so the CSS colours it:
+   `PRESENT | PARTIAL | ABSENT | NA`. Severity classes: `high | medium | low`.
+5. Every `PRESENT` and every finding must carry a concrete artifact
+   (file:line / CI step / doc section) in its evidence/why field — the
+   green-arbitration rule applies to the HTML exactly as to the sweep.
+
+Do not invent chart libraries or external CSS; keep the report a single
+portable file.
 
 ---
 
 ## Report template
 
-```markdown
-# Quality Sweep: <TARGET>
+The report template is `templates/report.html` — a self-contained HTML file
+(inline CSS, no external assets). It captures, in order:
 
-**Date**: <ISO>
-**Target**: <crate/workspace/service path>
-**Ecosystem**: <rust | node | python | …>
+- **Header** — target, date, ecosystem, dimensions-scored / 29.
+- **Summary** — a 2–3 sentence verdict (lead with where evidence is thinnest,
+  stated as an evidence claim not a prior); PRESENT / PARTIAL / ABSENT / N/A
+  counts; the full scorecard (one row per dimension, cross-listed concepts as a
+  single `(facet: …)` row); prioritised findings, risk-ordered
+  (`risk = blast-radius × irreversibility × likelihood`), each with a cited
+  artifact and a triage-shaped next step; and the validation run (adapter
+  test / lint / audit / deny with exit codes — never fabricated).
+- **Detail** — per SDLC phase, one entry per dimension: state, note, and the
+  concrete evidence that decided the state.
+- **What's solid** — dimensions confirmed PRESENT with evidence, so the report
+  is honest rather than a gap list.
 
-## Verdict
-
-<2–3 sentences. Lead with where the evidence is thinnest — that is where risk
-hides. State it as an evidence claim, not a prior.>
-
-## Scorecard (29 distinct dimensions across 7 phases)
-
-| Phase | Dimension | State | Evidence / gap |
-|-------|-----------|-------|----------------|
-| 1 Design | API/schema design | PRESENT/PARTIAL/ABSENT | … |
-| 1 Design | Type safety *(facet: phase 2)* | … | one row; note impl-level enforcement |
-| … | … | … | … |
-| 5 Release | Data-migration safety | PRESENT | schema-version field at db/mod.rs:12; replay test tests/replay.rs:40 |
-| 5 Release | Delivery performance (DORA) | N/A | no deployment pipeline (pure library) |
-| … | … | … | … |
-
-## Dimension notes
-
-<terse: one line each where useful. PRESENT+evidence closes it; ABSENT/PARTIAL
-is a finding. An evidence-free green is under-looked, not a pass.>
-
-## Validation run
-
-| Check | Result | Exit code |
-|-------|--------|-----------|
-| Tests (adapter test) | PASS/FAIL/SKIPPED | <n> |
-| Lint (adapter lint) | … | <n> |
-| Audit (adapter audit) | … | <n> |
-| Deny (adapter deny) | … | <n> |
-
-## Prioritised findings (risk-ordered)
-
-1. **[MEDIUM+] <finding>** — phase <n>, dimension <name>. <one-line why it
-   bites later>. Suggested next step: <triage-shaped, but do not execute>.
-2. …
-
-## What's solid
-
-<brief acknowledgement of dimensions confirmed PRESENT with evidence — so the
-report is honest, not just a gap list.>
-```
+Fill it per the Phase-3 procedure above; do not hand-roll a different format.
 
 ---
 
@@ -299,7 +308,7 @@ Target: <path>   Ecosystem: <name>
 PRESENT (with evidence): <n>   PARTIAL: <n>   ABSENT: <n>   N/A: <n>
 Top finding: <one line, risk-ranked #1>
 Validation: Tests=<..> Lint=<..> Audit=<..> Deny=<..>
-Report: <report-dir>/quality-sweep-<target>-<timestamp>.md
+Report: <report-dir>/quality-sweep-<target>-<timestamp>.html
 ```
 
 ## Discipline
