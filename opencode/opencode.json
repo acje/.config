@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 3,
   "share": "disabled",
   "compaction": {
     "auto": true,
@@ -134,13 +135,18 @@
     "edit": "allow",
     "write": "allow",
     "external_directory": {
+      "**": "deny",
       "~/tmp/**": "allow",
       "/tmp/**": "allow",
       "/private/tmp/**": "allow",
-      "/var/folders/**": "allow"
+      "/var/folders/**": "allow",
+      "~/.cargo/registry/**": "allow"
     }
   },
   "model": "github-copilot/claude-opus-4.8",
+  "experimental": {
+    "continue_loop_on_deny": true
+  },
   "plugin": [
     "./plugins/searxng.mjs",
     "./plugins/tracer.mjs",
