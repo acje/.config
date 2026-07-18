@@ -27,3 +27,15 @@ Notes:
   with the same four slots; the engine reads whatever rows are present.
 - Record the exit code for each command actually run. Tool absent → `SKIPPED`
   with the reason; never fabricate a pass.
+- **Interpret each exit code against the tool's config, not at face value.** A
+  passing `audit` with an ignore list (e.g. `.cargo/audit.toml`) is
+  `PASS-WITH-IGNORES` — name the suppressed advisories; it is not a clean pass.
+  A failing `deny`/policy gate with no policy file present is `UNCONFIGURED`,
+  not a license violation. Read the config before scoring the check.
+- **Compiled ecosystems: run the four mechanical commands ONCE, centrally.**
+  For any ecosystem whose commands share a build directory (rust `target/`, go
+  build cache, dotnet `obj/bin`, …), do not re-invoke `test`/`lint`/`audit`/
+  `deny` inside each parallel phase shard — the shared build dir causes
+  lock contention and wasted rebuilds. Run them once, capture exit codes +
+  transcripts, and share the captured results with the shards as evidence.
+  Anti-pattern: parallel shards each spawning the compiler on one `target/`.

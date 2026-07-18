@@ -10,8 +10,10 @@ phases against **one target codebase** and produces a prioritised HTML report.
 The evidence pass **fans out one subagent per SDLC phase** (seven parallel
 shards) so each shard gets a fresh full context budget for its ~4 dimensions
 rather than 29 dimensions competing in one window — the fix for run-to-run
-score nondeterminism. The engine is target-agnostic and self-contained; three
-swappable data layers tune it:
+score nondeterminism. Before the report is written, a fresh-context
+verification subagent re-arbitrates every finding against its cited evidence
+(Phase 2.5) so no producing shard signs off its own work. The engine is
+target-agnostic and self-contained; three swappable data layers tune it:
 
 - **Toolchain adapter** (`adapters/toolchains.md`) — maps the target's
   ecosystem to `{test, lint, audit, deny}` commands (rust / node / python / …).
@@ -203,6 +205,16 @@ hunt for*. Read the phase reference before that phase's evidence pass.
    available code-graph. Note committed conventions so findings judge against
    *this* codebase's contract, not a generic one.
 4. Record the sweep timestamp, target, and ecosystem in the report header.
+5. **(Optional) Reference exemplar.** You may name a mature sibling/exemplar
+   repo whose *solved* patterns become an extra checklist for this sweep: "does
+   the target do what the exemplar already solved?". Inspecting a weaker repo
+   right after a stronger sibling sharpens both — the sibling's solved patterns
+   expose the target's gaps as concrete probes. Guardrails: the exemplar is
+   **optional**; **evidence still arbitrates** (never assume the exemplar is
+   itself correct — an exemplar's pattern is a probe to run against the target,
+   not a score to inherit); the exemplar **sharpens probes, it does not set
+   scores**. Record which repo was used as exemplar in the report header for
+   provenance.
 
 ### Phase 1 — Evidence pass (7 parallel phase shards, equal rigour)
 
@@ -217,6 +229,16 @@ per-phase fan-out gives each shard a fresh full budget for ~4 dimensions.
 Do **not** split by code region (dimensions are cross-cutting) or by individual
 dimension (29 shards = coordination overhead >> work, and evidence dedup is
 lost). Phase is the natural boundary — it is already the data-layer seam.
+
+**Compiled-ecosystem mechanical checks run ONCE, centrally — not per shard.**
+For compiled ecosystems (rust, go, dotnet, …) the adapter commands
+(`test` / `lint` / `audit` / `deny`) share a single build directory
+(`target/`, etc.). Running them inside each parallel phase shard causes
+build-lock contention and wasted rebuilds. Run the four mechanical commands
+**once, centrally**, capture their exit codes and transcripts, and hand the
+captured results to the shards as shared evidence. Shards still interpret those
+results for their own dimensions, but they do not each re-invoke the compiler.
+Interpreted ecosystems without a shared build artifact are exempt.
 
 **The seven shards and their scored dimension counts (sum = 29):**
 
@@ -270,7 +292,8 @@ after the dimension's probe floor has run and its transcript is recorded —
 **Merge step.** After all seven shards return, assemble the scorecards into one
 set of exactly 29 scored dimensions (verify each of the 29 appears once and only
 once — the facet-ownership table above is the checklist), dedup any evidence
-cited by more than one shard, then proceed to Phase 2 scoring and the report.
+cited by more than one shard, then proceed to Phase 2 scoring, the Phase 2.5
+verification pass, and the report.
 
 For reference, the dimensions each shard hunts (the reference file is the
 authoritative check source; this is a fast summary, not a substitute):
@@ -310,7 +333,10 @@ never a pass. For **binary** dimensions a single concrete artifact closes the
 dimension. For **graded** dimensions (Testing, Security, Observability,
 Correctness, Reliability) the probe floor must COMPLETE even after a hit, so the
 score reflects coverage, not first-touch luck — do not stop at the first
-artifact.
+artifact. **"Graded" names the closing rule, never a state value.** A graded
+dimension still emits exactly one of `PRESENT | PARTIAL | ABSENT | N/A`;
+returning a category word such as "GRADED" as if it were a state is a contract
+violation — resolve it to a concrete state.
 
 ### Phase 2 — Score & prioritise
 Score each of the 29 dimensions **once** (cross-phase concepts get one row with
@@ -328,11 +354,69 @@ no deployment pipeline (e.g. a pure library) and for **Safety / fail-safe** on
 non-safety-critical targets — mark `N/A` with a one-line reason rather than
 `ABSENT`, since absence of the *concern* is not a finding.
 
+**`N/A` can coexist with a PRESENT sub-facet.** When a dimension is `N/A` for
+its *primary* concern but an applicable *sub-facet* exists, score `N/A` with the
+reason AND record the sub-facet's `PRESENT` evidence — do not lose it. Example:
+Safety is `N/A` for physical safety on a data service, yet a data-integrity
+fail-safe sub-facet is genuinely `PRESENT` with cited evidence; the row reads
+`N/A (physical safety inapplicable) — sub-facet: data-integrity fail-safe
+PRESENT (evidence: …)`. The primary `N/A` reason and the sub-facet evidence both
+survive into the report.
+
 Prioritise findings by **risk = blast-radius × irreversibility × likelihood**.
 `ABSENT` items on a production/public artifact are medium+ by default
 (data-migration and API-versioning gaps are classic expensive-later failures).
 
-### Phase 3 — Report
+### Phase 2.5 — Independent verification (fresh context, before report)
+
+Before the report is written, the merged-and-scored dimension set is handed to
+**one verification subagent in a fresh context** whose sole job is to
+re-arbitrate every finding against its cited evidence. This is a second pair of
+eyes that never saw the shard runs — it cannot inherit a shard's under-looking,
+only catch it. The producing contexts (the seven shards) are the wrong ones to
+check their own work; a fresh context is.
+
+The verifier receives the full scored set (all 29 dimensions with state,
+evidence, and probe transcript) and, for each dimension, re-checks against the
+same evidence-arbitration rules the sweep runs on:
+
+- **`PRESENT` without a concrete artifact** (file:line / CI step / doc section)
+  → **reject**: downgrade to a finding (green-without-evidence = under-looked).
+- **`ABSENT` without a completed probe-floor transcript** → **reject**: the
+  score is not yet earned; the dimension returns to its home shard for the
+  mandatory probes, or is marked with the gap explicit.
+- **Cited artifact that does not support the claimed state** (evidence
+  mismatch, stale line reference, artifact proves a weaker/different claim) →
+  **reject**: correct the state to what the evidence actually supports.
+- **`N/A` without a one-line applicability reason** → **reject**: demand the
+  reason or rescore.
+- **Facet dimension scored by the wrong shard, or scored twice** → **reject**:
+  re-apply the facet-ownership table; exactly 29 rows, none dropped, none
+  doubled.
+- **State field carrying a category label instead of a concrete state** (e.g.
+  "GRADED", "binary", a phase name) → **reject**: `PRESENT | PARTIAL | ABSENT |
+  N/A` are the only legal state values; resolve the label to the concrete state
+  its evidence supports.
+
+The verifier returns a **verification verdict** per dimension —
+`CONFIRMED` (state and evidence stand) or `REJECTED (reason, corrected state /
+required re-probe)` — plus a one-line overall gate:
+
+```
+verification: dimensions_checked: 29
+  confirmed: <n>   rejected: <n>
+  [ per rejected: { name, was: <state>, reason, disposition: CORRECT|RE-PROBE } ]
+gate: PASS  (all findings evidence-backed)  |  FAIL (rejects must be resolved)
+```
+
+On `FAIL`, resolve every rejection before Phase 3 — corrected states are
+applied in place; `RE-PROBE` dispositions go back to the owning shard for the
+missing probe floor, then re-verify. The report is written **only** from a set
+whose verification gate is `PASS`. The verification verdict itself is recorded
+so the report's validation section can cite it (findings survived an
+independent evidence re-check, not just the producing shard's own claim).
+
+
 Produce an **HTML report** from the template at `templates/report.html`. Write it
 to the configured report path (default `.ooda/`, gitignored):
 `<report-dir>/quality-sweep-<target>-<timestamp>.html`.
@@ -345,7 +429,10 @@ dimension with its state, note, and cited evidence). Fill procedure:
 1. Read `templates/report.html`.
 2. Replace every `{{TOKEN}}` with the swept value. Header tokens: `{{TARGET}}`,
    `{{DATE_ISO}}`, `{{ECOSYSTEM}}`, `{{DIMS_SCORED}}`; summary tokens:
-   `{{VERDICT}}`, `{{N_PRESENT}}`/`{{N_PARTIAL}}`/`{{N_ABSENT}}`/`{{N_NA}}`.
+   `{{VERDICT}}`, `{{N_PRESENT}}`/`{{N_PARTIAL}}`/`{{N_ABSENT}}`/`{{N_NA}}`;
+   verification tokens (Phase 2.5): `{{VERIFY_GATE}}` (`PASS` — the report is
+   only written from a passing set), `{{VERIFY_CONFIRMED}}`,
+   `{{VERIFY_REJECTED}}` (rejects found and resolved before reporting).
 3. Repeat each marked block once per item, then delete its `BEGIN/END` comment
    markers: `scorecard-row` per dimension, `finding` per prioritised finding
    (highest risk first), `validation-row` per adapter check, `phase-section`
@@ -378,7 +465,9 @@ The report template is `templates/report.html` — a self-contained HTML file
   single `(facet: …)` row); prioritised findings, risk-ordered
   (`risk = blast-radius × irreversibility × likelihood`), each with a cited
   artifact and a triage-shaped next step; and the validation run (adapter
-  test / lint / audit / deny with exit codes — never fabricated).
+  test / lint / audit / deny with exit codes — never fabricated), plus the
+  Phase-2.5 verification gate (findings survived an independent fresh-context
+  evidence re-check, not just the producing shard's claim).
 - **Detail** — per SDLC phase, one entry per dimension: state, note, the
   concrete evidence that decided the state, and the **probe transcript** (what
   was searched / which adapter commands ran with exit codes) that earned the
@@ -424,7 +513,19 @@ Report: <report-dir>/quality-sweep-<target>-<timestamp>.html
 - **ABSENT is earned.** No dimension is scored `ABSENT` until its mandatory
   probe floor has run and its transcript is recorded. `ABSENT` = "these specific
   probes returned nothing", never "I didn't look".
+- **Verify in a fresh context before reporting.** Every finding is re-arbitrated
+  against its cited evidence by an independent verification subagent (Phase 2.5)
+  that never saw the shard runs. The report is written only from a set whose
+  verification gate is `PASS`; a producing context does not sign off its own work.
 - **Don't fabricate validation.** Tool missing → `SKIPPED` with a reason.
+- **Exit code is not truth — interpret it against the tool's config.** A green
+  exit can mask suppressed advisories, and a red exit can be a missing config
+  rather than a real violation. Before scoring a mechanical check, read its
+  config: an `audit` that passes *with* an ignore list is `PASS-WITH-IGNORES`
+  (name the suppressed advisories), not a clean pass; a `deny`/policy gate that
+  fails because there is *no* policy file is `UNCONFIGURED`, not a license
+  violation. Score the interpreted state, and record the config basis in the
+  probe transcript.
 - **Periodicity is a discovery trigger, not a cadence.** Route findings to your
   triage process signal-triggered; the sweep discovers, triage disposes.
 - **Sweep reports; it does not fix.** Findings become work through your normal

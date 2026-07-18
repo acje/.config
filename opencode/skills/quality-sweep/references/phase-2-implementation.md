@@ -16,6 +16,14 @@ probe floor below has been executed and its transcript recorded (what was
 searched / run, and the empty result). `ABSENT` means "these specific probes
 returned nothing", never "I didn't find anything".
 
+**State hygiene — "graded" is a closing rule, not a state.** Several dimensions
+here are graded (Correctness especially): the probe floor must complete even
+after a first hit. But a graded dimension still emits exactly one concrete
+state — `PRESENT | PARTIAL | ABSENT | N/A`. Never return a category word
+("GRADED", "binary", a phase name) in the state field; that is a shard-contract
+violation the verifier auto-rejects. "Graded" describes how you *close* the
+dimension (complete the floor), not what you *report* as its state.
+
 ## Refactor / readability
 
 Good: functions are cohesive single-responsibility units small enough to hold

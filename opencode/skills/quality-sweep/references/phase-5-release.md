@@ -217,6 +217,14 @@ For data-integrity-critical systems the fail-safe posture still applies (a
 corrupt write is the hazard). The corpus is rich on fail-*closed* defaults at
 data boundaries; genuine physical-hazard safety is history-thin.
 
+**Check — N/A for the primary concern does not erase a PRESENT sub-facet.**
+When physical safety is `N/A` but a data-integrity fail-safe sub-facet is
+genuinely present, score `N/A` for the primary concern AND record the
+sub-facet's `PRESENT` evidence in the same row — do not let the `N/A` swallow
+the applicable sub-facet. Read the row as `N/A (physical safety inapplicable)
+— sub-facet: data-integrity fail-safe PRESENT (evidence: file:line)`. Both the
+`N/A` reason and the sub-facet evidence survive into the report.
+
 **Checks:**
 - Fail-safe default is declared and correct for the domain: gates fail closed where
   a wrong-accept is the hazard (e.g. rehydrate gated on a schema marker, fail-closed

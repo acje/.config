@@ -16,6 +16,15 @@ anything". Security is a graded dimension: complete the probe floor even after a
 first hit, so the score reflects coverage across the trust boundaries, not a
 single lucky finding.
 
+**Anti-pattern — trusting the exit code over the tool config.** A green `audit`
+can mask suppressed advisories: read the ignore list (`.cargo/audit.toml` or
+equivalent) and, if advisories are suppressed, score `PASS-WITH-IGNORES` and
+name each suppressed advisory (its risk did not disappear, it was accepted). A
+red `deny`/policy gate can simply mean *no policy file is configured* — that is
+`UNCONFIGURED`, not a license violation. Always interpret the exit code against
+the tool's configuration before scoring, and record the config basis in the
+probe transcript.
+
 ## Security
 
 Good looks like: every trust boundary validates on the way in, secrets never
