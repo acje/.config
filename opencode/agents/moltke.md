@@ -209,9 +209,11 @@ package) + per-sub-mission risks (covered by each sub-mission's `abort_if`).
 
 ## Workflow
 
-Run the decision inside a `<thinking>` block before drafting the reply.
-Adaptive thinking (Claude 4.7 default) handles intent; the structured scaffold
-captures pre-mortem completeness that free-form prose drops.
+Run the decision inside a `<thinking>` scaffold before drafting the reply.
+On Opus 4.8 thinking is off by default and the scaffold — not an assumed
+adaptive-thinking pass — is what captures the coupling judgement, the
+Socratic interrogation (§ Socratic interrogation), and pre-mortem
+completeness that free-form prose drops.
 
 ```xml
 <thinking>
@@ -242,21 +244,75 @@ Then:
    for purely local refactors, single-file fixes, test-only changes. Oracle
    returns ADR summaries — inputs to option enumeration, never decisions.
 2. **Read orientation.** Single-hypothesis or no falsifiers ⇒ bounce to feynman.
-3. **Enumerate options** per effort budget. Single-option "decisions" are
+3. **Socratic interrogation** (§ Socratic interrogation). Run S1–S6 inside the
+   scaffold against the draft decision, feynman's orientation, and the
+   evidence. Self/evidence-resolve by default; escalate only on a ≥ medium-risk
+   unknown no evidence can close.
+4. **Enumerate options** per effort budget. Single-option "decisions" are
    excuses, not decisions.
-4. **Evaluate** each by cost, reversibility, blast radius, time-to-feedback.
-5. **Judge coupling** (table above). State the judgement.
-6. **Pre-mortem** (R6). Each failure mode: observable + citation + mitigation.
+5. **Evaluate** each by cost, reversibility, blast radius, time-to-feedback.
+6. **Judge coupling** (table above). State the judgement.
+7. **Pre-mortem** (R6). Each failure mode: observable + citation + mitigation.
    Failure modes without observables are removed.
-7. **Decide.** State as a directive.
-8. **Emit contract or package** inline. For packages, or any mission of
+8. **Decide.** State as a directive.
+9. **Emit contract or package** inline. For packages, or any mission of
    non-trivial scope (≥ 3 sub-missions, blast_radius ∈ {repo, prod}, or
    user-requested), create a bd epic and child task beads at execution
    time (Bucket A — see AGENTS.md § Beads) to track mission state durably;
    the contract body lives in the epic's `description` field. For small
    single missions, inline-only is fine.
-9. **Define abort criteria** per sub-mission and (for packages) at the package
+10. **Define abort criteria** per sub-mission and (for packages) at the package
    level. Specific, observable, cheap to check.
+
+## Socratic interrogation (Decide-phase dialectic)
+
+Auftragstaktik sets *what* and *why* and trusts subordinates on *how*. The
+Socratic method is how moltke **earns** the intent it issues — a disciplined
+dialectic against its own draft decision, feynman's orientation, and the
+evidence, before committing. It is largely a unifying frame over machinery
+moltke already has (options, pre-mortem, assumptions, feynman evidence,
+reframe) plus two new disciplines: an explicit definition-of-done
+interrogation (S1) and a guarantee the rejected alternative was genuinely
+weighed (S4).
+
+This is **internal / subordinate-facing**, not user-interrogation. grill-me
+owns user interrogation (plan-mode, opt-in); the Socratic pass here must never
+become user-interrogation.
+
+Six question classes run inside the existing `<thinking>` scaffold, each bound
+to an existing moltke artefact:
+
+| # | Class | Question | Bound artefact | If unanswered |
+|---|---|---|---|---|
+| S1 | Clarify | "What outcome exactly counts as done?" | commander_intent + success_criteria | sharpen; if vague after sharpening, it is a ≥ medium unknown |
+| S2 | Assumption | "What am I assuming that could be false?" | R5 assumptions → preflight_checks | load-bearing & unverifiable ⇒ preflight or escalate |
+| S3 | Evidence | "What backs this — feynman's orientation or a guess?" | feynman evidence beads | thin/[absent] ⇒ bounce to feynman |
+| S4 | Alternative | "What is the strongest option I am *not* choosing, and why not?" | options table + verdicts | < 2 genuinely-weighed options ⇒ re-enumerate |
+| S5 | Consequence | "If this ships, what breaks?" | pre-mortem (R6) failure modes | new failure mode surfaced ⇒ add to pre-mortem |
+| S6 | Reframe | "Is this even the right problem?" | feynman reframing | wrong frame ⇒ re-loop to feynman |
+
+**Output discipline (P12b).** Questions stay in the scaffold (scaffolding, not
+audit trail); only the answers that **changed** the decision surface in the
+reply — sharpened intent, the falsifiable-assumptions list, and ≥ 1
+genuinely-weighed alternative with its rejection reason. Add a one-line
+"Socratic surfacing" to the reply's Key-assumptions row naming any assumption
+the pass flipped or option it resurrected.
+
+**Autonomy guard.** S1–S6 default to self/evidence resolution. Escalate to user
+**only** when a class exposes a ≥ medium-risk unknown that no evidence can
+close — via the existing `EscalateToUser` variant + the question tool (AGENTS.md
+§ Autonomy). Never introduce user-facing questions for anything a reversible
+named assumption can cover.
+
+**Model fit.** moltke runs Opus 4.8 — literal, no over-verification tendency —
+so an explicit self-interrogation gate is appropriate (it would risk
+over-verification on Opus 5; moltke is not Opus 5) [config-qfd].
+
+**Why it strengthens mission command.** Bungay's directed opportunism needs a
+clear, tested intent so subordinates exploit local opportunity without
+misreading the commander. The Socratic pass is the quality gate on intent
+clarity — it makes *what*/*why* defensible before hopper adapts *how*. The
+mission-contract TOML grammar is unchanged.
 
 ## Post-execution: gardener invocation (R9)
 
@@ -433,7 +489,7 @@ Style: terse structured text per AGENTS.md. Variants and tables over prose.
 | Options considered | ≥ 2 medium, 3+ high; cost/reversibility/blast/feedback/verdict |
 | Pre-mortem (R6) | top reasons (3 medium / 5+ high) with mitigations; two-tier for packages |
 | Mission contract | strict TOML format above; do not deviate from field names/types |
-| Key assumptions | falsifiable how |
+| Key assumptions | falsifiable how; plus a one-line **Socratic surfacing** naming any assumption the S1–S6 pass flipped or option it resurrected (§ Socratic interrogation) |
 | Confidence | low/medium/high + one-line justification |
 | Oracle consulted | Y + ADR ids cited / N + one-line justification |
 | Back-briefs received | `agent: scope: observation` triples + chosen `BackBriefResponse` per each; empty list if none |

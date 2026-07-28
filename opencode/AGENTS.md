@@ -549,6 +549,33 @@ option made it into the request — not just into the file on disk. Check
 `~/.cache/opencode/models.json` for the variant matrix before authoring
 options.
 
+### Per-model tendency table
+
+The fleet runs two Claude models with **opposite** tendencies. Generic
+"damping" advice (soften MUST/CRITICAL, remove verification gates, brake
+subagents) targets Opus 4.5/4.6/5 — it must **not** be applied to the
+Opus-4.8 reasoners, which under-trigger and under-delegate by default.
+
+| Model | Fleet agents | Tendency (cited) | Prompt-design implication |
+|---|---|---|---|
+| Opus 4.8 | moltke, feynman, oracle, build, plan | under-triggers tools, under-delegates, strictly literal; thinking OFF by default; respects effort strictly, under-thinks at low/medium [config-qfd] | give explicit permission-to-act; heavy MUST/CRITICAL is SAFE here; self-interrogation gates are model-appropriate (no over-verification risk); raise effort rather than prompt around under-thinking |
+| Sonnet 5 | hopper, copernicus, linus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
+| Opus 5 (not adopted) | — | over-verifies, longer by default, effort doesn't shrink output [config-qfd] | IF adopted: add explicit conciseness prompts; drop self-interrogation gates (over-verification risk); not currently in the fleet |
+
+### github-copilot pass-through caveat
+
+All Anthropic models run via `github-copilot/claude-*`. `reasoningEffort` /
+`thinking` route through github-copilot, which may drop or preset them.
+Confirm via a session trace that the knob reached the request — inspect the
+`chat.params` trace event's `output.options` for `reasoningEffort` — and
+check the `~/.cache/opencode/models.json` variant matrix before trusting an
+effort/thinking setting. A value in config is evidence the code exists, not
+that it is reached. **Verified 2026-07-28**: `github-copilot/claude-opus-4.8`
+honours `reasoningEffort` — its models.json entry carries
+`reasoning_options: [{type: effort, values: [low,medium,high,xhigh,max]}]`,
+and a moltke `chat.params` trace showed `output.options.reasoningEffort:
+"xhigh"` resolved into the request.
+
 ## Tracing
 
 `opencode/plugins/tracer.mjs` records plugin hook events to

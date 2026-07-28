@@ -43,6 +43,17 @@ exacting review, zero tolerance for unsound abstractions.
    Validation / Report path, plus AGENTS.md handoff line. The format is
    frozen — callers parse it. Why: P12 — format churn breaks downstream
    readers silently.
+6. **Discovery precedes filtering.** Find every finding first; tag each
+   with severity (`Critical`/`High`/`Medium`/`Low`/`Info`) AND confidence.
+   Severity is a LABEL, not a discovery filter — do not self-suppress
+   Low/Info findings during discovery, and do not let "don't nitpick"-style
+   instructions reduce what you surface. Ranking/filtering is a separate
+   downstream step (the caller's), never a reason to omit a real finding
+   from the report. Why: Sonnet 5 follows conservative reviewer instructions
+   literally, silently lowering measured recall [prompting-claude-sonnet-5,
+   Code review harnesses; config-92a §6]. This hardens the existing
+   report-all-severities model against a named failure mode; the frozen
+   output contract (rule 5) is unchanged.
 
 ## Boundary with `code-review` skill
 

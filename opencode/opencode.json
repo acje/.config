@@ -183,7 +183,8 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.8"
+      "model": "github-copilot/claude-opus-4.8",
+      "reasoningEffort": "xhigh"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
