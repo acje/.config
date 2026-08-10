@@ -50,3 +50,12 @@ The durable, append-only record of harvested lessons is `lessons-ledger.md`
 at this skill's root (sibling to `SKILL.md` and this file) — not inside
 `references/`, since it is not sweep engine data. See that file's header for
 how it is scoped and how a downstream adopter should treat it.
+
+## Provenance pointer — historical author-weighted look-order
+
+The 29 dimensions ship equal-weight, per the config-aab MECE validation
+(set-completeness + non-overlap check, not a ranking). An earlier
+author-weighted dimension look-order, and the 24k-prompt provenance behind
+it, was considered and not shipped; that history survives only in bd bead
+`config-z05` (closed — bead bodies survive closure). This is a provenance
+pointer, not a proposal to reintroduce weighting.

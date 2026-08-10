@@ -591,9 +591,16 @@ and a moltke `chat.params` trace showed `output.options.reasoningEffort:
 "xhigh"` resolved into the request. **Verified 2026-08-10**:
 `github-copilot/claude-opus-5` also honours `reasoningEffort` — 45
 `build` agent `chat.params` observations on 2026-08-10 all resolved
-`output.options.reasoningEffort: "xhigh"` into the request. **Gap**:
-gpt-5.6 (sol/terra) remains unverified — linus has not run yet, so no
-`chat.params` evidence exists for either variant.
+`output.options.reasoningEffort: "xhigh"` into the request. **Verified
+2026-08-10**: `github-copilot/gpt-5.6-sol` also honours `reasoningEffort`
+— 8 feynman `chat.params` observations on 2026-08-10 all resolved
+`output.options.reasoningEffort: "xhigh"` into the request (same sweep:
+copernicus/`claude-sonnet-5` resolved `max`). **Gap**: gpt-5.6-terra
+remains unverified — terra is bound to linus, a Rust-specialist reviewer,
+and this repo has no Rust to review, so there is no legitimate way to
+exercise it here; per dispatch doctrine non-Rust review routes to the
+`code-review` skill, not linus, and contriving a linus dispatch to
+manufacture evidence would violate role discipline.
 
 ## Tracing
 
