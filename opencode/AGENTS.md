@@ -612,6 +612,14 @@ permission set based on traces, run the standard chain:
    permission was asked / denied (surfaced as `kind: "event"` with
    `input.event.type == "permission.asked"` / `"permission.replied"` —
    the dedicated `permission.ask` hook is rarely fired), hook errors.
+   **Trace-contamination filter (mandatory):** exclude sessions that
+   merely *read or edited* the prompt file under study before counting a
+   behavioural pattern as evidence — in a repo whose content IS agent
+   prompts, a grep for "does the agent do X" also matches sessions that
+   were editing the prompt defining X, not sessions where the agent did
+   X. Incident: a first pass counted "19/20 Socratic fires" by grepping
+   for the pattern name; once sessions that read/edited the Socratic-mode
+   prompt itself were excluded, the true figure was 0/11.
 2. **`feynman`** orients on the patterns: ranked hypotheses about which
    prompt rules are dead letters or which patterns the prompt fails to
    cover. Falsifiers must be observable in further trace data.
