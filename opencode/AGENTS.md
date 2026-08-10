@@ -551,16 +551,16 @@ options.
 
 ### Per-model tendency table
 
-The fleet runs two Claude models with **opposite** tendencies. Generic
-"damping" advice (soften MUST/CRITICAL, remove verification gates, brake
-subagents) targets Opus 4.5/4.6/5 — it must **not** be applied to the
-Opus-4.8 reasoners, which under-trigger and under-delegate by default.
+The fleet runs two Claude model profiles with **opposite** tendencies. Opus 5
+(moltke, feynman, oracle, build, plan) self-verifies unprompted and
+over-delegates by default — damp toward brevity, cap delegation, drop
+self-interrogation gates. Do not carry over 4.8-era compensations (heavy
+permission-to-act nudges, self-check gates) onto Opus 5 prompts.
 
 | Model | Fleet agents | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 4.8 | moltke, feynman, oracle, build, plan | under-triggers tools, under-delegates, strictly literal; thinking OFF by default; respects effort strictly, under-thinks at low/medium [config-qfd] | give explicit permission-to-act; heavy MUST/CRITICAL is SAFE here; self-interrogation gates are model-appropriate (no over-verification risk); raise effort rather than prompt around under-thinking |
+| Opus 5 | moltke, feynman, oracle, build, plan | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
 | Sonnet 5 | hopper, copernicus, linus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
-| Opus 5 (not adopted) | — | over-verifies, longer by default, effort doesn't shrink output [config-qfd] | IF adopted: add explicit conciseness prompts; drop self-interrogation gates (over-verification risk); not currently in the fleet |
 
 ### github-copilot pass-through caveat
 
@@ -574,7 +574,9 @@ that it is reached. **Verified 2026-07-28**: `github-copilot/claude-opus-4.8`
 honours `reasoningEffort` — its models.json entry carries
 `reasoning_options: [{type: effort, values: [low,medium,high,xhigh,max]}]`,
 and a moltke `chat.params` trace showed `output.options.reasoningEffort:
-"xhigh"` resolved into the request.
+"xhigh"` resolved into the request. **Gap**: no Opus-5 equivalent
+verification exists yet — confirm `reasoningEffort` reaches the request via
+a post-migration trace before trusting effort levers.
 
 ## Tracing
 
