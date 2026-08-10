@@ -11,9 +11,14 @@ description: Plan a huge chunk of work — more than one agent session can hold 
 > `/setup-matt-pocock-skills` provisioning step; `skills/grill-me` replaces
 > `/grilling`; `copernicus` (via Task) replaces the `/research` subagent;
 > `/domain-modeling` and `/prototype` have no analogue here (see Gaps).
-> Every bd command below was `--help`-verified in this repo before landing:
-> `bd create --help`, `bd dep --help`, `bd ready --help`, `bd assign --help`,
-> `bd comment --help`.
+> Every bd command below was verified in this repo before landing: `bd
+> create --help`, `bd dep add --help`, `bd ready --help`, `bd assign --help`,
+> `bd comment --help`, `bd children --help`, `bd update --help`, `bd close
+> --help`, `bd show --help`, `bd delete --help`. The frontier/parentage
+> claim — that `--parent`-only linkage surfaces in `bd ready --parent`, that
+> a blocking edge drops a ticket out of it, and that claiming does too — was
+> confirmed by an executed round-trip against throwaway beads, not inferred
+> from help text (see `config-7h7`).
 
 A loose idea has arrived — too big for one agent session, and wrapped in
 fog: the way from here to the **destination** isn't visible yet. Wayfinding
@@ -120,10 +125,11 @@ in; never write it to a scratch file first — see AGENTS.md § Beads).
 
 ### Tickets
 
-Each ticket is a **child bd task** of the map epic (`bd dep add <child>
-<map-id>`, or the `--parent` flag at create time, which wires the same
-edge). The bead id is its identity. Its description is the question, sized
-to one session:
+Each ticket is a **child bd task** of the map epic, wired by the `--parent`
+flag at create time. `bd dep add` is reserved solely for blocking edges
+between tickets (see below) — it defaults to a `blocks` edge, not
+parent-child, so it must never be used to wire parentage. The bead id is
+its identity. Its description is the question, sized to one session:
 
 ```
 ## Question
@@ -140,10 +146,10 @@ sessions skip it (`bd ready --parent <map-id> -u` only surfaces
 unassigned tickets). That assignee *is* the claim: `bd assign <id> ""`
 unassigns.
 
-Blocking uses `bd dep add <blocked-id> --blocks <blocker-id>` (bd's native
-dependency edge). A ticket is **unblocked** when every ticket blocking it is
-closed; the **frontier** is `bd ready --parent <map-id> -u` — the open,
-unblocked, unclaimed children.
+Blocking uses `bd dep add <blocked-id> --blocked-by <blocker-id>` (bd's
+native dependency edge). A ticket is **unblocked** when every ticket
+blocking it is closed; the **frontier** is `bd ready --parent <map-id> -u`
+— the open, unblocked, unclaimed children.
 
 The answer isn't part of the description — it's recorded on resolution (see
 Work through the map) as a **resolution comment** (`bd comment <id> "text"`)
@@ -251,7 +257,7 @@ User invokes with a loose idea.
 4. **Create the tickets you can specify now** as child tasks (`bd create
    "<title>" --type task --parent <map-id> --labels wayfinder:<type>`) —
    then wire blocking edges in a **second pass** (`bd dep add <blocked>
-   --blocks <blocker>`; tickets need ids before they can reference each
+   --blocked-by <blocker>`; tickets need ids before they can reference each
    other). Wiring sorts them into the frontier and the blocked; everything
    you can't yet specify stays in the fog — the **Not yet specified**
    section.
