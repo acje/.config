@@ -24,11 +24,10 @@ let TRACE_BASE = null; // set lazily on plugin init
 let broken = false;
 
 // ---------------------------------------------------------------------------
-// Per-session state — agent stamp, parentSessionID, system-transform hash,
+// Per-session state — agent stamp, system-transform hash,
 // tool.execute.before timestamps (for duration_ms pairing).
 // ---------------------------------------------------------------------------
 const sessionAgent = new Map(); // sessionID -> agent name
-const sessionParent = new Map(); // sessionID -> parentSessionID | null
 const sessionTransformHash = new Map(); // sessionID -> last-seen transform hash
 const toolCallStart = new Map(); // callID -> start ms
 
@@ -163,12 +162,41 @@ function writeLine(kind, sessionID, input, output, extra) {
     kind,
     sessionID,
     agent,
-    parentSessionID: sessionParent.has(sessionID) ? sessionParent.get(sessionID) : null,
     input: redact(input),
     output: redact(output) ?? null,
     ...extra,
   });
   const filePath = getTracePath(sessionID);
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.appendFileSync(filePath, line + "\n");
+  } catch (e) {
+    logOnce(e);
+    broken = true;
+  }
+}
+
+// Mission-tree linkage as a first-class, explicit record instead of a
+// per-line stamp. A per-line parentSessionID field is structurally
+// impossible to populate: the child session writes every one of its trace
+// lines before the parent's tool.execute.after for the "task" call fires
+// (measured 2026-08-10 — the parent's task-after record lands 1ms AFTER the
+// child's last line), so there is no ordering under which the child's own
+// lines could be stamped. Instead, tool.execute.after emits one additional
+// "session.link" record carrying {parent_session, child_session,
+// child_agent}, landing in the PARENT session's trace file, only when a
+// child session id is actually present.
+function writeSessionLink(parentSessionID, childSessionID, childAgent) {
+  if (broken) return;
+  const line = JSON.stringify({
+    v: 2,
+    ts: new Date().toISOString(),
+    kind: "session.link",
+    parent_session: parentSessionID,
+    child_session: childSessionID,
+    child_agent: childAgent ?? null,
+  });
+  const filePath = getTracePath(parentSessionID);
   try {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.appendFileSync(filePath, line + "\n");
@@ -187,8 +215,15 @@ function writeLine(kind, sessionID, input, output, extra) {
 //       stdout_empty + output_len (below) make the AGENTS.md "empty stdout is
 //       Outcome::Surprise" rule machine-checkable without an exit code.
 //   (b) args are correctly under input.args (not output) — no issue.
-//   (c) tool == "task" carries the child session id in output; used to derive
-//       parentSessionID when no hook exposes it directly.
+//   (c) tool == "task" carries the child session id LOWERCASE, under
+//       output.metadata.sessionId / output.metadata.parentSessionId (not the
+//       capital-ID casing used elsewhere in the opencode API surface). When
+//       present, this hook emits an additional "session.link" record — see
+//       writeSessionLink() above — carrying {parent_session, child_session,
+//       child_agent}; child_agent comes from input.args.subagent_type. This
+//       replaces a removed always-null per-line parentSessionID field, which
+//       was structurally incapable of populating (see writeSessionLink()
+//       comment for the measured ordering root cause).
 //
 // experimental.session.compacting — hook wired; fires only when compaction occurs.
 //   No sample available from 2026-05-02 sessions (none compacted). Hook captures
@@ -302,11 +337,13 @@ export default async function tracerPlugin(input) {
           extra.stdout_empty = typeof stdout === "string" ? stdout.trim().length === 0 : null;
           extra.output_len = typeof stdout === "string" ? stdout.length : null;
         }
-        if (inp?.tool === "task") {
-          const childSID = out?.metadata?.sessionID ?? out?.sessionID ?? null;
-          if (childSID) sessionParent.set(childSID, sid);
-        }
         writeLine("tool.execute.after", sid, inp, out, extra);
+        if (inp?.tool === "task") {
+          const childSID = out?.metadata?.sessionId ?? null;
+          if (childSID) {
+            writeSessionLink(sid, childSID, inp?.args?.subagent_type ?? null);
+          }
+        }
       } catch (e) { logOnce(e); }
     },
 
