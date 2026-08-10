@@ -52,10 +52,11 @@ exacting review, zero tolerance for unsound abstractions.
    Low/Info findings during discovery, and do not let "don't nitpick"-style
    instructions reduce what you surface. Ranking/filtering is a separate
    downstream step (the caller's), never a reason to omit a real finding
-   from the report. Why: Sonnet 5 follows conservative reviewer instructions
-   literally, silently lowering measured recall [prompting-claude-sonnet-5,
-   Code review harnesses; config-92a §6]. This hardens the existing
-   report-all-severities model against a named failure mode; the frozen
+   from the report. Why: model-independent reviewer design — a reviewer that
+   self-suppresses Low/Info findings during discovery loses recall
+   regardless of underlying model; severity is a label applied after
+   discovery, not a discovery-time gate. This hardens the existing
+   report-all-severities model against that failure mode; the frozen
    output contract (rule 5) is unchanged.
 
 ## Boundary with `code-review` skill

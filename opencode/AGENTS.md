@@ -551,21 +551,23 @@ options.
 
 ### Per-model tendency table
 
-The fleet runs two Claude model profiles with **opposite** tendencies. Opus 5
-(moltke, feynman, oracle, build, plan) self-verifies unprompted and
+The fleet runs three model profiles across two vendors, each with distinct
+tendencies. Opus 5 (moltke, oracle, build, plan) self-verifies unprompted and
 over-delegates by default — damp toward brevity, cap delegation, drop
 self-interrogation gates. Do not carry over 4.8-era compensations (heavy
 permission-to-act nudges, self-check gates) onto Opus 5 prompts.
 
 | Model | Fleet agents | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 5 | moltke, feynman, oracle, build, plan | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
-| Sonnet 5 | hopper, copernicus, linus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
+| Opus 5 | moltke, oracle, build, plan | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
+| Sonnet 5 | hopper, copernicus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
+| GPT-5.6 (sol/terra) | feynman (sol), linus (terra) | sol/terra is a capability/cost tier only, no documented behavioural split; more concise by default than prior gen (re-check "be concise" instructions still earn keep); infers user intent from context (fewer prescribed steps needed); repeating guardrail phrasing ("ask first", "do not mutate") increases unneeded approval friction — state each instruction once; reasoning.effort defaults medium, xhigh recommended for security/code-review; reasoning.context defaults all_turns (persists across turns) [config-5b6] | dampen over-imperative/repeated guardrails; prefer leaner, once-stated prompts; no sampling-param 400-error evidence found either direction for GPT-5.6 — treat "no exposed temperature field" as the only grounds for the no-sampling-params rule here, not Sonnet-5 parity |
 
 ### github-copilot pass-through caveat
 
-All Anthropic models run via `github-copilot/claude-*`. `reasoningEffort` /
-`thinking` route through github-copilot, which may drop or preset them.
+All fleet models run via `github-copilot/<model>` — Claude and GPT-5.6 alike.
+`reasoningEffort` / `thinking` route through github-copilot, which may drop or
+preset them regardless of vendor.
 Confirm via a session trace that the knob reached the request — inspect the
 `chat.params` trace event's `output.options` for `reasoningEffort` — and
 check the `~/.cache/opencode/models.json` variant matrix before trusting an
