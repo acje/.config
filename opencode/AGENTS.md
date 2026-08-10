@@ -549,6 +549,18 @@ option made it into the request — not just into the file on disk. Check
 `~/.cache/opencode/models.json` for the variant matrix before authoring
 options.
 
+### Restart-staleness
+
+Agent `model:` and prompt bindings are resolved at opencode startup. A
+session started before a config edit keeps the OLD binding — a committed
+config change is not a live change until the process restarts. Verify a
+binding took effect by inspecting a post-restart `chat.params` trace
+(`.input.agent` + `.input.model.id`), not by reading the config file. This
+extends the "a value in config is evidence the code exists, not that it is
+reached" principle above to startup caching. Incident: commit `a105604`
+(Opus-5 migration) landed `2026-08-10T08:26:58Z`; moltke `chat.params` still
+resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
+
 ### Per-model tendency table
 
 The fleet runs three model profiles across two vendors, each with distinct
@@ -576,9 +588,12 @@ that it is reached. **Verified 2026-07-28**: `github-copilot/claude-opus-4.8`
 honours `reasoningEffort` — its models.json entry carries
 `reasoning_options: [{type: effort, values: [low,medium,high,xhigh,max]}]`,
 and a moltke `chat.params` trace showed `output.options.reasoningEffort:
-"xhigh"` resolved into the request. **Gap**: no Opus-5 equivalent
-verification exists yet — confirm `reasoningEffort` reaches the request via
-a post-migration trace before trusting effort levers.
+"xhigh"` resolved into the request. **Verified 2026-08-10**:
+`github-copilot/claude-opus-5` also honours `reasoningEffort` — 45
+`build` agent `chat.params` observations on 2026-08-10 all resolved
+`output.options.reasoningEffort: "xhigh"` into the request. **Gap**:
+gpt-5.6 (sol/terra) remains unverified — linus has not run yet, so no
+`chat.params` evidence exists for either variant.
 
 ## Tracing
 
