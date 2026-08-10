@@ -261,18 +261,14 @@ export default async function tracerPlugin(input) {
         // ~31% of corpus bytes measured 2026-08-10). Trim model to
         // {id, providerID} but KEEP output.options — that carries
         // resolved reasoningEffort, the signal FINDING 2 depends on.
+        // The hook receives the params object directly; writeLine adds the
+        // `input` nesting seen in the trace line. Trim on `inp`, not `inp.input`.
         const trimmedInp = { ...inp };
-        if (inp?.input?.provider) {
-          trimmedInp.input = {
-            ...inp.input,
-            provider: { id: inp.input.provider.id ?? inp.input.provider },
-          };
+        if (inp?.provider) {
+          trimmedInp.provider = { id: inp.provider.id ?? inp.provider };
         }
-        if (inp?.input?.model) {
-          trimmedInp.input = {
-            ...trimmedInp.input,
-            model: { id: inp.input.model.id, providerID: inp.input.model.providerID },
-          };
+        if (inp?.model) {
+          trimmedInp.model = { id: inp.model.id, providerID: inp.model.providerID };
         }
         writeLine("chat.params", sid, trimmedInp, out);
       } catch (e) { logOnce(e); }
