@@ -146,7 +146,7 @@
       "~/.claude/skills/**": "allow"
     }
   },
-  "model": "github-copilot/claude-opus-4.8",
+  "model": "github-copilot/claude-opus-5",
   "experimental": {
     "continue_loop_on_deny": true
   },
@@ -158,12 +158,12 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/claude-opus-4.8",
+      "model": "github-copilot/claude-opus-5",
       "reasoningEffort": "xhigh"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/claude-opus-4.8",
+      "model": "github-copilot/claude-opus-5",
       "reasoningEffort": "xhigh"
     },
     "moltke": {
@@ -183,13 +183,13 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.8",
+      "model": "github-copilot/claude-opus-5",
       "reasoningEffort": "xhigh"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-4.8"
+      "model": "github-copilot/claude-opus-5"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",
