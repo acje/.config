@@ -183,7 +183,7 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-5",
+      "model": "github-copilot/gpt-5.6-sol",
       "reasoningEffort": "xhigh"
     },
     "oracle": {
@@ -194,7 +194,7 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-5"
+      "model": "github-copilot/gpt-5.6-terra"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
