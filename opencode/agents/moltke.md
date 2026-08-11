@@ -166,7 +166,7 @@ sub-missions as parallel-eligible.
 
 Each sub-mission is complete only when it has **all** of:
 
-1. Independently verifiable (own `success_criteria` + `verify_commands`).
+1. Independently verifiable (own `success_criteria` + `verify.inner`/`verify.mid`).
 2. Independently rollback-able (own `rollback_plan`).
 3. Leaves the tree in a green state at its boundary (tests pass, builds compile).
 4. Carries its own `abort_if`.
@@ -337,6 +337,17 @@ restated here).
 <!-- Grammar frozen: hopper parses this verbatim. Changes require a trace
 showing the parser failing on a real session. See recipe P12a. -->
 
+<!-- Unfrozen 2026-08-11, trace evidence adr-fmt-j5ujb (session
+ses_043a52d2bffenaYASIt3m1A5z3.jsonl:314-350: parent instruction embedded a
+`--workspace` command in a per-increment verify_commands vector; hopper ran
+it per its load-bearing rule to execute every listed entry) plus measured
+driver adr-fmt-vurg4 (1647 full-workspace invocations, 84.2% at
+hopper/linus inner-loop tier, 0/98 triaged GenuineEscape). The single
+undifferentiated `verify_commands` vector is replaced by a tier-keyed
+`[verify]` table so a broad command is unrepresentable at sub-mission tier,
+not merely forbidden by prose (R16, adr-fmt-zm96h). Re-freeze after this
+point; further grammar changes again need their own trace. -->
+
 ### Single-mission form (tightly-coupled, atomic)
 
 ````toml
@@ -347,9 +358,14 @@ intent       = "<why — the outcome>"
 success_criteria = [ "<observable outcome 1>", "<observable outcome 2>" ]
 preflight_checks = [ "<assumption to verify>" ]
 
-# verify_commands MUST be non-empty. Trivial sub-mission ⇒ list `true` rather
-# than omitting; hopper R1 (verify-before-claim) bounces empty lists.
-verify_commands  = [ "<cmd 1>", "<cmd 2>" ]
+# [verify.inner] / [verify.mid] MUST be non-empty. [verify.boundary] is valid
+# here ONLY because a standalone single mission has no separate epic level —
+# it is both sub-mission and epic in one. Trivial mission -> list ["true"]
+# rather than omitting; hopper R1 (verify-before-claim) bounces empty lists.
+[verify]
+inner    = [ "<cmd 1>", "<cmd 2>" ]  # changed crate(s)/file(s) only
+mid      = [ "<cmd 1>" ]             # changed + reverse-dependent closure
+boundary = [ "<cmd 1>" ]             # full workspace, ONCE, backs the terminal done-claim
 
 out_of_scope     = [ "<what NOT to touch>" ]
 preferred_tools  = [ "edit", "bash" ]
@@ -374,6 +390,12 @@ package_abort_if         = [ "<observation that kills the whole package>" ]
 package_rollback_strategy = "rollback_failed_only"  # default
 mission_epic_id           = "create bd epic when executing package; do not create in plan mode"
 
+# verify.boundary lives ONLY here (epic level) — full workspace, ONCE, before
+# the epic done-claim. There is no verify.boundary field on [[missions]]
+# below; a sub-mission cannot construct one, by schema.
+[mission_package.verify]
+boundary = [ "<cmd 1>", "<cmd 2>" ]
+
 [[missions]]
 mission_id       = "<slug>-01"
 objective        = "<one-line goal>"
@@ -381,7 +403,16 @@ intent           = "<why — local outcome>"
 depends_on       = []                      # default []; add edges only when coupling forces sequencing
 success_criteria = ["<observable>"]
 preflight_checks = ["<assumption>"]
-verify_commands  = ["<cmd>"]               # non-empty per single-mission note
+
+# [missions.verify] carries ONLY inner and mid. verify.boundary has no slot
+# here by design — embedding one is unrepresentable, not merely forbidden
+# (R16). Hopper treats a `--workspace`/`--all-features` command found under
+# [missions.verify] as Outcome::Surprise regardless of which key it sits
+# under.
+[missions.verify]
+inner = ["<cmd>"]                          # non-empty per single-mission note
+mid   = ["<cmd>"]                          # changed sub-mission crates + reverse-dependent closure
+
 out_of_scope     = ["<what NOT to touch>"]
 abort_if         = ["<sub-mission-local trigger>"]
 rollback_plan    = "<exact revert for THIS sub-mission only>"
@@ -392,8 +423,9 @@ max_tool_calls         = <n>
 max_wall_clock_minutes = <n>
 
 # Subsequent [[missions]] blocks vary only: objective, intent, depends_on,
-# success_criteria, preflight_checks, verify_commands, out_of_scope, abort_if,
-# rollback_plan, effort_budget. Same shape; do not re-document the schema.
+# success_criteria, preflight_checks, [missions.verify], out_of_scope,
+# abort_if, rollback_plan, effort_budget. Same shape; do not re-document the
+# schema.
 ````
 
 ## Handoff line (frozen grammar)
@@ -428,7 +460,7 @@ report complete while a mismatch is open.
 ## Verification duty
 
 Before reporting MISSION/PACKAGE COMPLETE, independently re-run the
-`verify_commands` backing `success_criteria` yourself — hopper's reported
+`verify.inner`/`verify.mid` backing `success_criteria` yourself — hopper's reported
 exit codes are evidence hopper acted on, not proof the commander vouches for
 to the user. Cheap re-runs (the same commands, not a new suite) suffice;
 mismatch ⇒ `BackBriefResponse::ReportMismatch`, not a silent pass-through.
@@ -502,7 +534,9 @@ success_criteria = [
   "full pytest suite passes with no new failures",
 ]
 preflight_checks = [ "git status clean", "pytest -k flaky passes once on HEAD (baseline)" ]
-verify_commands  = [ "pytest -k flaky --count=20", "pytest" ]
+[verify]
+inner            = [ "pytest -k flaky --count=20" ]
+mid              = [ "pytest" ]
 out_of_scope     = [ "other tests in tests/test_orders.py", "fixture refactors elsewhere" ]
 preferred_tools  = [ "edit", "bash" ]
 abort_if         = [ "any failure in 20× run", "full suite gains a new failure", "CI runtime > +20% locally" ]
@@ -569,7 +603,9 @@ intent           = "Local consistency; no external surface."
 depends_on       = []                       # first sub-mission in sequence
 success_criteria = ["module_a uses the new name only"]
 preflight_checks = ["cargo test -p module_a passes on HEAD"]
-verify_commands  = ["cargo test -p module_a", "cargo build"]
+[missions.verify]
+inner            = ["cargo test -p module_a"]
+mid              = ["cargo build"]
 out_of_scope     = ["modules b, c, d"]
 abort_if         = ["cargo test -p module_a fails", "cargo build fails"]
 rollback_plan    = "git checkout -- crates/module_a"

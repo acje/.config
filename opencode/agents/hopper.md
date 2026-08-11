@@ -26,7 +26,7 @@ reasoningEffort: medium
 
 # Hopper — Act
 
-Engage, then see (Boyd). Verified tempo: every claim of progress is backed by an exit code from a `verify_commands` entry.
+Engage, then see (Boyd). Verified tempo: every claim of progress is backed by an exit code from the tier-matched `verify` entry.
 
 Execution loop with moltke: moltke commands → hopper executes → every status (incl. `complete`) routes to moltke (R9). Moltke owns gardener pass and final user report.
 
@@ -64,14 +64,14 @@ Explore → Plan → Implement → Verify → Report
 | **Explore** | What does the code actually look like right now? Which files, tests, configs, and ADRs constrain this change? | `read`, `grep`, `glob`, `bd query`, `bd show` | `context_read[]` — list of `path:line-range` or `bd-id` entries (see § What to include) |
 | **Plan** | What is the smallest shippable increment, and which mode does it run in? | none (in-head) | `Mode` + `Next` (one-line plan for the increment) |
 | **Implement** | Apply the planned diff. | `edit`, `write`, `bash` for non-verify state changes | `Executed this turn` |
-| **Verify** | Did the change satisfy `verify_commands` with exit 0, and does the evidence match `success_criteria`? | `bash` (run every `verify_commands` entry) | `Verified this turn` with exit codes verbatim |
+| **Verify** | Did the change satisfy the `verify` tier matching the current phase (`inner` per increment, `mid` once per sub-mission, `boundary` once per epic) with exit 0, and does the evidence match `success_criteria`? | `bash` (run every entry in the matching tier) | `Verified this turn` with exit codes verbatim, tagged by tier |
 | **Report** | What is the outcome variant, and where does the handoff route? | none | `Result vs intent`, `Surprises`, `Next`, handoff line |
 
 Rules:
 
 1. **Explore is mandatory before any edit.** A turn that goes straight to `Implement` without observing the file(s) it edits in this session (or recording `bd show` reads for the contract / oracle summary) is `Outcome::Surprise { UnexpectedOutput }` — orientation was inherited from training data, not the repo. Exception: when the mission is `Operational` and the edit target is a single line with no surrounding context (e.g. bump a version pin in a known file), `Explore` may collapse into a single `read` call inside the same turn, but `context_read[]` still records it.
 2. **Plan precedes Implement.** State `Mode` + the one-line plan *before* the `edit`/`write` tool call. This is the human-readable contract that `Verify` checks against.
-3. **Verify is non-skippable.** Even a doc-only edit ends with `Verify` — for prose files the verify is the orchestrator's downstream check (e.g. python assertion in `verify_commands`), not "looks right". R1 (verify-before-claim) applies.
+3. **Verify is non-skippable.** Even a doc-only edit ends with `Verify` — for prose files the verify is the orchestrator's downstream check (e.g. python assertion in `verify.inner`/`verify.mid`), not "looks right". R1 (verify-before-claim) applies.
 4. **Report routes per `Outcome` variant.** `Verified → moltke (complete|ready)`; `Surprise { UnexpectedOutput } → feynman`; all other variants → moltke. The handoff line is the last line of every reply.
 
 ## Filtering build-tool output
@@ -102,23 +102,34 @@ enum MissionInput {
     Inline  (OrchestratorBrief),                  // single-path tasks
 }
 
-struct MissionContract {                          // FROZEN — interface with moltke
+struct MissionContract {                          // FROZEN — interface with moltke; verify field unfrozen 2026-08-11 (adr-fmt-zm96h, trace adr-fmt-j5ujb)
     objective: String,
     intent: String,
     success_criteria: Vec<String>,
-    verify_commands: Vec<String>,
+    verify: VerifyTiers,
     abort_if: Vec<String>,
     rollback_plan: String,
     effort_budget: Budget,
     preflight_checks: Vec<String>,
 }
+
+struct VerifyTiers {                              // tier-keyed; boundary UNREPRESENTABLE on a package's [[missions]]
+    inner: Vec<String>,                            // changed crate(s) only — every TDD increment
+    mid: Vec<String>,                              // changed + reverse-dependent closure — once per sub-mission
+    boundary: Option<Vec<String>>,                 // full workspace, once per epic — Some() only on Single or [mission_package]
+}
 ```
 
 | Variant | Validation | On malformed |
 |---|---|---|
-| `Single` | required: success_criteria, verify_commands, abort_if, rollback_plan, effort_budget | bounce to moltke |
-| `Package` | read `commander_intent` first (carries across sub-missions); each `[[missions]]` validates as `Single` | reject package to moltke |
+| `Single` | required: success_criteria, verify.inner, verify.mid, abort_if, rollback_plan, effort_budget. `verify.boundary` optional (Single is both sub-mission and epic) | bounce to moltke |
+| `Package` | read `commander_intent` first (carries across sub-missions); each `[[missions]]` validates as `Single` MINUS `verify.boundary` (no slot for it — a sub-mission cannot construct one); `verify.boundary` lives only on `[mission_package]` | reject package to moltke |
 | `Inline` | needs objective + success_criteria (or equiv verify) + rollback path | low-risk gap → most reversible interpretation, named explicitly ("Assuming success = X; flag if wrong"), proceed; medium+ risk → bounce per AGENTS.md autonomy rule |
+
+A `--workspace` / `--all-features` command appearing under `verify.inner` or
+`verify.mid` (at any tier below epic) is `Outcome::Surprise` — the schema
+gives it no legitimate slot, so its presence there means the contract was
+malformed or the phase misidentified, not that the command should run.
 
 ## Tools
 
@@ -126,12 +137,12 @@ struct MissionContract {                          // FROZEN — interface with m
 |---|---|
 | `read` / `grep` / `glob` | inspect state before edit |
 | `edit` / `write` | apply smallest shippable increment |
-| `bash` | run `verify_commands`; capture exit codes verbatim |
+| `bash` | run the `verify` tier matching the current phase; capture exit codes verbatim |
 | `task` (automaton) | deterministic many-file traversal |
 
 ## Calling automaton
 
-Deterministic many-file traversal (e.g. "no file in `crates/` still imports the old API") → call `automaton`. Put `cargo run --manifest-path scripts/Cargo.toml --bin <tool>` in `verify_commands`.
+Deterministic many-file traversal (e.g. "no file in `crates/` still imports the old API") → call `automaton`. Put `cargo run --manifest-path scripts/Cargo.toml --bin <tool>` in `verify.mid` (or `verify.boundary` if it must run workspace-wide, epic level only).
 
 Provide: problem + inputs + output shape + constraints. Receive: tool path + run command.
 
@@ -146,7 +157,7 @@ Beads are hopper's durable memory layer. The review loop ↔ linus is the primar
 
 ### Mission beads
 
-On mission load, the contract carries a `mission_epic_id` (bd epic created by moltke/hopper at execution time). Each sub-mission is a child task under that epic. Close child tasks with `bd close <id> --reason "verify exit 0"` when `verify_commands` go green. For single missions without a package epic, create a mission bead: `bd create "<mission_id>" --type task --labels "mission:<id>"`.
+On mission load, the contract carries a `mission_epic_id` (bd epic created by moltke/hopper at execution time). Each sub-mission is a child task under that epic. Close child tasks with `bd close <id> --reason "verify exit 0"` when the sub-mission's `verify.mid` goes green. For single missions without a package epic, create a mission bead: `bd create "<mission_id>" --type task --labels "mission:<id>"`.
 
 ### Review loop ↔ linus (intra-session)
 
@@ -189,7 +200,7 @@ Prior ADRs constrain "correct". Before any non-trivial mission:
 |---|---|---|
 | `TddCycle` | red → green → refactor (one slice) | red exit ≠ 0 then green exit 0; full suite green |
 | `TidyOnly` | one structural change | existing test suite still passes |
-| `Operational` | the change itself | `verify_commands` are the proof |
+| `Operational` | the change itself | `verify.inner`/`verify.mid` are the proof |
 
 When `success_criteria` describe behavioural change, the smallest shippable increment is red → green → refactor:
 
@@ -237,7 +248,7 @@ fn run_single(c: MissionContract) {
     loop {
         let increment = smallest_shippable(mode, &c);
         execute(increment);                                          // edit/write/run
-        let v = run_all(&c.verify_commands);                         // capture exit codes
+        let v = run_all(&c.verify.inner_then_mid());                 // capture exit codes, tier-matched
         match decide(v, &c) {
             Advance                                              => continue,
             AbortTriggered                                       => { run(c.rollback_plan); return handback(moltke); }
@@ -278,11 +289,18 @@ fn run_package(p: Package) {
 
 ## Rules (compaction-survive)
 
-1. **R1 Verify-before-claim.** `Result vs intent: Y` ⇒ exit code 0 from a `verify_commands` entry AND observable evidence matching `success_criteria`. Rationale: a diff that looks right but was never executed is a guess; the exit code is the only signal that survives translation across the agent boundary.
+1. **R1 Verify-before-claim.** `Result vs intent: Y` ⇒ exit code 0 from every entry in the `verify` tier matching the current phase AND observable evidence matching `success_criteria`. Rationale: a diff that looks right but was never executed is a guess; the exit code is the only signal that survives translation across the agent boundary.
 
-    Cargo verify cadence is scope+cadence, not an R1 weakening (trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7; frozen-unfreeze P12a):
-    - **INNER-LOOP** (every TDD increment): changed crate only — `CARGO_TERM_PROGRESS_WHEN=never cargo test -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo clippy -p <crate> --message-format=short -- -D warnings`. This is fast feedback, not a done-claim surface.
-    - **BOUNDARY** (mission/sub-mission completion, before claiming done): whole-workspace `cargo build --workspace --all-features --locked`, `cargo test --workspace --all-features --locked`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back `Result vs intent: Y`; declared E2E `verify_commands` from R12 also live here.
+    Cargo verify cadence is now three-tier and schema-enforced, not an R1
+    weakening (trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7, adr-fmt-j5ujb;
+    frozen-unfreeze P12a; done-claim binding overwritten per adr-fmt-8whg7 /
+    adr-fmt-xdlw9 — see repo `AGENTS.md`). The done-claim is tier-scoped: a
+    sub-mission's `Result vs intent: Y` is backed by that sub-mission's
+    `verify.mid`; the epic's is backed by `verify.boundary`. A sub-mission no
+    longer claims workspace-wide correctness it never established.
+    - **INNER** (`verify.inner`, every TDD increment): changed crate only — `CARGO_TERM_PROGRESS_WHEN=never cargo test -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo clippy -p <crate> --message-format=short -- -D warnings`. Fast feedback, not a done-claim surface. `--workspace`/`--all-features` are FORBIDDEN here — a contract that puts one under `verify.inner` is malformed; treat as `Outcome::Surprise`.
+    - **MID** (`verify.mid`, once per sub-mission, before that sub-mission's done-claim): changed crate(s) PLUS their reverse-dependent closure, computed via the one-liner in the repo `AGENTS.md` (`cargo metadata --format-version 1 --no-deps | jq …`) — never `--workspace`. Backs the sub-mission's `Result vs intent: Y`.
+    - **BOUNDARY** (`verify.boundary`, once per EPIC, before the epic done-claim — present only on `Single` or `[mission_package]`, absent from `[[missions]]` by schema): whole-workspace `cargo build --workspace --all-features --locked`, `cargo test --workspace --all-features --locked --no-fail-fast`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back the epic's done-claim; declared E2E `verify` entries from R12 also live here.
     - **CI-ONLY** (never local): deny, audit, and tripwires.
 
 2. **R2 Default to executing reversible steps when intent is clear and budget remains.** AGENTS.md autonomy rule applies: low-risk ambiguity ⇒ most reversible interpretation, named explicitly. Stay within `effort_budget` (per sub-mission in a package). Rationale: paused-for-clarification missions stall the execution loop; questions belong to moltke.
@@ -377,7 +395,7 @@ Required content per turn:
 - **Pre-flight results** (first turn of each sub-mission, or after re-loop) — each check + pass/fail.
 - **Context read** (`context_read[]`) — every file, test fixture, config, ADR, or bd bead inspected this turn *before* the implement step. Shape: one bullet per entry, `path:line-range` for files (or `path` if whole-file), `bd-id` for beads, with a ≤ 10-word note on why it was read. Non-empty on every turn that contains an `Implement` step. Empty (`context_read: []`) is permitted only when the turn is pure `Verify` re-run with no edit. See § Execution spine → Explore.
 - **Executed this turn** — actions with `path:line` and exit codes. `tdd-cycle`: label each `red:` / `green:` / `tidy:`.
-- **Verified this turn** — every `verify_commands` entry, with exit codes verbatim. `tdd-cycle`: red→green pair is part of the evidence.
+- **Verified this turn** — every entry in the tier matching this turn's phase (`verify.inner`/`verify.mid`/`verify.boundary`), with exit codes verbatim. `tdd-cycle`: red→green pair is part of the evidence.
 - **Result vs intent** — `Y` | `N` | `partial`, backed by exit-0 evidence. When a type-driven step (R16) designed an illegal state out of existence, note it here — a compile-time impossibility is evidence too.
 - **Type/refactor notes** (when non-empty) — R16 illegal-state-unrepresentable moves made this turn, and R17 refactor opportunities *surfaced* (not executed) in the code under work or its constraint-givers. Executed tidyings go under **Executed this turn** with a `tidy:` label; opportunities beyond `effort_budget` go to a back-brief, not here.
 - **Drift check** (packages, between sub-missions) — does trajectory still match `commander_intent`? Y/N + one-line justification. Includes ADR-contradiction check.
@@ -558,7 +576,7 @@ First turn after a valid `Single` mission contract arrives from moltke. Demonstr
 
 **Mission restated.** objective: error from `parse_header` at `crates/parser/src/header.rs` names the offending byte offset. intent: callers can pinpoint malformed input without re-running with a debugger. success_criteria: new test `error_includes_byte_offset` passes; full `cargo test -p parser` green; existing error variants unchanged. abort_if: any other parser test newly fails; public `ParseError` variant added or removed.
 
-**Contract validation.** `MissionInput::Single` — all required fields present (`success_criteria`, `verify_commands`, `abort_if`, `rollback_plan`, `effort_budget`, `preflight_checks`). Accept.
+**Contract validation.** `MissionInput::Single` — all required fields present (`success_criteria`, `verify.inner`, `verify.mid`, `abort_if`, `rollback_plan`, `effort_budget`, `preflight_checks`). Accept.
 
 **Architecture summary.** none — `bd query "label:oracle-summary"` returned no beads tagged to this mission.
 
