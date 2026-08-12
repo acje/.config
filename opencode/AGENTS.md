@@ -944,7 +944,7 @@ Use graphify for structural questions:
 - `graphify affected "<symbol>" --depth 3` — blast-radius before refactor.
 - `graphify path "<A>" "<B>"` — shortest path; intra-module only.
 
-Use `rg`/`grep` for textual searches, the `adr-context` skill for ADR
+Use `rg`/`grep` for textual searches, the `oracle` agent for ADR
 questions, and read files directly for definitions at specific locations.
 After code changes, `graphify update .` (or commit so the post-commit hook
 fires).
