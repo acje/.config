@@ -623,7 +623,7 @@ possible or expected. Pure `.ooda/` deletion sweeps are user-driven local
 cleanup, not gardener mission GC. Gardener's auditable work is bd-state
 mutation: epic closures, label changes, orphan-bead cleanup.
 
-### Self-improvement workflow
+## Self-improvement
 
 When asked to improve an agent prompt, mode prompt, model choice, or tool
 permission set based on traces, run the standard chain:
