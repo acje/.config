@@ -661,6 +661,78 @@ you pick the runs that matter.
 - No reader CLI by default. Build one via `automaton` only when grep/jq
   becomes the bottleneck.
 
+### Code-quality methods
+
+Each rule is a trigger plus a named artefact. If you cannot name the artefact,
+the rule does not apply here.
+
+1. **Error is not a negative finding.** Any check mapping a failure, permission,
+   or absence signal to a domain verdict must carry a distinct indeterminate
+   variant (Unknown / Unauthorised) and must never fold it into the negative.
+   Trigger: writing a match arm on an error or status code that yields a domain
+   conclusion. Enforcement: type-level — a two-variant, bool-shaped verdict on a
+   fallible probe is a review reject (linus; code-review skill). Incident: an
+   HTTP 404 read as "unprotected" when it equally means "unauthorised", risking a
+   mis-verdict on ~99.6% of scanned repos.
+2. **Prove the guard bites.** A new or edited guard (tripwire, lint, CI gate,
+   assertion) is unverified until you plant a real violation, observe it fail,
+   revert, and observe clean. Record all four steps in the PR body or bead.
+   Trigger: any diff touching a guard's matching rules — especially *widening* a
+   whitelist or path, the shape that fails **open** with every check green.
+   Unproven guard ⇒ NEEDS WORK.
+3. **Citations are read, not trusted.** A mechanism citing a rule id must cite
+   text that actually states the invariant it enforces; open the rule and read
+   it. Trigger: adding or moving a citation, or renaming/renumbering a rule.
+   Incident: an audit found 3 of 6 citations wrong, one already propagated into
+   the source corpus.
+4. **Verify against the artefact, never the summary.** Before relaying a
+   subordinate's result, read what it produced — diff, PR body, bead
+   description, command output. A summary that omits the root cause is
+   indistinguishable from one that never found it. Binds moltke's § Verification
+   duty and any agent relaying another's work.
+5. **CI-only gates are an agent blind spot.** Checks that run only in CI are the
+   defect class agents ship unseen. A repo with CI-only invariants must expose
+   one locally-runnable entry point, named in its own AGENTS.md; agents run it
+   before handing off. Where none exists, say so explicitly rather than implying
+   the change is verified.
+
+### Iteration speed
+
+1. **Record conditions with every measurement.** A timing figure without machine
+   state, concurrency, and date is not evidence. Store number and conditions
+   together in a bead.
+2. **Re-measure before planning against a number.** Any figure predating the
+   last toolchain, dependency, or hardware change — or differing from an
+   independent estimate by ≥3× — is re-measured before it constrains a plan. An
+   unexplained order-of-magnitude gap is a signal to re-measure, not to
+   optimise. Incident: a boundary verify recorded at 60–83 min under CPU
+   contention drove months of planning; the true figure was ~4.4 min.
+3. **Tier the verification, never the coverage.** Speed comes from running less
+   *per iteration*, never less *in total*. Nothing may be deleted, ignored, or
+   feature-gated to make a tier faster. Tier definitions and ratios are
+   repo-specific — see the repo's own AGENTS.md.
+4. **Fail-fast hides blast radius.** Batch runners that stop at the first
+   failure yield one datum per run. When the question is "what else is broken",
+   use the no-fail-fast form and learn the whole radius in one pass.
+5. **Flakes are load-bearing.** A module with a flake reputation makes waving
+   through a genuine regression likely. Open a bead for a flake family the
+   second time it is observed; a red run in a module with an open flake bead is
+   triaged, never re-run until green.
+6. **Know each tool's strength asymmetry.** Prefer a tool's precise surface over
+   its fuzzy one, and record which is which in the repo's tooling notes.
+   Leading an agent to the weak surface wastes loops.
+
+### Adding to this file (anti-dead-letter)
+
+Before adding a rule here, name its enforcement surface: schema, script, type,
+or review checklist item. Where prose is the only surface available, write it as
+**trigger + named artefact** ("when X, produce Y"), never as an aspiration.
+Measured failure: a prose ban on full-workspace verification at the inner tier
+was violated in 84.2% of 1647 invocations, because the mission-contract schema
+exposed a single undifferentiated verify_commands vector. The fix was
+structural — a tier-keyed [verify] table in which the boundary tier has no
+slot on sub-missions. Prose cannot stop what the schema permits.
+
 ## Beads — durable memory & coordination
 
 bd (`bd` CLI) provides per-repo `.beads/` databases for durable coordination,
