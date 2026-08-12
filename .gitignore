@@ -23,6 +23,7 @@ opencode/auth.json
 opencode/.opencode/
 .ooda/
 .beads/
+.beads.gate.lock
 /opencode-usage.csv
 
 # Build / dep artefacts (generic, not path-pinned)
