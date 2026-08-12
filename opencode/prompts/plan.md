@@ -37,7 +37,7 @@ A full plan covers, in order:
 - **Evidence** — citations (`path:line` or bd bead ids). Floating claims are rejected per § Pattern-mining discipline.
 - **Options** — ≥ 2 viable approaches when the work is genuinely multi-path, with one-line cost/reversibility/risk per option. State the recommended option first.
 - **Stakes** — `low | medium | high` per AGENTS.md autonomy rule. Drives whether moltke needs a full pre-mortem.
-- **Success criteria** — observable artefacts moltke will translate into `verify_commands`. MIRROR rule applies (§ Pattern-mining discipline).
+- **Success criteria** — observable artefacts moltke will translate into the `[verify]` tiers. MIRROR rule applies (§ Pattern-mining discipline).
 - **Risks / abort conditions** — what would make moltke abandon the mission; what rollback looks like.
 - **Open questions** — only the genuinely blocking ones, batched, with recommended defaults via the `question` tool.
 

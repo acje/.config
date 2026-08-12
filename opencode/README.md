@@ -173,7 +173,7 @@ Moltke decomposes work by **coupling**, not by stakes:
   refactor that cannot leave the tree green mid-way) → one mission.
 - **Loosely coupled** (disjoint files, independent verifies, can each
   leave the tree green) → a **mission package**: 2–5 self-contained
-  sub-missions, each with its own `success_criteria`, `verify_commands`,
+  sub-missions, each with its own `success_criteria`, `[verify]` tiers,
   `abort_if`, `rollback_plan`. Hopper executes them in dependency order
   with **green checkpoints** between them. On sub-mission failure, only
   that sub-mission rolls back; prior greens stay; control returns to
@@ -374,7 +374,7 @@ For plan-mode-produced plans:
 - Copernicus reports include `Tool calls used: 8/15` and a non-empty `Unobserved (gaps)`. Re-tasks are first-class, not failure.
 - Feynman reports always have ≥ 2 hypotheses with falsifiers, a stress-test walk-through, and (when needed) an explicit re-task brief to copernicus.
 - Moltke contracts always have a pre-mortem, `rollback_plan`, and a one-sentence **coupling judgement**. Oracle is consulted (or explicitly skipped with reason) when architectural surface is touched.
-- Hopper's `Result vs intent` is backed by an exit-0 verify command, not vibes. Every mission has bd child tasks; sub-missions are closed when their `verify_commands` go green.
+- Hopper's `Result vs intent` is backed by an exit-0 verify command, not vibes. Every mission has bd child tasks; sub-missions are closed when their `verify.mid` goes green.
 - Gardener reports clean bd-state GC outcomes (`closed_epics: [...]`, `retained_open_beads: [...]`) per package; back-briefs accumulating retention as a system-level signal.
 - Automaton always returns a tool description (purpose / inputs / output schema / exit codes / determinism / performance) alongside the run command.
 

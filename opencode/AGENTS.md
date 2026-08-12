@@ -24,7 +24,7 @@ Overrides the system-prompt rule "only commit when explicitly asked". In this
 repo the agent commits autonomously when **all** of the following hold:
 
 1. The work was in scope of the current turn (no scope creep).
-2. Verification has run and passed (per any `verify_commands` in play, or the
+2. Verification has run and passed (per any `[verify]` tier in play, or the
    ad-hoc check the agent named in its plan).
 3. Working tree contains only the intended changes (`git status` reviewed; no
    stray files, no `.ooda/` artefacts staged, no secrets).
@@ -645,7 +645,7 @@ permission set based on traces, run the standard chain:
 2. **`feynman`** orients on the patterns: ranked hypotheses about which
    prompt rules are dead letters or which patterns the prompt fails to
    cover. Falsifiers must be observable in further trace data.
-3. **`moltke`** decides the edit (mission contract). `verify_commands`
+3. **`moltke`** decides the edit (mission contract). `[verify]` entries
    for prompt changes are necessarily judgement-bound — there is no
    replay harness — so contracts cite a specific trace excerpt as
    counterfactual evidence.

@@ -124,7 +124,7 @@ User: "Rename the public `Job` type to `Task` everywhere."
 - Inlining a multi-file change to "save a step." (Hidden coupling makes
   rollback expensive; moltke decides coupling.)
 - Claiming success without verify. (Vibes ≠ evidence; moltke's contract
-  carries `verify_commands` for a reason.)
+  carries a tier-keyed `[verify]` table for a reason.)
 - Rewriting prompts inline. (Turbo's role; preserves audit trail and
   avoids editing the source in place.)
 - Doing web research inline. (That's copernicus, which moltke will dispatch
