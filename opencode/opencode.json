@@ -124,6 +124,8 @@
       "rm -rf *": "deny",
       "sudo *": "deny",
       "git push --force*": "deny",
+      "git push -f*": "deny",
+      "git push --force-with-lease*": "allow",
       "git reset --hard*": "deny",
       "dd *": "deny",
       "mkfs*": "deny",
