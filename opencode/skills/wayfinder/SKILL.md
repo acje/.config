@@ -75,30 +75,13 @@ doesn't vanish — a name wraps its `bd show <id>` reference — but it rides
 
 ## Current state only
 
-The map states **what is true now**. It is not a chronicle of how it got
-there. When a later decision changes an earlier one, **overwrite the
-earlier text in place** — never append a correction beside the thing it
-corrects.
+The map is a projection of the current state, stating only what is true
+now. Overwrite superseded text in place rather than annotating it — git
+already holds the prior state.
 
-This is *the map is an index, not a store* applied across time rather than
-across tickets: a fact lives in exactly one place, and that place holds the
-current version of it.
-
-The named practice is **defensible deletion** — data cleansing, or
-maintaining a single source of truth by overwriting and in-place update.
-Framed as an intentional policy to purge stale states it belongs to active
-data lifecycle management. It is deletion *with* a policy, not carelessness.
-
-**Why it earns its keep.** A correction gets marked; the text it corrects
-usually does not. A reader skimming for the rule hits the dead one and has
-no way to tell. The failure is silent, and it compounds — every supersession
-left in place is one a later reader must adjudicate with less context than
-whoever wrote it had.
-
-**The test.** Would a reader of *only this sentence* get the current state
-right? If no, rewrite the sentence rather than annotate it.
-
-**Rewrite, don't annotate:**
+Annotation marks the correction but never the thing corrected, so dead text
+goes on reading as live. The test: would a reader of *only that sentence*
+get the current state right?
 
 | Instead of | Write |
 |---|---|
@@ -106,25 +89,12 @@ right? If no, rewrite the sentence rather than annotate it.
 | "the form below is superseded by this paragraph" | delete the form below |
 | "Still rejected: A. Still unadopted: B." | nothing — unless the refusal is a rule, then state the rule |
 | a ledger of which old records this one supersedes | one pointer, plus the rule governing the edge |
-| an erratum fixing a typo, date, or anything with no semantic content | fix it in place; add nothing |
+| an erratum fixing a typo or a date | fix it in place; add nothing |
 
-**Where displaced history goes.** Nothing is deleted without a home:
-
-- **Why a decision was made, and what it replaced** — the ticket's
-  resolution comment, and an ADR where the effort keeps one. The decision
-  log is the chronicle; the map is not.
-- **A rejected option whose reason prevents re-proposal** — keep it, but as
-  a *rule* in the destination artifact ("enforce-once-in-core is unsound
-  because the loser's cached value passes its own check"), not as a
-  rejection register in the map. A bare "rejected" without its reason
-  invites a rerun and is worth less than nothing.
-
-**Append-only stores are the exception that proves the rule.** Where a
-correction cannot overwrite — bd comments cannot be edited, close reasons
-cannot be amended — an erratum is the only honest fix, so keep it minimal
-and say plainly that it is spent. That constraint argues for being ruthless
-everywhere overwriting *is* possible; it is not a licence to annotate by
-default.
+Keep a rejected option only where its reason prevents re-proposal, and keep
+it as a rule carrying that reason — never as a rejection register. Where a
+store is append-only and cannot be overwritten (bd comments, close reasons),
+a minimal erratum is the honest fix.
 
 ## The map
 
@@ -343,11 +313,9 @@ without one, you pick the next decision, not the user.
    rather than resolving it on the route. If the decision invalidates other
    parts of the map, update or close those tickets.
 6. **Purge what the answer superseded** (see Current state only). Any Notes
-   entry, Decisions-so-far line or standing constraint the decision has
-   changed is **rewritten in place**, not annotated — the map must read as
-   current truth when the next session loads it. Anything worth keeping
-   about the superseded version belongs in this ticket's resolution
-   comment, which is where the chronicle lives.
+   entry, Decisions-so-far line or standing constraint the decision changed
+   is **rewritten in place**, not annotated — the map must read as current
+   truth when the next session loads it. Git holds the prior state.
 
 The user may run unblocked tickets in parallel, so expect other sessions to
 be editing bd concurrently.
