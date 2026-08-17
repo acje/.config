@@ -1,29 +1,34 @@
 ---
 name: quality-sweep
-description: Generic, shareable SDLC quality sweep of a codebase or crate. Scores 29 equally-weighted quality dimensions across 7 SDLC phases and produces a prioritised, evidence-arbitrated HTML report (summary + per-phase detail) from a template. Every verdict is decided by cited evidence, never by a prior. NOT a per-change gate — a standalone breadth-first sweep run on demand. Use when the user asks to "run a quality sweep", "SDLC quality audit", or "quality process", or wants a periodic codebase health check. For per-diff review use a dedicated code-review process instead.
+description: Generic, shareable SDLC quality sweep of a codebase. Discovers each independently deployable service in the target and scores 29 equally-weighted quality dimensions across 7 SDLC phases for each, producing one prioritised, evidence-arbitrated HTML report per service (summary + per-phase detail) from a template — or a single short no-services report when none are discovered. Every verdict is decided by cited evidence, never by a prior. NOT a per-change gate — a standalone breadth-first sweep run on demand. Use when the user asks to "run a quality sweep", "SDLC quality audit", or "quality process", or wants a periodic codebase health check. For per-diff review use a dedicated code-review process instead.
 ---
 
 # Quality Sweep
 
 A generic, breadth-first SDLC quality sweep. It scores 29 dimensions across 7
-phases against **one target codebase** and produces a prioritised HTML report.
-The evidence pass **fans out one subagent per SDLC phase** (seven parallel
+phases against **each independently deployable service discovered in one
+target codebase** and produces a prioritised HTML report per service. The
+evidence pass **fans out one subagent per SDLC phase** (seven parallel
 shards) so each shard gets a fresh full context budget for its ~4 dimensions
 rather than 29 dimensions competing in one window — the fix for run-to-run
-score nondeterminism. Before the report is written, a fresh-context
-verification subagent re-arbitrates every finding against its cited evidence
-(Phase 2.5) so no producing shard signs off its own work. The engine is
-target-agnostic and self-contained; three swappable data layers tune it:
+score nondeterminism. Before each service's report is written, a
+fresh-context verification subagent re-arbitrates every finding against its
+cited evidence (Phase 2.5) so no producing shard signs off its own work. The
+engine is target-agnostic and self-contained; four swappable data layers tune
+it:
 
 - **Toolchain adapter** (`adapters/toolchains.md`) — maps the target's
   ecosystem to `{test, lint, audit, deny}` commands (rust / node / python / …).
+- **Service discovery adapter** (`adapters/services.md`) — maps deployment-
+  marker/entrypoint/monorepo-convention tiers to service root directories, so
+  the sweep knows what a "service" is in this target.
 - **Per-phase check references** (`references/phase-<n>-*.md`) — one file per
   SDLC phase holding concrete, generalized checks and named anti-patterns for
   that phase's dimensions. The engine defines *what* each dimension is; the
   reference tells you *what concrete issues to hunt for*. Load the reference for
   a phase before running its evidence pass.
 - **Report template** (`templates/report.html`) — a self-contained HTML
-  template (summary + per-phase detail) filled at report time.
+  template (summary + per-phase detail) filled once per discovered service.
 
 The 29 dimensions and the 7-phase model are fixed, and **all dimensions carry
 equal importance**. There is no weighting, ranking, or bias — the sweep looks
@@ -198,14 +203,25 @@ hunt for*. Read the phase reference before that phase's evidence pass.
 ## Procedure
 
 ### Phase 0 — Scope & context
-1. Resolve target: crate / workspace / service path. State it before starting.
+1. Resolve target: crate / workspace / repo path. State it before starting.
 2. Detect the ecosystem and pick the matching row from
    `adapters/toolchains.md`. State it.
-3. Read `AGENTS.md` (or equivalent), relevant ADRs/architecture docs, and any
+3. **Discover services** per `adapters/services.md` (tiered T1/T2/T3
+   detection, dedup by filesystem root). **State the discovered service list**
+   before any evidence pass runs — this is what makes the discovery
+   assumption reversible: the operator may override it. When **more than 5**
+   services are discovered, **pause here** for operator confirmation or
+   narrowing before continuing; do not start the evidence pass on more than 5
+   services without that confirmation. When discovery finds nothing, record
+   the full probe transcript (every tier probed, every path/glob searched)
+   and proceed to the single no-services report (Phase 3).
+4. Read `AGENTS.md` (or equivalent), relevant ADRs/architecture docs, and any
    available code-graph. Note committed conventions so findings judge against
    *this* codebase's contract, not a generic one.
-4. Record the sweep timestamp, target, and ecosystem in the report header.
-5. **(Optional) Reference exemplar.** You may name a mature sibling/exemplar
+5. Record the sweep timestamp, target, and ecosystem in the report header.
+   One timestamp is shared across every report produced by this sweep run
+   (see Phase 3 path scheme).
+6. **(Optional) Reference exemplar.** You may name a mature sibling/exemplar
    repo whose *solved* patterns become an extra checklist for this sweep: "does
    the target do what the exemplar already solved?". Inspecting a weaker repo
    right after a stronger sibling sharpens both — the sibling's solved patterns
@@ -218,26 +234,48 @@ hunt for*. Read the phase reference before that phase's evidence pass.
 
 ### Phase 1 — Evidence pass (7 parallel phase shards, equal rigour)
 
+**Services are swept sequentially; the 7-shard fan-out stays within one
+service.** For each discovered service, in turn, run the full phase-shard
+fan-out described below for that service alone. Peak parallelism is always 7
+shards, never 7×N — total sweep cost is linear in the number of services (N),
+not multiplicative. This is the cost-control shape: do not fan out shards
+across services.
+
 The evidence pass **fans out one subagent per SDLC phase** — seven shards, run
 in parallel. Each shard is a self-contained evidence job: it loads **exactly its
 own** `references/phase-<n>-*.md`, scores **only that phase's dimension
-cluster**, and returns a phase scorecard. A single agent scoring all 29
-dimensions in one context window is what makes the sweep nondeterministic (later
-dimensions starve as context saturates and default to under-looked `ABSENT`);
-per-phase fan-out gives each shard a fresh full budget for ~4 dimensions.
+cluster** for the current service, and returns a phase scorecard. A single agent
+scoring all 29 dimensions in one context window is what makes the sweep
+nondeterministic (later dimensions starve as context saturates and default to
+under-looked `ABSENT`); per-phase fan-out gives each shard a fresh full budget
+for ~4 dimensions.
 
 Do **not** split by code region (dimensions are cross-cutting) or by individual
 dimension (29 shards = coordination overhead >> work, and evidence dedup is
 lost). Phase is the natural boundary — it is already the data-layer seam.
 
-**Compiled-ecosystem mechanical checks run ONCE, centrally — not per shard.**
-For compiled ecosystems (rust, go, dotnet, …) the adapter commands
-(`test` / `lint` / `audit` / `deny`) share a single build directory
-(`target/`, etc.). Running them inside each parallel phase shard causes
-build-lock contention and wasted rebuilds. Run the four mechanical commands
-**once, centrally**, capture their exit codes and transcripts, and hand the
-captured results to the shards as shared evidence. Shards still interpret those
-results for their own dimensions, but they do not each re-invoke the compiler.
+**Shared-root artifacts count as evidence for every service (A4).**
+Root-level artifacts that apply repo-wide — CI config, root lockfile, root
+LICENSE, root SBOM, and similar — are valid evidence **for each service**,
+cited by their **real path** (the actual root-relative path, e.g.
+`.github/workflows/ci.yml`, never rewritten as if it lived under the service
+root). A service must not score `ABSENT` on CI merely because the CI
+definition lives at the repo root rather than inside the service directory.
+
+**Compiled-ecosystem mechanical checks run ONCE PER BUILD ROOT, not per
+shard and not unconditionally per service.** For compiled ecosystems (rust,
+go, dotnet, …) the adapter commands (`test` / `lint` / `audit` / `deny`)
+share a single build directory (`target/`, etc.) per build root. Running them
+inside each parallel phase shard causes build-lock contention and wasted
+rebuilds; running them once per service when several services share one build
+root does the same. Run the four mechanical commands **once per build root**,
+capture their exit codes and transcripts, and hand the captured results to
+every shard and every service mapping to that build root as shared evidence.
+A monorepo with one shared `target/` runs the four commands once for the
+whole sweep (identical to a single-service sweep today); a polyglot repo with
+a separate manifest/build dir per service runs them once per service, which is
+correct and causes no contention. Shards still interpret those results for
+their own dimensions, but they do not each re-invoke the compiler.
 Interpreted ecosystems without a shared build artifact are exempt.
 
 **The seven shards and their scored dimension counts (sum = 29):**
@@ -417,22 +455,42 @@ so the report's validation section can cite it (findings survived an
 independent evidence re-check, not just the producing shard's own claim).
 
 
-Produce an **HTML report** from the template at `templates/report.html`. Write it
-to the configured report path (default `.ooda/`, gitignored):
-`<report-dir>/quality-sweep-<target>-<timestamp>.html`.
+### Phase 3 — Report
+
+Produce one **HTML report per discovered service** from the template at
+`templates/report.html`. Write each to the configured report path (default
+`.ooda/`, gitignored):
+
+`<report-dir>/quality-sweep-<target>-<service-slug>-<timestamp>.html`
+
+- `<service-slug>`: the service root path relative to the target, with `/`
+  replaced by `-`, any character outside `[A-Za-z0-9._-]` replaced by `-`,
+  lowercased.
+- Service root equal to the target root → slug `root`.
+- The no-services report (below) → slug `no-services`.
+- Dedup-by-filesystem-root (`adapters/services.md`) guarantees relative roots
+  are unique, so slugs are unique — no collisions.
+- One shared `<timestamp>` covers every report from a single sweep run (set
+  in Phase 0), so all reports of one run sort together and are identifiable
+  as one run.
 
 The template is self-contained (inline CSS, no external assets) and has two
 parts: a **Summary** (verdict, state counts, scorecard, prioritised findings,
 validation run) and a **Detail** section (per-SDLC-phase, one entry per
-dimension with its state, note, and cited evidence). Fill procedure:
+dimension with its state, note, and cited evidence). Fill procedure, run once
+per service:
 
 1. Read `templates/report.html`.
 2. Replace every `{{TOKEN}}` with the swept value. Header tokens: `{{TARGET}}`,
-   `{{DATE_ISO}}`, `{{ECOSYSTEM}}`, `{{DIMS_SCORED}}`; summary tokens:
-   `{{VERDICT}}`, `{{N_PRESENT}}`/`{{N_PARTIAL}}`/`{{N_ABSENT}}`/`{{N_NA}}`;
-   verification tokens (Phase 2.5): `{{VERIFY_GATE}}` (`PASS` — the report is
-   only written from a passing set), `{{VERIFY_CONFIRMED}}`,
-   `{{VERIFY_REJECTED}}` (rejects found and resolved before reporting).
+   `{{DATE_ISO}}`, `{{ECOSYSTEM}}`, `{{DIMS_SCORED}}`, `{{SERVICE}}` (service
+   name — manifest-declared name, or directory basename), `{{SERVICE_ROOT}}`
+   (service root path relative to the target), `{{SERVICE_N_OF}}` (this
+   service's position in the run, e.g. `2 of 4`, so a single report is
+   legible as part of a cohort); summary tokens: `{{VERDICT}}`,
+   `{{N_PRESENT}}`/`{{N_PARTIAL}}`/`{{N_ABSENT}}`/`{{N_NA}}`; verification
+   tokens (Phase 2.5): `{{VERIFY_GATE}}` (`PASS` — the report is only written
+   from a passing set), `{{VERIFY_CONFIRMED}}`, `{{VERIFY_REJECTED}}` (rejects
+   found and resolved before reporting).
 3. Repeat each marked block once per item, then delete its `BEGIN/END` comment
    markers: `scorecard-row` per dimension, `finding` per prioritised finding
    (highest risk first), `validation-row` per adapter check, `phase-section`
@@ -447,9 +505,48 @@ dimension with its state, note, and cited evidence). Fill procedure:
 5. Every `PRESENT` and every finding must carry a concrete artifact
    (file:line / CI step / doc section) in its evidence/why field — the
    green-arbitration rule applies to the HTML exactly as to the sweep.
+6. **Shared-root artifacts (A4).** When a dimension's evidence is a root-level
+   artifact (CI config, root lockfile, root LICENSE, root SBOM), cite its
+   **real path** (e.g. `.github/workflows/ci.yml`), never a path rewritten as
+   if it lived under the service root.
 
-Do not invent chart libraries or external CSS; keep the report a single
+Do not invent chart libraries or external CSS; keep each report a single
 portable file.
+
+**No-services report (D-Q2).** When Phase 0 discovery finds zero services,
+emit **exactly one** report from the same template, filled as a distinct
+short form — never 29 fabricated `N/A` rows (that would fabricate scores and
+violate both evidence-arbitration and ABSENT-is-earned). "No services were
+discovered" is itself the single arbitrated claim, governed by the same
+rules as any other finding:
+
+- `{{SERVICE}}` = `(none discovered)`, `{{SERVICE_ROOT}}` = `—`,
+  `{{SERVICE_N_OF}}` = `—`.
+- `{{DIMS_SCORED}}` = `0`; `{{N_PRESENT}}` = `{{N_PARTIAL}}` = `{{N_ABSENT}}`
+  = `{{N_NA}}` = `0`.
+- `{{VERDICT}}` — short statement: no services were identified, therefore no
+  service-scoped checks were applicable or run; names the discovery probe
+  floor that was executed.
+- `scorecard-row` — exactly **one** row: phase `0`, dimension
+  `(no services discovered)`, state `NA`, evidence = discovery probe
+  transcript.
+- `finding` — **zero** blocks (delete the block entirely).
+- `solid` — **zero** blocks (delete the block entirely).
+- `validation-row` — exactly **one** row: check `Service discovery`, result
+  `0 services — probe floor completed`, exit `—`.
+- `phase-section` — exactly **one**: `0 — Service discovery`, containing
+  **one** `dimension-detail` whose `{{DET_PROBE}}` carries the full discovery
+  transcript (every tier probed, every path/glob searched, what returned
+  nothing).
+- Phase 2.5 **still runs** on the no-services report; its sole job is to
+  re-arbitrate the discovery claim against that transcript.
+  `{{VERIFY_GATE}}` = `PASS`, `{{VERIFY_CONFIRMED}}` = `1`,
+  `{{VERIFY_REJECTED}}` = whatever was actually rejected and resolved
+  (usually `0`).
+
+This is ABSENT-is-earned applied to discovery itself: "no services" is legal
+only after the discovery probe floor ran and its transcript is recorded —
+never a default.
 
 ---
 
@@ -458,7 +555,9 @@ portable file.
 The report template is `templates/report.html` — a self-contained HTML file
 (inline CSS, no external assets). It captures, in order:
 
-- **Header** — target, date, ecosystem, dimensions-scored / 29.
+- **Header** — target, date, ecosystem, dimensions-scored / 29, and the
+  swept service's identity (`{{SERVICE}}`, `{{SERVICE_ROOT}}`,
+  `{{SERVICE_N_OF}}`).
 - **Summary** — a 2–3 sentence verdict (lead with where evidence is thinnest,
   stated as an evidence claim not a prior); PRESENT / PARTIAL / ABSENT / N/A
   counts; the full scorecard (one row per dimension, cross-listed concepts as a
@@ -482,18 +581,47 @@ Fill it per the Phase-3 procedure above; do not hand-roll a different format.
 
 ## Final reply (terse, structured)
 
-After writing the report, reply with:
+After writing all reports, reply with one summary line per service, then the
+report path list.
+
+Multi-service shape:
 
 ```
-Target: <path>   Ecosystem: <name>
+Target: <path>   Ecosystem: <name>   Services discovered: <n>
+
+[per service:]
+Service: <name> (<service-root>)
 PRESENT (with evidence): <n>   PARTIAL: <n>   ABSENT: <n>   N/A: <n>
 Top finding: <one line, risk-ranked #1>
 Validation: Tests=<..> Lint=<..> Audit=<..> Deny=<..>
-Report: <report-dir>/quality-sweep-<target>-<timestamp>.html
+
+Reports:
+  <report-dir>/quality-sweep-<target>-<service-slug-1>-<timestamp>.html
+  <report-dir>/quality-sweep-<target>-<service-slug-2>-<timestamp>.html
+  ...
+```
+
+No-services shape:
+
+```
+Target: <path>   Ecosystem: <name>   Services discovered: 0
+Discovery probe floor: <one line — tiers probed, all returned nothing>
+Report: <report-dir>/quality-sweep-<target>-no-services-<timestamp>.html
 ```
 
 ## Discipline
 
+- **Service is the reporting unit.** Each discovered service gets its own
+  full 29-dimension report; no blended whole-repo score. Sequential across
+  services, 7-way parallel within one service (never 7×N).
+- **Shared-root artifacts are evidence for every service.** Root-level CI,
+  lockfile, LICENSE, SBOM, etc. count for each service, cited by their real
+  path — never rewritten as a service-relative fiction, and never scored
+  `ABSENT` merely for living at the repo root.
+- **"No services" is earned, never defaulted.** The no-services report is
+  legal only after the discovery probe floor (`adapters/services.md`)
+  completed and its transcript is recorded — the same ABSENT-is-earned rule
+  applied to discovery itself.
 - **Evidence arbitrates.** A dimension is `PRESENT` only with a cited artifact
   (file:line / CI step / doc section); nothing is passed on a prior.
 - **Green without evidence = under-looked; green with evidence = pass.**

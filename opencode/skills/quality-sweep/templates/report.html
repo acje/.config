@@ -10,12 +10,17 @@
   State vocabulary (use verbatim in the `data-state` attribute so the CSS
   colours it): PRESENT | PARTIAL | ABSENT | NA
   Severity vocabulary for findings: HIGH | MEDIUM | LOW
+
+  One report is generated per discovered service ({{SERVICE}} /
+  {{SERVICE_ROOT}} / {{SERVICE_N_OF}}). No-services degradation:
+  {{SERVICE}}="(none discovered)", {{SERVICE_ROOT}}="—",
+  {{SERVICE_N_OF}}="—".
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quality Sweep — {{TARGET}}</title>
+<title>Quality Sweep — {{TARGET}} — {{SERVICE}}</title>
 <style>
   :root {
     --bg: #0f1115; --panel: #171a21; --ink: #e6e8ec; --muted: #9aa3af;
@@ -77,6 +82,9 @@
 
   <h1>Quality Sweep — {{TARGET}}</h1>
   <div class="meta">
+    <span>Service: <b>{{SERVICE}}</b></span>
+    <span>Service root: <b>{{SERVICE_ROOT}}</b></span>
+    <span>Run: <b>{{SERVICE_N_OF}}</b></span>
     <span>Date: <b>{{DATE_ISO}}</b></span>
     <span>Ecosystem: <b>{{ECOSYSTEM}}</b></span>
     <span>Dimensions scored: <b>{{DIMS_SCORED}}</b> / 29</span>
