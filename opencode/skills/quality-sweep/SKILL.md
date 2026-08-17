@@ -254,7 +254,7 @@ Do **not** split by code region (dimensions are cross-cutting) or by individual
 dimension (29 shards = coordination overhead >> work, and evidence dedup is
 lost). Phase is the natural boundary — it is already the data-layer seam.
 
-**Shared-root artifacts count as evidence for every service (A4).**
+**Shared-root artifacts count as evidence for every service.**
 Root-level artifacts that apply repo-wide — CI config, root lockfile, root
 LICENSE, root SBOM, and similar — are valid evidence **for each service**,
 cited by their **real path** (the actual root-relative path, e.g.
@@ -505,7 +505,7 @@ per service:
 5. Every `PRESENT` and every finding must carry a concrete artifact
    (file:line / CI step / doc section) in its evidence/why field — the
    green-arbitration rule applies to the HTML exactly as to the sweep.
-6. **Shared-root artifacts (A4).** When a dimension's evidence is a root-level
+6. **Shared-root artifacts.** When a dimension's evidence is a root-level
    artifact (CI config, root lockfile, root LICENSE, root SBOM), cite its
    **real path** (e.g. `.github/workflows/ci.yml`), never a path rewritten as
    if it lived under the service root.
@@ -513,7 +513,7 @@ per service:
 Do not invent chart libraries or external CSS; keep each report a single
 portable file.
 
-**No-services report (D-Q2).** When Phase 0 discovery finds zero services,
+**No-services report.** When Phase 0 discovery finds zero services,
 emit **exactly one** report from the same template, filled as a distinct
 short form — never 29 fabricated `N/A` rows (that would fabricate scores and
 violate both evidence-arbitration and ABSENT-is-earned). "No services were
