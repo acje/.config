@@ -21,9 +21,12 @@ column entry runs the generic reference only (`none (unseeded)`).
 | Ecosystem | Detect via | test | lint | audit | deny | Stack profile |
 |---|---|---|---|---|---|---|
 | rust | `Cargo.toml` | `cargo test` | `cargo clippy -- -D warnings` | `cargo audit` | `cargo deny check` | `adapters/stacks/rust.md` |
-| node | `package.json` (no `tsconfig.json`) | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` | `npm audit` | `license-checker` (or `npm-license-crawler`) | none (unseeded) |
-| typescript | `package.json` + `tsconfig.json` | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` + `tsc --noEmit` | `npm audit` | `license-checker` (or `npm-license-crawler`) | none (unseeded) |
+| node | `package.json` (no `tsconfig.json`) | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` | `npm audit` | `license-checker-rseidelsohn` | none (unseeded) |
+| typescript | `package.json` + `tsconfig.json` | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` + `tsc --noEmit` | `npm audit` | `license-checker-rseidelsohn` | `adapters/stacks/typescript.md` |
 | python | `pyproject.toml` / `requirements.txt` | `pytest` | `ruff check .` (or `flake8`) | `pip-audit` | `pip-licenses` | none (unseeded) |
+| kotlin | `build.gradle.kts` + `settings.gradle.kts` | `./gradlew test` | `./gradlew ktlintCheck` + `./gradlew detekt` | `./gradlew dependencyCheckAnalyze` | `./gradlew checkLicense` | `adapters/stacks/kotlin.md` |
+| clojure | `deps.edn` / `project.clj` | `clojure -X:test` (or `kaocha` / `lein test`) | `clj-kondo --lint <path>` | `nvd-clojure` (run from a separate helper project — see profile) | SKIPPED (no standard tool) | `adapters/stacks/clojure.md` |
+| go | `go.mod` | `go test ./...` | `golangci-lint run` | `govulncheck ./...` | `go-licenses check <pkg> --disallowed_types=...` | `adapters/stacks/go.md` |
 
 Notes:
 
@@ -37,10 +40,9 @@ Notes:
 - Prefer the target's declared runner over the row default when the target's
   CI or manifest names a specific command (e.g. `pnpm` over `npm`, `nox`/`tox`
   over bare `pytest`). The row is a fallback, not an override.
-- Extend this table for other ecosystems (go, ruby, dotnet, kotlin, clojure,
-  …) by adding a row with the same four slots (plus a stack-profile column
-  entry once that stack's profile file exists); the engine reads whatever
-  rows are present.
+- Extend this table for other ecosystems (ruby, dotnet, …) by adding a row
+  with the same four slots (plus a stack-profile column entry once that
+  stack's profile file exists); the engine reads whatever rows are present.
 - Record the exit code for each command actually run. Tool absent → `SKIPPED`
   with the reason; never fabricate a pass.
 - **Interpret each exit code against the tool's config, not at face value.** A
