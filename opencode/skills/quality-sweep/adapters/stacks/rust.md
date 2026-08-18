@@ -128,3 +128,26 @@ scored as a clean pass instead of `PASS-WITH-IGNORES`.
 a test-only harness crate (`tempfile` or similar) declared in
 `[dependencies]` instead of `[dev-dependencies]`, inflating the shipped
 dependency graph.
+
+## Phase 3 — Testing
+
+**Probes (add):**
+- `rg '#\[cfg\(test\)\]'` for inline unit tests colocated with source,
+  plus a `tests/` dir for integration tests against the public API.
+- `rg '#\[should_panic\]|#\[ignore\]'` — `#[ignore]` needs a reason string.
+
+**Anti-patterns:** `#[ignore]`d test with no reason; a `tests/` test
+reaching into private items (module-boundary violation); public API with
+zero doc-tests (`cargo test --doc`).
+
+## Phase 2 — Concurrency
+
+**Probes (add):**
+- `rg 'unsafe impl (Send|Sync)'` for manual impls needing justification.
+- Check a `std::sync::MutexGuard` held across `.await` vs an async-aware
+  lock (`tokio::sync::Mutex`); `rg 'thread::sleep|block_on'` inside an
+  `async fn` with no `spawn_blocking` hand-off.
+
+**Anti-patterns:** a `MutexGuard` held across `.await`, blocking the
+executor thread; a blocking call inside `async fn` with no
+`spawn_blocking`; `unsafe impl Send`/`Sync` with no safety justification.

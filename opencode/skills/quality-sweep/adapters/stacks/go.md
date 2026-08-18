@@ -67,3 +67,56 @@ lint gate (running on tool defaults only, not a reviewed rule set);
 (silently resolves to the wrong major version or fails); `govulncheck` run
 per-package instead of at module root, missing cross-package call-graph
 vulnerabilities.
+
+## Phase 1 — Type safety
+
+**Probes (add):**
+- `rg 'interface\{\}|\bany\b'` for `interface{}`/`any` overuse vs a
+  narrow, named interface.
+- `rg 'errors\.Is\(|errors\.As\('` for typed-error inspection vs a raw
+  string-match on `err.Error()`.
+
+**Anti-patterns:** `interface{}`/`any` used where a narrow interface would
+do, deferring a type error to runtime; string-matching `err.Error()`
+instead of `errors.Is`/`errors.As` for error-type inspection.
+
+## Phase 1 — Architecture
+
+**Probes (add):**
+- Confirm an `internal/` package boundary enforces a non-exported API
+  surface (Go's compiler-enforced import restriction) rather than relying
+  on doc-comment convention alone.
+
+**Anti-patterns:** no `internal/` package used at all on a multi-package
+module with a clear public/private split, relying on naming convention
+instead of the compiler-enforced boundary.
+
+## Phase 3 — Testing
+
+**Probes (add):**
+- Confirm `_test.go` files are colocated with the source they test (Go's
+  convention, not a separate test tree).
+- `rg 'func Test[A-Z]'` for `TestXxx` naming; `rg 't\.Run\('` for
+  table-driven subtests.
+- `rg 't\.Skip\('` for skipped tests; confirm a reason string. Check
+  `testdata/` dir convention for fixture files.
+
+**Anti-patterns:** a test file not named `_test.go` (invisible to `go
+test`); `t.Skip()` with no reason string; fixture data placed outside
+`testdata/` (accidentally included in the build).
+
+## Phase 4 — Supply-chain integrity
+
+**Probes (add):**
+- Confirm `go.sum` is committed and matches `go.mod` (checksum-verified
+  dependency graph).
+- Check `GOFLAGS=-mod=readonly` (or CI equivalent) enforcing no silent
+  `go.mod`/`go.sum` drift during build.
+- Check `GONOSUMDB`/`GOPRIVATE` scope covers only intended private
+  modules, not a bypass of the public checksum database for public ones.
+  If `vendor/` is present, confirm it's kept in sync via `go mod vendor`.
+
+**Anti-patterns:** `go.sum` missing or stale relative to `go.mod`
+(unverified dependency graph); `GONOSUMDB`/`GOPRIVATE` covering public
+modules (bypassing checksum verification, not just private ones);
+`vendor/` present but out of sync with `go.mod`.

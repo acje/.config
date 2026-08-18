@@ -31,7 +31,7 @@ deepens it for one ecosystem, per the composition rule below.
 Only dimensions where the stack MATERIALLY changes the probe get an entry.
 Dimensions with no stack-specific delta are OMITTED and inherit the generic
 reference — an omitted dimension means INHERITS GENERIC, never "not
-applicable". Budget: each profile file <= ~130 lines, entries for roughly
+applicable". Budget: each profile file <= ~150 lines, entries for roughly
 8-14 of the 29 dimensions. Breadth over depth; do not restate generic
 reference content.
 
@@ -98,4 +98,4 @@ service's single scorecard.
    equal-or-greater-count replacement for. Default to ADD, not REPLACE.
 5. Pull the stack's toolchain row from `adapters/toolchains.md` (or add one
    there first if it doesn't exist yet) for the four toolchain slots.
-6. Keep the file under the ~130-line budget; breadth over depth.
+6. Keep the file under the ~150-line budget; breadth over depth.

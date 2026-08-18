@@ -80,3 +80,45 @@ exception type; a coroutine-scope leak flagged by
 **Anti-patterns:** `dependencyCheckAnalyze` present but never wired into
 CI (local-only); `checkLicense` task absent or run with no
 `allowedLicensesFile`, making it report-only rather than a gate.
+
+## Phase 1 — Type safety
+
+**Probes (add):**
+- `rg 'sealed (class|interface)'` vs a plain enum/open class, for
+  exhaustive-`when` coverage enforced by the compiler.
+- `rg 'value class'` for zero-cost wrapper types around a domain concept
+  (e.g. an id or amount) vs a bare `String`/`Long`/`Int` parameter.
+- `rg 'data class'` at domain-model boundaries vs a plain class with
+  mutable `var` fields.
+
+**Anti-patterns:** a domain concept (id, amount, email) typed as a bare
+`String`/`Long` instead of a `value class` wrapper; a `when` over a plain
+enum/open class with no `else` and no sealed-class exhaustiveness; a
+nullable type threaded deep into a call chain instead of resolved at the
+boundary.
+
+## Phase 3 — Testing
+
+**Probes (add):**
+- Confirm tests live under `src/test/kotlin` (Gradle source-set
+  convention).
+- `rg '@Disabled|@Ignore'` for skipped tests; confirm a reason/tracked
+  follow-up.
+
+**Anti-patterns:** test files outside `src/test/kotlin` (invisible to the
+default Gradle test source-set); `@Disabled`/`@Ignore` with no reason or
+tracked follow-up.
+
+## Phase 4 — Supply-chain integrity
+
+**Probes (add):**
+- Confirm the Gradle wrapper jar's checksum is verified before use
+  (wrapper validation), not executed unverified.
+- Confirm `gradle/libs.versions.toml` (version catalog) is the single
+  source of dependency versions, not duplicated as inline version
+  literals across `build.gradle.kts` files.
+
+**Anti-patterns:** no wrapper-checksum verification before the Gradle
+wrapper jar executes; a version catalog declared but individual modules
+still hardcode inline version strings, defeating its single-source-of-
+truth intent.

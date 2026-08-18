@@ -85,3 +85,45 @@ actually run.
 **Anti-patterns:** treating `antq` output as if it were a license/policy
 gate — it answers "is this dependency stale", not "is this dependency's
 license allowed".
+
+## Phase 2 — Error handling
+
+**Probes (add):**
+- `rg 'ex-info|ex-data'` for the idiomatic typed-error carrier vs a bare
+  string/map thrown.
+- `rg '\(try\b|\(catch |\(finally'` at I/O/boundary call sites; check a
+  caught exception is re-thrown via `ex-info` with an added `ex-data` map
+  (context enrichment) rather than swallowed.
+
+**Anti-patterns:** `throw`/`ex-info` of raw strings with no `:type`/
+`:cause` key discipline, making programmatic recovery impossible; a broad
+`(catch Exception e ...)` swallowing a programmer error alongside genuine
+recoverable conditions.
+
+## Phase 2 — Concurrency
+
+**Probes (add):**
+- `rg '\(atom |\(ref |\(agent '` for the chosen state-coordination
+  primitive; confirm it matches the update pattern (atom: uncoordinated
+  sync update; ref: coordinated STM transaction; agent: async/fire-and-
+  forget).
+- `rg 'core.async|>!!|<!!'` inside a `go` block for a blocking op
+  (`>!!`/`<!!`) that should be the parking form (`>!`/`<!`).
+
+**Anti-patterns:** a blocking op used inside a `core.async` `go` block
+(starves the thread-pool); a `ref` used where an `atom` would suffice, or
+an `atom` used for a multi-value coordinated update that needed a
+transaction.
+
+## Phase 3 — Testing
+
+**Probes (add):**
+- Confirm tests live under `test/` (source-root convention distinct from
+  `src/`).
+- `rg 'deftest|\(is '` for the `deftest`/`is` idiom; check for an
+  `^:integration` (or similar) metadata selector distinguishing unit from
+  integration runs in the test-runner alias.
+
+**Anti-patterns:** test namespaces outside `test/` (invisible to the
+default test-runner classpath alias); a `deftest` with no `is` assertion
+inside it (a no-op test that always "passes").

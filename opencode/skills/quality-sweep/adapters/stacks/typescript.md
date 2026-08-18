@@ -75,3 +75,41 @@ incorrectly-spelled or non-existent package name.
 
 **Anti-patterns:** unpinned `typescript` devDependency letting compiler
 strictness behaviour drift silently between installs.
+
+## Phase 1 — API / schema design
+
+**Probes (add):**
+- Check whether external-facing boundaries (request handlers, parsed JSON)
+  use a runtime schema validator vs a bare TypeScript `interface`/`type`
+  alone — a type-only contract validates nothing at runtime.
+- `rg 'JSON\.parse\(.*\) as \w+'` for an unchecked cast replacing a
+  validated parse.
+
+**Anti-patterns:** a public boundary typed only with a TS interface, no
+runtime validation call, trusting the compiler to guard a boundary it
+cannot see at runtime; `JSON.parse(...) as Type` asserting shape with no
+validation.
+
+## Phase 2 — Dead-code removal
+
+**Probes (add):**
+- `rg 'export (const|function|class|interface|type)'` cross-checked
+  against cross-file imports for unused exports.
+- Check barrel files (`index.ts` re-export hubs) for re-exports with zero
+  external consumers.
+
+**Anti-patterns:** barrel-file re-export sprawl — an `index.ts`
+re-exporting symbols no consumer imports; an exported symbol with no
+cross-file import (dead public surface).
+
+## Phase 3 — Testing
+
+**Probes (add):**
+- `rg '\.(test|spec)\.ts$'` file-naming convention, or a `__tests__/`
+  directory, for test-location.
+- Confirm a `coverage` key in the resolved vitest/jest config states a
+  threshold rather than running report-only.
+
+**Anti-patterns:** test files with neither a `*.test.ts`/`*.spec.ts`
+suffix nor a `__tests__/` location, invisible to the default test-runner
+glob; coverage config present with no enforced threshold.
