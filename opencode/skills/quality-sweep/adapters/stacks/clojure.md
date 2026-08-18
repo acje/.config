@@ -31,10 +31,11 @@ on its inputs, relying on duck-typing all the way to a runtime `ClassCastExcepti
 ## Phase 2 — Correctness / bugfix
 
 **Probes (add):**
-- Read `clj-kondo`'s reflection-warning output (`:reflection-warning` in
-  `.clj-kondo/config.edn` linter config) — reflection is both a correctness
-  smell (silently falls back to slow/incorrect dispatch) and a performance
-  one in Clojure.
+- Check for `(set! *warn-on-reflection* true)` in source namespaces (or the
+  equivalent compiler/build option), then read reflection warnings surfacing
+  in build output — reflection is both a correctness smell (silently falls
+  back to slow/incorrect dispatch) and a performance one in Clojure. This is
+  a compiler diagnostic, not a `clj-kondo` linter check.
 - `rg ':unresolved-symbol|:unused-binding'` findings from a `clj-kondo --lint`
   run for dead or broken bindings.
 

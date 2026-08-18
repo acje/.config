@@ -500,7 +500,13 @@ per service:
 
 1. Read `templates/report.html`.
 2. Replace every `{{TOKEN}}` with the swept value. Header tokens: `{{TARGET}}`,
-   `{{DATE_ISO}}`, `{{ECOSYSTEM}}`, `{{DIMS_SCORED}}`, `{{SERVICE}}` (service
+   `{{DATE_ISO}}`, `{{ECOSYSTEM}}` (this service's bound ecosystem — per
+   Phase 0 step 3, ecosystem binding is per service, not run-level),
+   `{{PROFILE}}` (this service's bound stack profile: the seeded profile
+   name, `none (unseeded)` when the ecosystem has no seeded profile — never
+   blank, never implying stack-awareness that didn't happen — or
+   `<primary> + <secondary>` for a polyglot service per the polyglot rule in
+   `adapters/stacks/README.md`), `{{DIMS_SCORED}}`, `{{SERVICE}}` (service
    name — manifest-declared name, or directory basename), `{{SERVICE_ROOT}}`
    (service root path relative to the target), `{{SERVICE_N_OF}}` (this
    service's position in the run, e.g. `2 of 4`, so a single report is
@@ -539,7 +545,8 @@ discovered" is itself the single arbitrated claim, governed by the same
 rules as any other finding:
 
 - `{{SERVICE}}` = `(none discovered)`, `{{SERVICE_ROOT}}` = `—`,
-  `{{SERVICE_N_OF}}` = `—`.
+  `{{SERVICE_N_OF}}` = `—`, `{{PROFILE}}` = `—` (no service to bind a
+  profile to).
 - `{{DIMS_SCORED}}` = `0`; `{{N_PRESENT}}` = `{{N_PARTIAL}}` = `{{N_ABSENT}}`
   = `{{N_NA}}` = `0`.
 - `{{VERDICT}}` — short statement: no services were identified, therefore no
@@ -573,8 +580,10 @@ never a default.
 The report template is `templates/report.html` — a self-contained HTML file
 (inline CSS, no external assets). It captures, in order:
 
-- **Header** — target, date, ecosystem, dimensions-scored / 29, and the
-  swept service's identity (`{{SERVICE}}`, `{{SERVICE_ROOT}}`,
+- **Header** — target, date, the swept service's bound ecosystem and stack
+  profile (`{{ECOSYSTEM}}`, `{{PROFILE}}` — per-service, never a run-level
+  single value; unseeded renders `none (unseeded)`), dimensions-scored / 29,
+  and the swept service's identity (`{{SERVICE}}`, `{{SERVICE_ROOT}}`,
   `{{SERVICE_N_OF}}`).
 - **Summary** — a 2–3 sentence verdict (lead with where evidence is thinnest,
   stated as an evidence claim not a prior); PRESENT / PARTIAL / ABSENT / N/A
@@ -605,10 +614,10 @@ report path list.
 Multi-service shape:
 
 ```
-Target: <path>   Ecosystem: <name>   Services discovered: <n>
+Target: <path>   Services discovered: <n>
 
 [per service:]
-Service: <name> (<service-root>)
+Service: <name> (<service-root>)   Ecosystem: <name>   Stack profile: <name | none (unseeded) | primary + secondary>
 PRESENT (with evidence): <n>   PARTIAL: <n>   ABSENT: <n>   N/A: <n>
 Top finding: <one line, risk-ranked #1>
 Validation: Tests=<..> Lint=<..> Audit=<..> Deny=<..>
@@ -622,7 +631,7 @@ Reports:
 No-services shape:
 
 ```
-Target: <path>   Ecosystem: <name>   Services discovered: 0
+Target: <path>   Services discovered: 0
 Discovery probe floor: <one line — tiers probed, all returned nothing>
 Report: <report-dir>/quality-sweep-<target>-no-services-<timestamp>.html
 ```

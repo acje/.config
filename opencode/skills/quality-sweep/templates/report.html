@@ -12,9 +12,11 @@
   Severity vocabulary for findings: HIGH | MEDIUM | LOW
 
   One report is generated per discovered service ({{SERVICE}} /
-  {{SERVICE_ROOT}} / {{SERVICE_N_OF}}). No-services degradation:
-  {{SERVICE}}="(none discovered)", {{SERVICE_ROOT}}="—",
-  {{SERVICE_N_OF}}="—".
+  {{SERVICE_ROOT}} / {{SERVICE_N_OF}}). {{PROFILE}} is the bound stack
+  profile for this service: a seeded stack name, "none (unseeded)" when no
+  profile is seeded for the detected ecosystem, or "<primary> + <secondary>"
+  for a polyglot service. No-services degradation: {{SERVICE}}="(none
+  discovered)", {{SERVICE_ROOT}}="—", {{SERVICE_N_OF}}="—", {{PROFILE}}="—".
 -->
 <html lang="en">
 <head>
@@ -87,6 +89,7 @@
     <span>Run: <b>{{SERVICE_N_OF}}</b></span>
     <span>Date: <b>{{DATE_ISO}}</b></span>
     <span>Ecosystem: <b>{{ECOSYSTEM}}</b></span>
+    <span>Stack profile: <b>{{PROFILE}}</b></span>
     <span>Dimensions scored: <b>{{DIMS_SCORED}}</b> / 29</span>
   </div>
 
