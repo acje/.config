@@ -71,8 +71,8 @@ is needed.
   forcing the reader to re-derive it.
 - Flag-drunk signature — long positional arg list or many booleans; call sites
   become inscrutable `foo(x, true, false, true)`.
-- Blanket-allow shield — a crate/module-wide `allow` hiding many real items
-  behind one suppression, blocking the smaller cohesive fix.
+- Blanket-allow shield — a module-wide suppression hiding many real items
+  behind one blanket allowance, blocking the smaller cohesive fix.
 - Refactor-and-behaviour-in-one-commit — structural moves mixed with logic
   changes, so the diff can't be read.
 
@@ -130,25 +130,31 @@ and docs describe CURRENT behaviour, not aspirational behaviour.
 Good: every fallible call either propagates a typed error or handles it
 explicitly; error enums are exhaustive-by-intent with a single controlled
 conversion chokepoint that fails closed; there is no path that discards a
-durable-write failure or returns success on failure; `expect`/`unwrap` are
-absent from production paths (or carry a precondition-naming message on a
-genuinely-unrecoverable, documented invariant).
+durable-write failure or returns success on failure; partial-function calls
+(unwrap/expect-equivalents) are absent from production paths (or carry a
+precondition-naming message on a genuinely-unrecoverable, documented
+invariant).
 
 **Checks:**
-- Enumerate `unwrap`/`expect`/`panic`/array-index on production (non-test)
+- Enumerate partial-function calls (unwrap/expect-equivalents),
+  panic-equivalents, and unchecked-index accesses on production (non-test)
   paths, especially on derivation/aggregation and external-input paths. Each is
   a finding unless it guards a documented, genuinely-unreachable invariant with
-  a message that names the precondition. Cite file:line.
-- Is every fallible call propagated (`?`/typed error) rather than
-  `unwrap`/`expect`? Distinguish library error style (typed, structured) from
-  binary/top-level style (context-carrying); flag `Box<dyn Error>` on public
-  APIs without justification.
+  a message that names the precondition. Cite file:line. (Exact literal
+  patterns are stack-specific — see the bound stack profile under
+  `adapters/stacks/`.)
+- Is every fallible call propagated via the language's typed-error/result idiom
+  rather than a partial-function call that panics? Distinguish library error
+  style (typed, structured) from binary/top-level style (context-carrying);
+  flag an untyped/boxed generic error type on public APIs without
+  justification.
 - Is there a single conversion chokepoint mapping backend/low-level errors to
   the domain taxonomy, with exactly ONE controlled wildcard that FAILS CLOSED
   to an unrecoverable/refuse variant — and NO per-call-site wildcard swallow?
 - Do public error enums preserve their forward-compat / exhaustiveness
-  discipline (the repo's `#[non_exhaustive]`-style policy), applied UNIFORMLY?
-  Hunt consumer enums that escaped the discipline the libraries enforce.
+  discipline (the repo's declared forward-compat/exhaustiveness marker or
+  policy), applied UNIFORMLY? Hunt consumer enums that escaped the discipline
+  the libraries enforce.
 - Is a failure on a durability/write path NEVER swallowed and NEVER reported as
   success (e.g. returning HTTP 200 on a failed durable write defeats upstream
   redelivery)? Classify each designed response as fatal | retry | degrade |
@@ -157,18 +163,21 @@ genuinely-unrecoverable, documented invariant).
   string), so operators see the originating error? Cite where the chain is
   logged/propagated.
 - Where a mutex/lock can be poisoned, is recovery explicit
-  (recover-inner-value) rather than an `unwrap` that turns one panic into a
-  cascade? Cite the lock site.
+  (recover-inner-value) rather than a partial-function call that turns one
+  panic into a cascade? Cite the lock site.
 
 **Probe floor (mandatory before ABSENT):**
-- Grep production paths for `unwrap`/`expect`/`panic!`/index (`rg 'unwrap\(\)|expect\(|panic!|\[[0-9]' src/` excluding tests).
-- Grep for typed error taxonomy and propagation (`rg 'enum .*Error|thiserror|anyhow|Box<dyn.*Error>|\?;'`).
+- Grep production paths for partial-function calls, panic-equivalents, and
+  unchecked-index access (exact literal patterns are stack-specific — see
+  the bound stack profile under `adapters/stacks/` for the concrete grep).
+- Grep for a typed-error taxonomy and propagation idiom (stack-specific
+  pattern — see the bound stack profile).
 - Grep for durable-write / success-on-failure tells (`rg -i 'return.*Ok|200|success' ` near persist/append/write paths).
 - ABSENT only if the target has no fallible operations (state so) OR the probes surfaced no error-handling surface — record the transcript.
 
 **Anti-patterns to hunt:**
-- Unwrap in production path — `unwrap`/`expect` reachable from non-test code on
-  data that can fail.
+- Partial-function call in production path — an unwrap/expect-equivalent
+  reachable from non-test code on data that can fail.
 - Swallowed durable-write — a persist/append failure dropped or masked; tell:
   success returned / 200 emitted while the write did not land.
 - Catch-all wildcard swallow — a per-call-site `_ =>`/catch-all that discards
@@ -179,8 +188,8 @@ genuinely-unrecoverable, documented invariant).
   downcast/classification ability.
 - Escaped-enum discipline — consumer error enums missing the forward-compat
   marker the libraries mandate; tell: a grep for the marker finds gaps.
-- Poison-panic cascade — `unwrap` on a lock guard so one thread's panic
-  poisons and crashes all others.
+- Poison-panic cascade — a partial-function call on a lock guard so one
+  thread's panic poisons and crashes all others.
 
 ## Concurrency
 
@@ -271,19 +280,21 @@ permanent mask over genuinely-removable items.
   parameters pruned (e.g. dropping a `_policy` param, deleting variants only
   ever matched never constructed)? Deletion shrinks the taxonomy without
   changing topology.
-- Are orphaned modules / whole dead crates deleted, with proof no remaining
+- Are orphaned modules / whole dead packages deleted, with proof no remaining
   references exist and no behaviour is silently lost (demoted-not-deleted must
   be explicit)? Cite the reference-check.
 - Is duplicated dead structure collapsed (repeated open/rehydrate flows,
-  duplicated macro definitions across crates) rather than left as parallel
-  copies?
+  duplicated macro definitions across modules/packages) rather than left as
+  parallel copies?
 - Do "unused"-lint suppressions carry a reason and a plan, or are they permanent
   masks? A suppression that hides multiple real dead items is itself the finding.
 
 **Probe floor (mandatory before ABSENT):**
 - Grep for dead-code suppressions (`rg '#\[allow\(dead_code|unused'`).
 - Grep for commented-out code and stale markers (`rg '^\s*// .*(fn |let |= )|TODO|FIXME|HACK|MIGRATION|DEPRECATED'`).
-- Run the ecosystem's unused-dependency check if available (`cargo machete`/`cargo-udeps`, `depcheck`); else grep manifest deps against `src/`+tests references.
+- Run the ecosystem's unused-dependency check if available (see the bound
+  stack profile for the concrete tool); else grep manifest deps against
+  `src/`+tests references.
 - ABSENT only if a clean unused-scan ran AND the greps returned nothing — record the transcript. (A truly clean tree is PRESENT-with-evidence, not ABSENT.)
 
 **Anti-patterns to hunt:**
@@ -296,7 +307,7 @@ permanent mask over genuinely-removable items.
 - Zombie dependency — manifest entry with zero references in src+tests.
 - Vestigial variant/field/param — enum variants never constructed, fields never
   read, params never used (dead `_`-prefixed args).
-- Orphan module/crate — module or crate with no remaining callers, not yet
-  deleted; risk of silent behaviour loss if demoted without a note.
+- Orphan module — a module or compilation unit with no remaining callers,
+  not yet deleted; risk of silent behaviour loss if demoted without a note.
 - Parallel-copy debt — duplicated flow/macro kept as N copies instead of one
   source; cognitive-load and drift risk.

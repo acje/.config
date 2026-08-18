@@ -37,23 +37,24 @@ integrity, README walkthroughs, and stale cross-references recur heavily.
   fail document their error conditions, functions that can panic document the
   panic, and unsafe items document the safety contract. Undocumented public
   surface is a finding; blanket suppression of the "missing docs" lint at
-  module/crate scope is itself a finding — fix by documenting, not silencing.
+  module scope is itself a finding — fix by documenting, not silencing.
 - Documented errors/panics/safety are ACCURATE — the stated conditions match
   the actual code path, not boilerplate. A `# Errors`/`# Panics` section that
   lists conditions the body cannot produce (or omits ones it can) is a finding.
-- The architecture document reflects the current module/crate structure and the
-  current public surface. Cross-check its API tables, crate map, and dependency
+- The architecture document reflects the current module structure and the
+  current public surface. Cross-check its API tables, module map, and dependency
   narrative against the code; stale rows listing removed commands/types/events
   as "current" are doc-drift findings.
 - Diagrams (mermaid, C4, Graphviz, dependency graphs) are internally
   consistent: every edge references a declared node/subgraph; every node name
-  matches a real symbol/crate/function; data-flow edges correspond to real call
+  matches a real symbol/module/function; data-flow edges correspond to real call
   sites. An edge to an undeclared node, or a node naming a nonexistent
-  crate/function, is a finding.
+  module/function, is a finding.
 - Operational/runbook docs (OPERATIONS/DEPLOYMENT/runbook) match the running
   system: config defaults, env-var names, backends, intervals, uids, and route
-  lists reflect reality. Known template-residue values (placeholder crate names,
-  copied-in defaults) are findings even if flagged as "known drift".
+  lists reflect reality. Known template-residue values (placeholder module/
+  package names, copied-in defaults) are findings even if flagged as "known
+  drift".
 - The primary README (or equivalent entry doc) matches the current
   implementation and gives an external adopter a real quickstart: overview,
   minimal working invocation, module/architecture map, and pointers to deeper
@@ -68,8 +69,8 @@ integrity, README walkthroughs, and stale cross-references recur heavily.
 - Cross-references resolve and are current: intra-doc links are not broken; ADR
   (or design-doc) citations point at the governing, non-superseded record;
   file:line citations embedded in docs/comments are not stale. A broken link, a
-  citation to a superseded decision, or a surviving `file.rs:NN` pointer after a
-  refactor is a finding.
+  citation to a superseded decision, or a surviving stale file:line pointer
+  after a refactor is a finding.
 - Comments in code are the code's own explanation, not a substitute for it. If a
   reader needs a "why" comment to follow the code, treat the code as the defect
   (rename/extract/restructure); durable rationale belongs in ADR/commit, not
@@ -87,18 +88,18 @@ integrity, README walkthroughs, and stale cross-references recur heavily.
   table lists removed surface as current.
 - undocumented-public-API — `pub` items with no doc comment, or missing
   `# Errors`/`# Panics`/`# Safety` where the signature warrants.
-- blanket-doc-suppression — module/crate-level allow of the missing-docs lint
+- blanket-doc-suppression — module-level allow of the missing-docs lint
   masking a whole undocumented surface.
 - boilerplate-contract — `# Errors`/`# Panics` section present but inaccurate
   (lists impossible errors, omits real ones).
 - diagram-contradicts-code — mermaid/C4 edge to an undeclared node, or a node
-  naming a nonexistent crate/function.
+  naming a nonexistent module/function.
 - aspirational-doc-claim — doc-comment promises a field/behaviour never actually
   landed (load-bearing-wrong).
 - rationale-in-doc-comment — doc comment used to park rationale, ADR links, or lint
   justifications instead of contract.
-- stale-citation — surviving `file.rs:NN` pointer or superseded-ADR reference
-  after a rename/refactor.
+- stale-citation — surviving stale file:line pointer or superseded-ADR
+  reference after a rename/refactor.
 - broken-intra-doc-link — doc link that fails a docs build.
 - stub-README — thin/placeholder README for a shipped, adopter-facing tool.
 

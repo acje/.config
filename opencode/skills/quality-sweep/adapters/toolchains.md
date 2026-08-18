@@ -13,21 +13,34 @@ Each ecosystem provides four command slots: `{test, lint, audit, deny}`.
 empty slot means "no standard tool"; record `SKIPPED (no standard tool)`, not
 `ABSENT`.
 
-| Ecosystem | Detect via | test | lint | audit | deny |
-|---|---|---|---|---|---|
-| rust | `Cargo.toml` | `cargo test` | `cargo clippy -- -D warnings` | `cargo audit` | `cargo deny check` |
-| node | `package.json` | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` | `npm audit` | `license-checker` (or `npm-license-crawler`) |
-| python | `pyproject.toml` / `requirements.txt` | `pytest` | `ruff check .` (or `flake8`) | `pip-audit` | `pip-licenses` |
+Where a row has a matching `adapters/stacks/<stack>.md` profile, the
+stack-profile column names it — Phase 0 binds both the toolchain row and the
+profile per service (see `adapters/stacks/README.md`). A row with no profile
+column entry runs the generic reference only (`none (unseeded)`).
+
+| Ecosystem | Detect via | test | lint | audit | deny | Stack profile |
+|---|---|---|---|---|---|---|
+| rust | `Cargo.toml` | `cargo test` | `cargo clippy -- -D warnings` | `cargo audit` | `cargo deny check` | `adapters/stacks/rust.md` |
+| node | `package.json` (no `tsconfig.json`) | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` | `npm audit` | `license-checker` (or `npm-license-crawler`) | none (unseeded) |
+| typescript | `package.json` + `tsconfig.json` | `npm test` (or `pnpm test` / `yarn test`) | `eslint .` + `tsc --noEmit` | `npm audit` | `license-checker` (or `npm-license-crawler`) | none (unseeded) |
+| python | `pyproject.toml` / `requirements.txt` | `pytest` | `ruff check .` (or `flake8`) | `pip-audit` | `pip-licenses` | none (unseeded) |
 
 Notes:
 
 - The **rust** row is a single row: cargo/clippy/audit/deny are its four slots,
   not four separate ecosystems.
+- The **typescript** row is split out from bare **node**: a `tsconfig.json`
+  alongside `package.json` is a real distinct probe surface (`tsc --noEmit`
+  type-checking, ESLint flat-config parsing of `.ts`/`.tsx`), not just node
+  with extra files. Detect typescript first; fall back to the node row when
+  no `tsconfig.json` is present.
 - Prefer the target's declared runner over the row default when the target's
   CI or manifest names a specific command (e.g. `pnpm` over `npm`, `nox`/`tox`
   over bare `pytest`). The row is a fallback, not an override.
-- Extend this table for other ecosystems (go, ruby, dotnet, …) by adding a row
-  with the same four slots; the engine reads whatever rows are present.
+- Extend this table for other ecosystems (go, ruby, dotnet, kotlin, clojure,
+  …) by adding a row with the same four slots (plus a stack-profile column
+  entry once that stack's profile file exists); the engine reads whatever
+  rows are present.
 - Record the exit code for each command actually run. Tool absent → `SKIPPED`
   with the reason; never fabricate a pass.
 - **Interpret each exit code against the tool's config, not at face value.** A

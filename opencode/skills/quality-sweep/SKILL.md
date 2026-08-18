@@ -14,7 +14,7 @@ rather than 29 dimensions competing in one window — the fix for run-to-run
 score nondeterminism. Before each service's report is written, a
 fresh-context verification subagent re-arbitrates every finding against its
 cited evidence (Phase 2.5) so no producing shard signs off its own work. The
-engine is target-agnostic and self-contained; four swappable data layers tune
+engine is target-agnostic and self-contained; five swappable data layers tune
 it:
 
 - **Toolchain adapter** (`adapters/toolchains.md`) — maps the target's
@@ -22,6 +22,10 @@ it:
 - **Service discovery adapter** (`adapters/services.md`) — maps deployment-
   marker/entrypoint/monorepo-convention tiers to service root directories, so
   the sweep knows what a "service" is in this target.
+- **Stack-profile adapter** (`adapters/stacks/`) — per-stack probes, anti-
+  patterns, and exemplars that ADD to (and, where marked, replace) each phase
+  reference's generic probe floor for a service's bound ecosystem; see
+  `adapters/stacks/README.md`.
 - **Per-phase check references** (`references/phase-<n>-*.md`) — one file per
   SDLC phase holding concrete, generalized checks and named anti-patterns for
   that phase's dimensions. The engine defines *what* each dimension is; the
@@ -203,10 +207,8 @@ hunt for*. Read the phase reference before that phase's evidence pass.
 ## Procedure
 
 ### Phase 0 — Scope & context
-1. Resolve target: crate / workspace / repo path. State it before starting.
-2. Detect the ecosystem and pick the matching row from
-   `adapters/toolchains.md`. State it.
-3. **Discover services** per `adapters/services.md` (tiered T1/T2/T3
+1. Resolve target: module / workspace / repo path. State it before starting.
+2. **Discover services** per `adapters/services.md` (tiered T1/T2/T3
    detection, dedup by filesystem root). **State the discovered service list**
    before any evidence pass runs — this is what makes the discovery
    assumption reversible: the operator may override it. When **more than 5**
@@ -215,12 +217,25 @@ hunt for*. Read the phase reference before that phase's evidence pass.
    services without that confirmation. When discovery finds nothing, record
    the full probe transcript (every tier probed, every path/glob searched)
    and proceed to the single no-services report (Phase 3).
+3. **Bind, per discovered service, its ecosystem toolchain row and stack
+   profile.** Detect that service's ecosystem (lockfile/manifest presence),
+   pick the matching row from `adapters/toolchains.md`, and bind the matching
+   profile from `adapters/stacks/` per the per-service binding contract in
+   `adapters/stacks/README.md`. A service whose ecosystem has no seeded
+   profile records the bound profile as `none (unseeded)` — visible in the
+   report, never silently implied generic (python/ruby/php take this path
+   today; the python toolchains.md row stays regardless). A polyglot service
+   (one root, two stacks) binds one PRIMARY profile plus SECONDARY profiles
+   per the polyglot rule in `adapters/stacks/README.md` — still one service,
+   one report. State each service's bound toolchain row and profile(s) before
+   the evidence pass runs; no repo-wide single-ecosystem assumption carries
+   past this step.
 4. Read `AGENTS.md` (or equivalent), relevant ADRs/architecture docs, and any
    available code-graph. Note committed conventions so findings judge against
    *this* codebase's contract, not a generic one.
-5. Record the sweep timestamp, target, and ecosystem in the report header.
-   One timestamp is shared across every report produced by this sweep run
-   (see Phase 3 path scheme).
+5. Record the sweep timestamp, target, and, per service, its bound ecosystem
+   and stack profile(s), in the report header. One timestamp is shared across
+   every report produced by this sweep run (see Phase 3 path scheme).
 6. **(Optional) Reference exemplar.** You may name a mature sibling/exemplar
    repo whose *solved* patterns become an extra checklist for this sweep: "does
    the target do what the exemplar already solved?". Inspecting a weaker repo
@@ -243,7 +258,10 @@ across services.
 
 The evidence pass **fans out one subagent per SDLC phase** — seven shards, run
 in parallel. Each shard is a self-contained evidence job: it loads **exactly its
-own** `references/phase-<n>-*.md`, scores **only that phase's dimension
+own** `references/phase-<n>-*.md`, PLUS the current service's bound stack
+profile(s) from `adapters/stacks/` (composition rule: ADD-BY-DEFAULT,
+REPLACE-ONLY-WHEN-MARKED — the generic probe floor always still runs; see
+`adapters/stacks/README.md`), scores **only that phase's dimension
 cluster** for the current service, and returns a phase scorecard. A single agent
 scoring all 29 dimensions in one context window is what makes the sweep
 nondeterministic (later dimensions starve as context saturates and default to

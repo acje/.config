@@ -174,7 +174,7 @@ tested property of every stateful component, not an afterthought.
 - interleaved writes to one aggregate — no serialization; events interleave.
 - dedup-window as correctness — load-bearing on an expiring best-effort window.
 - acausal command — command computed on a read missing its own causal history.
-- no crash-recovery gate — stateful crate admitted without a crash-recovery test.
+- no crash-recovery gate — stateful module admitted without a crash-recovery test.
 - volatile-only state-of-record — indices/projections not rebuildable from the durable log.
 - truncated-fetch-reads-as-empty — degraded fetch returns Some(empty) instead of None, producing false negatives.
 

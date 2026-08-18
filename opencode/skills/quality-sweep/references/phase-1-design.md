@@ -28,7 +28,7 @@ are wrapped at the boundary and validated once.
 **Checks:**
 - Is every public symbol a deliberate affordance? Flag `pub` items whose only
   callers are internal/tests/no dependent — demote to module-private or
-  crate-visible (visibility tighten, not necessarily a newtype).
+  package-visible (visibility tighten, not necessarily a newtype).
 - Does any public function take or return a bare primitive (`String`/int) where
   a validated domain type belongs? Grep public signatures for primitive params
   and returns; sample and classify each.
@@ -51,7 +51,9 @@ are wrapped at the boundary and validated once.
 **Probe floor (mandatory before ABSENT):**
 - Grep the public surface for exported symbols (`rg '^\s*pub (fn|struct|enum|trait|type|const|mod|use)'` across `src/`, or the ecosystem's export marker).
 - Grep public signatures for bare-primitive params/returns (`rg 'pub fn .*(String|&str|u\d+|i\d+|bool)'`).
-- Check conventional API-surface docs: `lib.rs` / `mod.rs` re-export blocks, `README`/`docs/` API section, any `#[doc(hidden)]` markers.
+- Check conventional API-surface docs: the ecosystem's module-entry file and
+  re-export block (e.g. Rust's `lib.rs`/`mod.rs`), `README`/`docs/` API
+  section, any `#[doc(hidden)]`-equivalent markers.
 - ABSENT only if there is no public surface OR the probes above returned nothing to classify — record the transcript.
 
 **Anti-patterns to hunt:**
@@ -71,18 +73,18 @@ declared dependency.
 
 **Checks:**
 - Does the dependency graph respect the declared ring/layer direction? Map the
-  crate/module DAG; flag any edge crossing a boundary the design forbids
+  module/package DAG; flag any edge crossing a boundary the design forbids
   (core depending on adapter, substrate depending on runtime).
 - Is the domain core free of runtime/infrastructure deps (async runtime, HTTP,
   storage, serialization frameworks) — even transitively via dev-deps? A
-  dependency budget on the core crate is load-bearing; verify it.
+  dependency budget on the core module/package is load-bearing; verify it.
 - Is the sync-domain / async-infrastructure split honored — no async on the
   pure domain/port surface, async confined to adapter signatures? Flag
   `async fn` that leaked onto a synchronous facade.
 - Do declared dependencies match actual edges? A declared dep with no edges is
   dead weight; an edge with no declared dep is a hidden coupling — report both.
-- Is duplicated infrastructure logic (two crates each reimplementing atomic
-  write, budget gating, etc.) consolidated, or explicitly justified as
+- Is duplicated infrastructure logic (two modules/packages each reimplementing
+  atomic write, budget gating, etc.) consolidated, or explicitly justified as
   forbidden-to-merge by a cited decision?
 - Is each invariant's enforcement mechanism classified — compile-error >
   CI-tripwire > lint > prose-only? Prose-only invariants are the weakest and
@@ -186,7 +188,9 @@ backup to the human-authored record.
 **Probe floor (mandatory before ABSENT):**
 - Look for a changelog: `rg -l -i 'changelog|releases|history'` (`CHANGELOG.md`, `RELEASES.md`, GitHub releases).
 - Grep for deprecation/semver discipline (`rg '#\[deprecated|@deprecated|semver|breaking'`, version field in the manifest).
-- Grep for automated API-diff tooling config (`cargo-semver-checks`, `api-extractor`, `.github` workflow steps).
+- Grep for automated API-diff tooling config (an ecosystem-specific
+  semver/API-diff checker, e.g. Rust's `cargo-semver-checks`, or
+  `api-extractor`, `.github` workflow steps).
 - ABSENT only if the target exposes a public/consumer surface AND none of the above exist — record the transcript. (Facet: phase-5 release mechanics; scored here once.)
 
 **Anti-patterns to hunt:**
@@ -211,8 +215,9 @@ pinned by a stable hash and golden vectors.
   HALT, not ship silently.
 - Is schema evolution a first-class strategy — version bytes / header
   negotiation / upcasting / a documented forward-backward-compat rule — rather
-  than appending optional fields ad hoc? Flag the "add `Option<T>` with a
-  serde default" pattern where a version bump is the accepted policy.
+  than appending optional fields ad hoc? Flag the "add an optional field with
+  a default value" pattern (e.g. Rust's `#[serde(default)]`) where a version
+  bump is the accepted policy.
 - When adding a field, is it confined to render-only/projection types and kept
   OFF the persisted event/payload schema unless a schema bump is intended?
   Verify the persisted-type diff is empty when no bump is meant.
@@ -229,7 +234,9 @@ pinned by a stable hash and golden vectors.
   rather than assumed?
 
 **Probe floor (mandatory before ABSENT):**
-- Grep for wire/serialization surface (`rg 'serde|Serialize|Deserialize|to_bytes|from_bytes|proto|schema'`).
+- Grep for wire/serialization surface (ecosystem-specific serialization
+  framework markers, e.g. Rust's `serde`/`Serialize`/`Deserialize` — see the
+  bound stack profile — plus generic `to_bytes|from_bytes|proto|schema`).
 - Grep for golden/round-trip vectors and schema-hash pins (`rg -l 'golden|snapshot|schema_hash|round.?trip'`).
 - Grep for foreign-shape structs tested against captured payloads (`rg -l 'fixtures?|captured|testdata'`).
 - ABSENT only if the target has no cross-system interchange surface (state so) OR the probes returned nothing — record the transcript.

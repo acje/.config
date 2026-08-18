@@ -106,7 +106,7 @@ the intent.)
   is in-scope and self-contained (re-run to confirm clean), and does not smuggle
   behavioural change.
 - Suppressions are per-item, rare, and carry a stated rationale — never a
-  blanket file- or crate-wide silence of a whole lint class. Each suppression
+  blanket file- or module-wide silence of a whole lint class. Each suppression
   should name WHY (framework requirement, deliberate test-only allowance, a
   contract the lint can't see).
 - Suppression audit: count them and read each. A suppression that could be
@@ -125,13 +125,13 @@ the intent.)
 
 **Probe floor (mandatory before ABSENT):**
 - Run the adapter `lint` command; record exit code and whether warnings fail the build.
-- Locate lint/format config (`rg -l 'clippy|rustfmt|eslint|prettier|ruff|flake8|.editorconfig'` / conventional config files).
+- Locate lint/format config (`rg -l 'eslint|prettier|ruff|flake8|clippy|rustfmt|.editorconfig'` / conventional config files).
 - Grep for suppressions and their justification (`rg '#\[allow|eslint-disable|# noqa|# type: ignore'`).
 - Grep CI for a lint gate step (`rg -i 'lint|clippy|fmt.*check' .github/ .gitlab-ci.yml` or equivalent).
 - ABSENT only if no linter is configured AND the adapter `lint` reports no tool — record the transcript with the exit code.
 
 **Anti-patterns to hunt:**
-- blanket lint suppression — a file/crate-wide allow that silences a whole class
+- blanket lint suppression — a file/module-wide allow that silences a whole class
   of diagnostics instead of fixing or justifying per-site.
 - unjustified suppression — a per-item allow with no rationale; nobody can tell
   if it's load-bearing or lazy.

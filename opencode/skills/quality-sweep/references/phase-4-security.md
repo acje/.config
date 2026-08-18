@@ -17,8 +17,9 @@ first hit, so the score reflects coverage across the trust boundaries, not a
 single lucky finding.
 
 **Anti-pattern — trusting the exit code over the tool config.** A green `audit`
-can mask suppressed advisories: read the ignore list (`.cargo/audit.toml` or
-equivalent) and, if advisories are suppressed, score `PASS-WITH-IGNORES` and
+can mask suppressed advisories: read the ignore list (the ecosystem's audit
+tool's ignore-list config, e.g. Rust's `.cargo/audit.toml`, or equivalent)
+and, if advisories are suppressed, score `PASS-WITH-IGNORES` and
 name each suppressed advisory (its risk did not disappear, it was accepted). A
 red `deny`/policy gate can simply mean *no policy file is configured* — that is
 `UNCONFIGURED`, not a license violation. Always interpret the exit code against
@@ -77,9 +78,9 @@ enforces" is still required at the local boundary.
 - ABSENT only if the target has a trust/network/secret surface AND these probes surfaced no security control — record the transcript. (Graded: finish the floor even after a hit.)
 
 **Anti-patterns to hunt:**
-- trust-the-input deserialization — `#[derive(Deserialize)]` writing private
-  fields with no post-decode `validate()`; zero/sentinel/out-of-range values
-  accepted silently.
+- trust-the-input deserialization — an auto-derived deserializer writing
+  private fields with no post-decode `validate()`; zero/sentinel/out-of-range
+  values accepted silently.
 - defense-in-depth gap — one call site sanitizes, a sibling interpolates the
   same raw input directly ("the API already validates" excuse).
 - all-interfaces default bind — binds `0.0.0.0` with no env gate, no auth, no
@@ -124,8 +125,8 @@ reviewed as a deliberate act, not absorbed silently.
   declared minimum-supported-version contract; MSRV drift is a mechanical gate,
   not a surprise.
 - Dependencies default-features-off, opting into only used features; unused
-  declared dependencies are removed; test-only deps live in dev-dependencies,
-  not runtime dependencies. Adding a new feature flag that pulls new transitive
+  declared dependencies are removed; test-only deps live in a dev/test-only
+  dependency group, not the runtime dependency set. Adding a new feature flag that pulls new transitive
   code is treated as a dependency change (see governance below).
 - Warnings are denied in CI (`-D warnings` / equivalent) so lint regressions
   block; the "advisory warning" tier is bounded and not silently growing.
@@ -139,7 +140,7 @@ reviewed as a deliberate act, not absorbed silently.
 - Run the adapter `audit` and `deny` commands; record exit codes (never fabricate).
 - Check for a committed lockfile and `--locked`/`--frozen` usage in CI (`rg -l 'Cargo.lock|package-lock.json|poetry.lock|--locked|--frozen'`).
 - Grep for advisory/deny gate config and whether it blocks (`rg -i 'audit|deny|continue-on-error' .github/ deny.toml`).
-- Grep for toolchain pin / MSRV (`rg -l 'rust-toolchain|rust-version|engines|.tool-versions'`).
+- Grep for toolchain pin / MSRV (`rg -l 'rust-version|engines|.tool-versions'` — plus the ecosystem's own toolchain-pin file, e.g. Rust's `rust-toolchain(.toml)`; see the bound stack profile).
 - ABSENT only if no lockfile, no audit/deny gate, and the adapter reports no tool — record the transcript with exit codes.
 
 **Anti-patterns to hunt:**
@@ -149,8 +150,9 @@ reviewed as a deliberate act, not absorbed silently.
   so a real finding never blocks a merge.
 - kitchen-sink features — default-features left on, pulling transitive code and
   license/advisory surface nobody uses.
-- runtime-dep-that-is-test-only — `tempfile`/harness crate in `[dependencies]`
-  instead of `[dev-dependencies]`, inflating the shipped dependency graph.
+- runtime-dep-that-is-test-only — a test-only harness dependency (e.g. Rust's
+  `tempfile`) declared in the runtime dependency set instead of the
+  dev/test-only group, inflating the shipped dependency graph.
 - advisory-dodge downgrade — a pin added "to clear the scan" silently reverts
   a security fix or masks the real vulnerable path.
 - lint-tier creep — the tolerated advisory-warning count ratchets upward every
@@ -170,7 +172,7 @@ reproducible builds — treat those as ASK-the-repo checks, not assumed-present.
 - Dependency evolution is intentional and reviewed: version/feature changes go
   through a dedicated change (a "dependency PR" discipline), carrying a
   before/after dependency-tree diff and a record of any new advisory warnings,
-  new transitive crates, or new unsafe surface introduced. A silent bump inside
+  new transitive packages, or new unsafe surface introduced. A silent bump inside
   an unrelated change is a finding.
 - Duplicate/transitive version bloat is surfaced (dep-tree duplicate scan) and
   justified or collapsed, not left to accumulate.

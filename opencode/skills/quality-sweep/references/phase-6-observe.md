@@ -72,7 +72,7 @@ optimization: you cannot tune what you never observed.
   claims completion on a path that was cut short.
 - Instrumentation sits at the correct architectural seam: added to the
   adapter/facade ring that already consumes signals, not forced into a pure
-  inner ring whose dependency budget forbids a metrics/tracing crate. If a
+  inner ring whose dependency budget forbids a metrics/tracing dependency. If a
   signal needs data only the pure ring has, surface it through the existing
   return/error type rather than adding an instrumentation call there.
 - Deterministic instrumentation tests exist: emitted events are captured via
@@ -99,7 +99,8 @@ optimization: you cannot tune what you never observed.
 - Message-less / empty event — a WARN/ERROR emitted with no message and no fields, pure noise masking real signal.
 - No runtime resource visibility — zero RSS/heap/cardinality gauge; memory tuning is guesswork.
 - Silent startup / shutdown — no config snapshot, no dependency-readiness line, no honest shutdown disposition.
-- Instrumentation in the wrong ring — metrics/tracing dep forced into a pure inner crate, breaching its dependency budget.
+- Instrumentation in the wrong ring — metrics/tracing dependency forced into
+  a pure inner module, breaching its dependency budget.
 
 ## Cost / resource economics (runtime)
 
