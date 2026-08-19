@@ -121,7 +121,7 @@ why:              <which hypothesis or reframing this informs>
 ```
 
 Hand off `→ to: oracle | status: needs-reloop | ...`. Oracle returns an
-`oracle-summary` bead (queryable via `bd query --label oracle-summary,mission:<id>`)
+`oracle-summary` bead (queryable via `bd list --label oracle-summary,mission:<id>`)
 whose body lives in the bead's `description` field (read via `bd show bd-NNN`);
 cite ADR ids in revised hypotheses the same way you cite `path:line`.
 

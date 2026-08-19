@@ -145,7 +145,7 @@ producer agent has two equivalent options:
    working tree.
 
 Either way the handoff line carries `artefact: bd-NNN`. Commanders use
-`bd show bd-NNN` to read the body lazily; `bd query --label evidence`
+`bd show bd-NNN` to read the body lazily; `bd list --label evidence`
 browses metadata without inlining bodies.
 
 Never stage evidence bodies on disk as the durable home. The bead
@@ -201,7 +201,7 @@ Use subagents when the work earns coordination overhead:
 - cause isn't obvious from one or two file reads → `copernicus`
 - need external/library/spec knowledge → `copernicus` (don't synthesise from training data)
 - two or more plausible causal models → `feynman`
-- decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd query --label oracle-summary,mission:<id>`; body lives in the bead's `description` field)
+- decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd list --label oracle-summary,mission:<id>`; body lives in the bead's `description` field)
 - Rust code review (idioms, unsafe soundness, cargo-audit, cargo-deny, MSRV/edition) → `linus`. Generic / non-Rust / cross-language review → `code-review` skill. Linus and the skill are orthogonal; neither calls the other.
 - two or more viable approaches, or multi-file / irreversible / cross-module → `moltke`, then `hopper`
 - executing a non-trivial change with a clear plan → `hopper` directly
@@ -855,7 +855,7 @@ pair programming:
 
 Large evidence stays inside the bead as its `description` field; the bead id
 (`bd-NNN`) is the durable cross-session pointer. Handoff lines carry the bead
-id, not the body. Commanders use `bd query --label evidence` (metadata-only,
+id, not the body. Commanders use `bd list --label evidence` (metadata-only,
 no body inlining) to browse, and `bd show bd-NNN` only when the body is
 needed to decide the next step. This preserves pointer-over-body discipline
 (§ Evidence carrying) — the cost is paid once at decision time, not on every
@@ -869,7 +869,7 @@ hands off the bead id; never pass the file path as the cross-agent pointer.
 ### Audit trail
 
 `bd audit record` captures agent actions to `.beads/interactions.jsonl` (append-only,
-git-versionable). Use CLI flags (`--kind`, `--actor`, `--issue-id`, `--tool-name`,
+gitignored — durable persistence comes from bd's Dolt remotes, not git). Use CLI flags (`--kind`, `--actor`, `--issue-id`, `--tool-name`,
 `--exit-code`); avoid `--stdin` until `audit.Entry` schema is fully documented.
 
 Hopper records TDD boundary events; linus records review verdicts via
