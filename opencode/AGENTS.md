@@ -819,7 +819,9 @@ Labels follow bd's `<dimension>:<value>` convention for state dimensions.
 
 ### Bead creation shape
 
-Moltke creates epics (`--type epic`) + sub-task children with `bd dep add child epic`.
+Moltke creates epics (`--type epic`) + sub-task children with
+`bd dep add <epic> --blocked-by <child>` — the epic depends on its children, so
+children surface in `bd ready` while the epic stays blocked until they close.
 Evidence producers create tasks with `--labels evidence,mission:<id>` and put the body
 in `--description` (or `bd update --stdin` for bodies > 4KB to avoid trace
 truncation). Handoff lines carry `artefact: bd-NNN`; readers fetch the body via
