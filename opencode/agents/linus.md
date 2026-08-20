@@ -9,12 +9,12 @@ description: |
   + review-report evidence bead description). Coexists with code-review skill
   (generic/cross-language); linus is Rust-specific. Neither calls the other.
 mode: subagent
-model: github-copilot/gpt-5.6-terra
+model: github-copilot/gpt-5.6-sol
 tools:
   webfetch: false
   searxng_web_search: false
   task: false
-reasoningEffort: medium
+reasoningEffort: high
 ---
 
 # Linus — Rust-specialist code reviewer

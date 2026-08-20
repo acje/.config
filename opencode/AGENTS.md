@@ -564,16 +564,16 @@ resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
 ### Per-model tendency table
 
 The fleet runs three model profiles across two vendors, each with distinct
-tendencies. Opus 5 (moltke, oracle, build, plan) self-verifies unprompted and
+tendencies. Opus 5 (moltke, oracle, hopper, build, plan) self-verifies unprompted and
 over-delegates by default — damp toward brevity, cap delegation, drop
 self-interrogation gates. Do not carry over 4.8-era compensations (heavy
 permission-to-act nudges, self-check gates) onto Opus 5 prompts.
 
 | Model | Fleet agents | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 5 | moltke, oracle, build, plan | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
-| Sonnet 5 | hopper, copernicus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
-| GPT-5.6 (sol/terra) | feynman (sol), linus (terra) | sol/terra is a capability/cost tier only, no documented behavioural split; more concise by default than prior gen (re-check "be concise" instructions still earn keep); infers user intent from context (fewer prescribed steps needed); repeating guardrail phrasing ("ask first", "do not mutate") increases unneeded approval friction — state each instruction once; reasoning.effort defaults medium, xhigh recommended for security/code-review; reasoning.context defaults all_turns (persists across turns) [config-5b6] | dampen over-imperative/repeated guardrails; prefer leaner, once-stated prompts; no sampling-param 400-error evidence found either direction for GPT-5.6 — treat "no exposed temperature field" as the only grounds for the no-sampling-params rule here, not Sonnet-5 parity |
+| Opus 5 | moltke, oracle, hopper, build, plan | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
+| Sonnet 5 | copernicus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
+| GPT-5.6 (sol/terra) | feynman (sol), linus (sol) | sol/terra is a capability/cost tier only, no documented behavioural split; more concise by default than prior gen (re-check "be concise" instructions still earn keep); infers user intent from context (fewer prescribed steps needed); repeating guardrail phrasing ("ask first", "do not mutate") increases unneeded approval friction — state each instruction once; reasoning.effort defaults medium, xhigh recommended for security/code-review; reasoning.context defaults all_turns (persists across turns) [config-5b6] | dampen over-imperative/repeated guardrails; prefer leaner, once-stated prompts; no sampling-param 400-error evidence found either direction for GPT-5.6 — treat "no exposed temperature field" as the only grounds for the no-sampling-params rule here, not Sonnet-5 parity |
 
 ### github-copilot pass-through caveat
 
@@ -596,11 +596,9 @@ and a moltke `chat.params` trace showed `output.options.reasoningEffort:
 — 8 feynman `chat.params` observations on 2026-08-10 all resolved
 `output.options.reasoningEffort: "xhigh"` into the request (same sweep:
 copernicus/`claude-sonnet-5` resolved `max`). **Gap**: gpt-5.6-terra
-remains unverified — terra is bound to linus, a Rust-specialist reviewer,
-and this repo has no Rust to review, so there is no legitimate way to
-exercise it here; per dispatch doctrine non-Rust review routes to the
-`code-review` skill, not linus, and contriving a linus dispatch to
-manufacture evidence would violate role discipline.
+is no longer bound to any fleet agent (linus moved to sol), so no
+terra observation is expected or needed; re-open this gap only if terra
+is bound again.
 
 ## Tracing
 

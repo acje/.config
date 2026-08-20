@@ -175,7 +175,8 @@
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-5"
+      "model": "github-copilot/claude-opus-5",
+      "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
@@ -196,7 +197,8 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.6-terra"
+      "model": "github-copilot/gpt-5.6-sol",
+      "reasoningEffort": "high"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",

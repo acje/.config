@@ -10,16 +10,15 @@ description: |
   aligned with prior architectural decisions. Verify-before-claim; halts
   and re-loops on surprise.
 mode: subagent
-model: github-copilot/claude-sonnet-5
+model: github-copilot/claude-opus-5
 tools:
   webfetch: false
   searxng_web_search: false
   task: false
 reasoningEffort: high
-# Note: temperature / top_p intentionally absent. claude-sonnet-5 reports
-# `temperature: false` and exposes no `variants` block, so sampler
-# knobs are no-ops on this provider. `reasoningEffort: high` trades cost
-# for depth on long-running coding work; re-evaluate on model swap.
+# Note: temperature / top_p intentionally absent — no sampler knobs are set
+# on any fleet agent. `reasoningEffort: high` trades cost for depth on
+# long-running coding work; re-evaluate on model swap.
 ---
 
 <!-- Frozen: changes require trace evidence per turbo recipe P12a -->
