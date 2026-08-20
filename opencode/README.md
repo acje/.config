@@ -397,7 +397,7 @@ permission allows it. Trivial in-role tasks may be closed without escalation.
 
 ## Custom commands (`opencode/commands/`)
 
-Four slash commands are available in `opencode/commands/`. Invoke them with `/command-name` in opencode:
+Twelve slash commands are available in `opencode/commands/`. Invoke them with `/command-name` in opencode:
 
 | Command | File | Purpose |
 |---------|------|---------|
@@ -405,6 +405,7 @@ Four slash commands are available in `opencode/commands/`. Invoke them with `/co
 | `/create-prd` | `commands/create-prd.md` | 15-section PRD generator; output to `.ooda/PRDs/<slug>.prd.md` |
 | `/create-rules` | `commands/create-rules.md` | AGENTS.md generator for new projects (refuses if AGENTS.md exists) |
 | `/validate` | `commands/validate.md` | Multi-toolchain build/lint/test (Cargo/npm/pnpm/uv/go); inline tabular output |
+| `/understand*` (8) | `commands/understand.md`, `understand-chat.md`, `understand-dashboard.md`, `understand-diff.md`, `understand-domain.md`, `understand-explain.md`, `understand-knowledge.md`, `understand-onboard.md` | Thin wrappers over the matching `understand` skills: knowledge-graph generator; KG Q&A; launch KG web dashboard; analyze git diff/PR; business-domain flow graph; deep-dive file/function explainer; wiki knowledge-graph generator; onboarding guide generator |
 
 ## File map
 
@@ -417,31 +418,44 @@ Four slash commands are available in `opencode/commands/`. Invoke them with `/co
 │   ├── copernicus.md            Observe — pure sensor, owns external research
 │   ├── feynman.md               Orient — ranked hypotheses + falsifiers + stress-test
 │   ├── moltke.md                Decide / supreme commander — mission command, two-loop owner
-│   ├── hopper.md               Act — verify-before-claim execution
+│   ├── hopper.md                Act — verify-before-claim execution
 │   ├── gardener.md              Garbage collect — close completed bd epics
 │   ├── automaton.md             Specialist — Rust CLI tool-builder for scripts/
 │   ├── oracle.md                Specialist — ADR-driven architectural guidance
-│   ├── linus.md                Specialist — Rust-specific code reviewer
-│   └── turbo.md                Specialist — prompt rewriter (P1–P12 recipe)
+│   ├── linus.md                 Act — Rust-specialist code reviewer (read-only)
+│   └── turbo.md                 Specialist — prompt rewriter (P1–P12 recipe)
 ├── turbo/
 │   └── prompt-activation-recipe.md   P1–P12 recipe; single source of truth for turbo
 ├── plugins/
-│   ├── searxng.mjs             Web search tool (copernicus, feynman)
-│   └── tracer.mjs              Session trace writer → .ooda/traces/
+│   ├── graphify.js              Injects a knowledge-graph reminder before bash calls when graphify-out/ exists
+│   ├── searxng.mjs              Web search tool (copernicus, feynman)
+│   └── tracer.mjs               Session trace writer → .ooda/traces/
 ├── skills/
-│   ├── agent-browser/SKILL.md  Browser automation (probe-then-fallback)
-│   ├── code-review/SKILL.md    Generic code review (standard | security modes)
-│   └── grill-me/SKILL.md       Stress-test plans by interview
-├── package.json                Pins @opencode-ai/plugin SDK (currently 1.17.15)
-├── package-lock.json           Lockfile; tracked
+│   ├── agent-browser/SKILL.md   Browser automation (probe-then-fallback)
+│   ├── code-review/SKILL.md     Generic code review (standard | security modes)
+│   ├── graphify/SKILL.md        Knowledge-graph build + query over any codebase
+│   ├── grill-me/SKILL.md        Stress-test plans by interview
+│   ├── obsidian-second-brain/SKILL.md  Read-only navigation of a PARA-style Obsidian vault
+│   ├── quality-sweep/SKILL.md   29-dimension SDLC quality sweep → HTML report
+│   └── wayfinder/SKILL.md       Plan oversized work as bd decision tickets
+├── package.json                 Pins @opencode-ai/plugin SDK (currently 1.17.15)
+├── package-lock.json            Lockfile; tracked
 ├── commands/                    Custom slash commands (invoke with /command-name)
 │   ├── prime.md                 /prime — session context priming via copernicus
 │   ├── create-prd.md            /create-prd — 15-section PRD generator → .ooda/PRDs/
 │   ├── create-rules.md          /create-rules — AGENTS.md generator for new projects
-│   └── validate.md              /validate — multi-toolchain build/lint/test runner
+│   ├── validate.md              /validate — multi-toolchain build/lint/test runner
+│   ├── understand.md            /understand — knowledge-graph generator
+│   ├── understand-chat.md       /understand-chat — knowledge-graph Q&A
+│   ├── understand-dashboard.md  /understand-dashboard — launch KG web dashboard
+│   ├── understand-diff.md       /understand-diff — analyze git diff / PR
+│   ├── understand-domain.md     /understand-domain — business-domain flow graph
+│   ├── understand-explain.md    /understand-explain — deep-dive file/function explainer
+│   ├── understand-knowledge.md  /understand-knowledge — wiki knowledge-graph generator
+│   └── understand-onboard.md    /understand-onboard — onboarding guide generator
 └── prompts/
-    ├── plan.md                  Plan mode — full OODA loop; grill-me opt-in
-    └── build.md                 Build mode — direct user-driven execution
+    ├── plan.md                  Plan mode — orient-only, read-only on the tree; never dispatches moltke; grill-me opt-in
+    └── build.md                 Build mode — owns the full OODA loop; hands off to moltke
 ```
 
 ## References

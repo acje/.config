@@ -10,7 +10,7 @@ uncertainty, scope, or risk warrants it. Scale effort to query complexity.
 | `feynman`     | Orient     | Ranked hypotheses + falsifiers          | moltke                   | `evidence` (orientation subtype)    |
 | `moltke`      | Decide     | Mission contract / package + pre-mortem | hopper (exec), feynman (re-orient), oracle (arch input) | mission epic + `mission:<id>` |
 | `hopper`      | Act        | Verified commits per TDD increment      | moltke (back-brief), linus (review-request) | `review-request`         |
-| `linus`       | Specialist | APPROVE / NEEDS WORK verdict on Rust review | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
+| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
 | `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
 | `gardener`    | GC         | Reclamation report; closes mission epic + spent scaffolding when children closed | moltke → user | none                       |
