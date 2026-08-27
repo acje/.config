@@ -127,6 +127,16 @@ A node-name delta (`grep '^name = '` on both locks) is the wrong instrument: it
 reports nothing when the attacker reuses crates already present. Run the edge
 diff first; the node diff is a subset of it.
 
+**Third instrument — re-resolved sources.** A floating git dep (`branch`/`tag`, no
+`rev`) re-resolves in place: the sha moves inside the `source` field while `name`,
+`version` and `dependencies = [...]` stay byte-identical, so both instruments above
+report nothing while a new `build.rs` arrives (VERIFIED live). Edges stay correct
+for registry crates, and are blind to a source that mutates in place.
+
+```
+diff -u Cargo.lock.pre Cargo.lock | grep -E '^[-+]source = '   # re-resolved SOURCES
+```
+
 ### T2 — Triage signals
 
 Full checklist with how-to-observe commands: `references/triage-signals.md`.
@@ -141,6 +151,15 @@ repository link · version-number mimicry · lock-diff shape.
 
 T2 can and should produce a `Halt` on its own. It is required to be able to: a
 skill that only halts after deep review is a skill nobody runs.
+
+### Ledger consult — before the T3 set is computed
+
+Common crates carry a `build.rs` (libc, anyhow, ring, every `*-sys`), so without
+amortization every sprint re-reads the same scripts and the skill gets skipped.
+One mechanism, `cargo-vet`: `cargo vet check` passes cleared `(crate,version)`
+pairs; `cargo vet suggest` prints the backlog — that backlog **is** the T3 set. A
+clearance is void if publisher identity or crate source changes, so §Y, §P and §O
+run regardless of it and any hard stop overrides it. `references/clearance-ledger.md`.
 
 ### T3 — Build-time surface review (THE GATE)
 
@@ -167,6 +186,9 @@ library needing an HTTP client at build time.
 build-time surface was its dependency's.** Enumerate the closure, not the crate
 you bumped.
 
+Cleared at an earlier version? Diff against the cleared version
+(`references/source-diff-recipes.md` §(a)) instead of re-reading, then
+`cargo vet certify <crate> <cleared> <new>` — two versions is a delta audit (VERIFIED).
 ### T4 — Full source review
 
 Only on what T2/T3 flagged. Diff recipes: `references/source-diff-recipes.md`
@@ -192,20 +214,28 @@ its honest limits.
 ## Verdict
 
 ```rust
+enum Signal { Negative, Positive, NotApplicable }  // ran clean / ran and fired / could not run here
+
 enum Intake {
-    Clear,        // proceed to build/test
-    Churn,        // benign but noisy; proceed, record what was noisy
-    Investigate,  // T3/T4 required before any executing command
-    Halt,         // stop; do not build; back-brief; rollback
+    Clear,          // proceed to build/test
+    Churn,          // benign but noisy; proceed, record what was noisy
+    Investigate,    // T3/T4 required before any executing command
+    Indeterminate,  // >=1 signal NotApplicable — evidence absent, not clean
+    Halt,           // stop; do not build; back-brief; rollback
 }
 ```
 
 | Verdict | Forced by |
 |---|---|
-| `Clear` | Closure delta empty or version-only, no build-time surface added or changed, T2 all-negative |
-| `Churn` | Many nodes moved but every added/changed crate has no build.rs / no proc-macro / no `[build-dependencies]`, and T2 is negative. Version churn is not a finding. |
-| `Investigate` | Any added or changed build-time surface (T3 list items 1–5), OR any single T2 signal positive, OR a lock-diff shape disproportionate to the version bump |
+| `Clear` | Closure delta empty or version-only, no build-time surface added or changed, and **every T2 signal `Negative`** — applicable to this source and actually run |
+| `Churn` | Many nodes moved but every added/changed crate has no build.rs / no proc-macro / no `[build-dependencies]`, every T2 signal is `Negative`, none `NotApplicable`. Version churn is not a finding. |
+| `Investigate` | Any added or changed build-time surface (T3 list items 1–5), OR any single T2 signal `Positive`, OR a lock-diff shape disproportionate to the version bump |
+| `Indeterminate` | Any T2 signal `NotApplicable` — non-registry source (git / `[patch]` / path / workspace-internal / alternative registry), or a no-new-node delta silencing §T/§V/§W |
 | `Halt` | Any of the hard-stop list below |
+
+**Rule — absence is not a negative finding.** `Indeterminate` never resolves to
+`Clear` or `Churn`; it resolves to `Investigate` or `Halt`. Where T2 cannot
+discriminate, escalate to T3 by default (`references/triage-signals.md` §N).
 
 **Hard stops — `Halt` without judgement call:**
 
@@ -281,7 +311,7 @@ assume.** Everything below installs with `cargo install <tool>` unless noted.
 | `cargo` (built-in) | `fetch` / `metadata` / `tree -i` / `vendor` / `update --dry-run` / `info` / `add` — the whole non-executing T1 surface | `cargo --version` |
 | `cargo-deny` | Yanked + advisory + source gate. **See the yanked note below.** | `cargo deny --version` |
 | `cargo-audit` | Advisory DB against `Cargo.lock`. `--json` and `-D/--deny <warnings\|unmaintained\|unsound\|yanked>` are real flags (VERIFIED) | `cargo audit --version` |
-| `cargo-vet` | Audit/exemption ledger for reviewed crates | `cargo vet --help` |
+| `cargo-vet` | **The clearance ledger** (§Ledger consult): `check`/`suggest` compute the T3 set, `certify` records a clearance | `cargo vet --help` |
 | `curl` + `tar` + `diff` | All that T4 source diffing needs — no special tool required (VERIFIED, config-6sc G4) | standard |
 | `jq` | crates.io JSON API and sparse-index NDJSON | `jq --version` |
 | `podman` (or another container runtime) | The one verified containment primitive (`--network=none`) | `podman --version` |

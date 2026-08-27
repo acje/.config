@@ -185,20 +185,82 @@ should move a handful of lines. 33 insertions / 2 deletions for a patch bump is
 disproportionate — that was the tell that caught the arrayref incident, and it was
 visible before anyone read a single line of crate source.
 
+## §N — Non-registry dependency sources (the fail-open branch)
+
+Everything above §N is crates.io-API-shaped. Point it at a git, `[patch]`, path,
+workspace-internal or alternative-registry dependency and every one of those
+probes returns nothing. **That is `Signal::NotApplicable`, not `Signal::Negative`.**
+Scoring it as negative is how a bad dependency reaches `Clear` with a clean-looking
+checklist — absence of evidence read as evidence of absence.
+
+Identify the source of every changed node before scoring anything. `Cargo.lock`
+records it explicitly (VERIFIED live) — a crates.io node carries
+`source = "registry+https://github.com/rust-lang/crates.io-index"`, a git node
+carries `source = "git+<url>?branch=<b>#<sha>"`, and a path or workspace-internal
+node carries **no `source` key at all**:
+
+```
+grep -A2 '^\[\[package\]\]' Cargo.lock | grep '^source = ' | sort | uniq -c
+cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | "\(.name)\t\(.source // "path-or-workspace")"'
+```
+
+| Source | T2 evidence that IS available | Structurally unavailable |
+|---|---|---|
+| **git, `rev`-pinned** | The pinned sha; whether the sha *moved* (lock `source` diff); remote host is the expected one; commit signature (`git verify-commit <sha>`); tree at that sha readable via `--depth 1` fetch | Yank state, download counts, publisher identity, publish timestamps, owner history, typosquat-vs-lock, description/repo mimicry |
+| **git, floating (`branch`/`tag`, no `rev`)** | Same as above **minus stability** — the head re-resolves silently; a tag is mutable and can be re-pointed | All of the above, **plus** any guarantee that what you reviewed is what you build |
+| **`[patch]` / `[replace]`** | The patch target and its source; that the replacement is intentional and reviewed; whether it silently redirects a well-known crate name | Registry signals for the *replacement*; the name in the lock no longer implies the code |
+| **path dep** | Local diff under VCS; who owns the directory; whether it is inside the repo boundary | Everything registry-shaped; trust is inherited from your own VCS, so review it as first-party code |
+| **workspace-internal** | Normal code review of your own workspace member | Everything registry-shaped (correctly — it is first-party) |
+| **alternative / vendored registry** | Whatever that registry exposes (often nothing); vendored tree diff (`cargo vendor`); the registry URL is the expected one | crates.io yank/owner/download/publish signals do not apply and must not be assumed |
+
+Scoring rules — these are rules, not advice:
+
+1. Any changed node whose source is not crates.io scores `NotApplicable` for §Y,
+   §P, §O, §T, §V, §W. The verdict is at best `Indeterminate`.
+2. `Indeterminate` escalates to T3 on that node by default. §D (build edges) and
+   T3 (build-time surface) still apply to **every** source and are what you fall
+   back on — they read the tree, not the registry.
+3. A **floating** git dep is `Investigate` on its own, every run. You cannot
+   certify what re-resolves; there is no stable `(crate, version)` to clear.
+   The fix is a `rev` pin, after which it is reviewable like any other node.
+4. A `[patch]`/`[replace]` that redirects a crate you already depend on, to a
+   source you do not control, is a `Halt`.
+
+### Reconciling with the T1 edge-delta doctrine
+
+SKILL.md §T1 computes the delta over **edges** rather than node names, because an
+attacker reusing crates already in the closure is invisible to a node-name diff.
+A floating git dep defeats **both** instruments: verified live, when only the
+branch head moves, the node-name diff reports no change *and* the
+`dependencies = [...]` edge array is byte-identical, while the build-time surface
+at that sha can change completely.
+
+The three instruments are therefore ordered by what each can miss:
+
+| Instrument | Command | Blind to |
+|---|---|---|
+| Node-name delta | `grep '^name = '` on both locks | Re-used crates; edge changes; source changes |
+| Edge delta | `diff -u Cargo.lock.pre Cargo.lock \| grep -E '^[-+] "'` | Sources that mutate in place (git head, re-pointed tag) |
+| **Source delta** | `diff -u Cargo.lock.pre Cargo.lock \| grep -E '^[-+]source = '` | A `rev`-pinned dep whose *upstream* was force-pushed but sha unchanged (impossible without changing the sha) |
+
+Run all three. The edge-delta doctrine is unchanged and still correct for registry
+crates; the source delta is the instrument that covers what edges cannot see.
+
 ## Scoring
 
 | Observation | Action |
 |---|---|
-| All sections negative, no build-time surface changed | `Clear` |
+| Every section applicable and `Negative`, no build-time surface changed | `Clear` |
 | Nodes moved, nothing above fired, no new build-time surface | `Churn` |
-| Any single section positive | `Investigate` → T3 |
+| **Any section `NotApplicable` to this dependency source (§N)** | **`Indeterminate` → T3. Never `Clear`.** |
+| Any single section `Positive` | `Investigate` → T3 |
 | Any hard-stop in SKILL.md §Verdict | `Halt` |
-| Two or more sections positive independently | `Halt`, confirmed finding |
+| Two or more sections `Positive` independently | `Halt`, confirmed finding |
 
 **When the delta adds no new node.** §T, §V and §W are all keyed to a *newly
 added* crate and go silent when the attacker reuses crates already in your
 closure. That silence is not a `Clear`. The sections that still bite are §Y
 (yank census), §P (publish clustering), §O (publisher identity) and §D **read as
 an edge delta** — plus T3 on any crate whose build-time surface changed. Never
-score an all-silent §T/§V/§W as negative evidence; score it as not applicable,
-and rely on the edge delta.
+score an all-silent §T/§V/§W as negative evidence; score it `NotApplicable`
+(`Indeterminate`, per §N rule 1) and rely on the edge and source deltas.
