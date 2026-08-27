@@ -165,6 +165,43 @@ recommendation in the report. Patterns are named so findings can cite them
 
 ### Axis 1 — Idioms
 
+<example name="mechanically-covered-idioms">
+**Trigger.** The diff contains any of: `&String` / `&Vec<T>` in a signature;
+an index loop over a collection (`for i in 0..v.len()`); a pure `pub fn`
+missing `#[must_use]`; a `pub fn` returning `Result` (or able to panic)
+without `# Errors` / `# Panics` rustdoc; a narrowing `as` cast
+(`usize as u32`, `i64 as i32`, `u32 as u8`); a nested / redundant `match`
+on `Option` / `Result`.
+**Check.** Does the repo's own configuration already gate these — i.e. does
+Workflow step 2's read of `Cargo.toml` (`[lints.clippy]`), `clippy.toml`, or
+`.cargo/config.toml` enable `clippy::pedantic` **and** run with
+`-D warnings`? If yes, these shapes are caught mechanically and must **not**
+be hand-reviewed: reporting them duplicates a gate that already bites, and
+prose stacked on top of a mechanical gate is the failure mode, not defence
+in depth.
+**Fix.** When the gate is present: cite it and defer — no finding. When the
+repo lacks `pedantic`, or lints at `warn` without `-D warnings`, these
+revert to hand-review checks; raise them as ordinary idiom/quality findings
+and recommend the repo enable the gate.
+
+Lints that cover each shape:
+
+| Shape | Lint |
+|---|---|
+| `&String` / `&Vec<T>` in signature | `clippy::ptr_arg` |
+| index loop over a collection | `clippy::needless_range_loop` |
+| pure fn missing `#[must_use]` | `clippy::must_use_candidate` |
+| `pub fn` returning `Result` / panicking without docs | `clippy::missing_errors_doc`, `clippy::missing_panics_doc` |
+| narrowing `as` cast | `clippy::cast_possible_truncation`, `clippy::cast_sign_loss` |
+| nested / redundant `match` on `Option`/`Result` | `clippy::manual_let_else`, `clippy::manual_map`, `clippy::needless_match` |
+
+**Not subsumed — keep hand-reviewing regardless of config.**
+`clippy::unwrap_used` and `clippy::dbg_macro` are *restriction*-group lints,
+not `pedantic`; a repo running `pedantic + -D warnings` does **not** catch
+them. `unwrap-outside-test` and the `dbg!` / `println!` quality check below
+remain live hand-review checks.
+</example>
+
 <example name="unwrap-outside-test">
 **Trigger.** `.unwrap()` or `.expect("...")` in non-test, non-`main` code.
 **Check.** Is the `None`/`Err` branch genuinely unreachable, and is that
@@ -213,12 +250,8 @@ greet(&n); greet(&n);
 </example>
 
 Other idiom checks (no worked example — apply pattern recognition):
-- `&String` / `&Vec<T>` in signatures → `&str` / `&[T]`.
-- Index loops over collections → iterator chains.
-- Nested `match` on `Option`/`Result` → `if let` / `let-else` / `?`.
 - Domain primitives (`u64` user-id, `String` email) → newtypes.
-- Public growable enums/structs missing `#[non_exhaustive]`; pure
-  functions missing `#[must_use]`.
+- Public growable enums/structs missing `#[non_exhaustive]`.
 
 <example name="illegal-state-representable">
 **Trigger.** A type admits values the domain forbids: a struct whose field
@@ -268,32 +301,6 @@ enum Connection {
 
 ### Axis 2 — Quality
 
-<example name="missing-error-docs-on-pub-result">
-**Trigger.** `pub fn` returning `Result<_, _>` (or with `# Panics` / unsafe
-preconditions) lacking the corresponding doc section.
-**Check.** Does rustdoc carry `# Errors`, `# Panics`, `# Safety` as
-appropriate?
-**Fix.** Add the section listing each variant / panic condition / safety
-contract.
-
-Problem shape:
-
-```rust
-pub fn parse(input: &str) -> Result<Config, ParseError> { ... }
-```
-
-Preferred shape when `parse` is part of the public rustdoc contract:
-
-```rust
-/// Parse a config from text.
-///
-/// # Errors
-/// - `ParseError::Syntax` on malformed TOML.
-/// - `ParseError::Schema` if required keys are absent.
-pub fn parse(input: &str) -> Result<Config, ParseError> { ... }
-```
-</example>
-
 <example name="plain-comment-in-rust-source">
 **Trigger.** Any `//` line comment or `/* … */` block comment in `*.rs`
 source. Per AGENTS.md § House style — Rust comments and hopper R15,
@@ -325,6 +332,50 @@ let revenue: Money = active_orders(orders).map(|o| o.total).sum();
 ```
 </example>
 
+<example name="unjustified-discard">
+**Trigger.** A bare `let _ = <expr>` where the expression yields a `Result`
+or a `#[must_use]` value. The discard is silent: nothing at the call site
+distinguishes "this failure is genuinely irrelevant" from "someone forgot".
+**Check.** Is the discarded outcome deliberate, and does the *code* say so?
+Note the house-style constraint: AGENTS.md § House style bans non-doc
+comments, so "justify it in a comment" is **unavailable** as a fix. The
+justification must live in a name.
+**Fix.** Encode the reason in an identifier:
+- `drop(guard)` for a drop guard — the call names the intent.
+- A named helper fn for a deliberately-ignored fallible call
+  (`fn ignore_already_closed(r: Result<(), CloseError>) { ... }`).
+- `if let Err(e) = ... { tracing::debug!(?e, "..."); }` when the failure is
+  worth observing but not worth propagating.
+
+Never a bare `let _ =` on a `Result`.
+**Surface.** review-only. `clippy::let_underscore_must_use` is a
+*restriction*-group lint, and enabling it is out of scope here: repos of any
+age carry hundreds of existing sites, and under `-D warnings` any warn-level
+enablement is an instant workspace-wide red. Treat this honestly as a
+hand-review check on the diff, not a gate to recommend switching on.
+</example>
+
+<example name="feature-combinatorics">
+**Trigger.** A diff adding a `#[cfg(feature = "...")]`, a new cargo feature,
+or a new optional dependency. `n` features means `2^n` build configurations;
+testing one point proves one point.
+**Check.** Is the new combination actually built or tested anywhere — is it
+in the repo's feature matrix, or does CI only ever build the default set?
+Subsumes the older "does it still compile with `--no-default-features`, and
+per-feature" question.
+**Fix.** Cover the new combination in the repo's feature matrix, or state
+plainly why the single tested point is sufficient (e.g. the feature only
+gates an additive re-export).
+**Surface.** review-only in fleet doctrine. `cargo hack --feature-powerset`
+is the mechanical answer **where a repo chooses to adopt it**; no fleet repo
+currently does, so do **not** mandate it — mention it as the available
+option when the combinatorics genuinely warrant it.
+
+Precedent: the `async-trait` ban reached case-by-case in ADR CHE-0025 is this
+argument's proc-macro-obfuscation half — a macro-expanded surface is another
+configuration nobody reads or tests directly.
+</example>
+
 Other quality checks:
 - Module boundaries — minimal `pub` surface; types pulled into `pub` only
   when callers need them.
@@ -339,12 +390,83 @@ Other quality checks:
   rationale in the commit message or a bd task. Plain `//` justifications
   are themselves a finding.
 - `dbg!` / `println!` / commented-out code on non-binary paths.
-- Feature cfg hygiene — does the crate still compile with
-  `--no-default-features`, and per-feature?
 - `Box<dyn Error>` in **public** API surfaces → `thiserror`-derived enum
   (see negative rule below).
 
 ### Axis 3 — Security
+
+<example name="unbounded-recursion-at-trust-boundary">
+**Trigger.** A recursive function (directly or mutually recursive) reachable
+from a parse, deserialize, network, or user-input entry point, with no
+explicit depth cap. Rust does **not** cover this: stack overflow aborts the
+process and is uncatchable, so ownership and `forbid(unsafe_code)` buy
+nothing here. Recursion depth driven by attacker-controlled nesting is a DoS
+primitive.
+**Check.** Trace the recursive function back to its outermost caller. Does
+any untrusted input reach it? If so, is there an explicit depth parameter
+with a cap, or a serde/parser-level nesting limit?
+**Fix.** Thread an explicit `depth: u32` parameter checked against a named
+cap constant, returning a typed error on exhaustion; or convert to an
+explicit work-stack loop with a bounded queue.
+**Surface.** review-only — not mechanizable. Reachability from a trust
+boundary is a whole-program property no lint computes.
+</example>
+
+<example name="unbounded-io-or-alloc-at-boundary">
+**Trigger.** Either shape, at or below a trust boundary:
+(a) a pagination / retry / poll / drain loop with no explicit iteration cap;
+(b) `Vec::with_capacity(n)`, `read_to_end`, `read_to_string`, or `collect`
+fed by a non-literal, externally-influenced length with no cap.
+**Check.** Can a hostile or merely broken peer make the loop run forever, or
+make the allocation arbitrarily large? A `Content-Length`, a page-count
+field, and a "next cursor" that never goes empty are all externally
+influenced.
+**Fix.** An explicit max-iterations constant with a typed error on
+exhaustion; `.take(N)` on the iterator, or `reader.by_ref().take(N)` on the
+reader, before `read_to_end` / `collect`.
+**Surface.** review-only — not mechanizable. Whether a length is externally
+influenced is a data-flow property outside clippy's reach.
+</example>
+
+<example name="untyped-runtime-invariant">
+**Trigger.** An invariant that **cannot** be encoded in the type system —
+a cross-field relationship, a runtime-computed range, a protocol state
+ordering — that is neither asserted nor returned as a typed error.
+**Check.** First: is `illegal-state-representable` (hopper R16) applicable?
+That check stays **primary** and is strictly stronger *where it reaches* — a
+type that makes the bad value unconstructible needs no assertion at all.
+This check is only the residue where R16 does not reach.
+**Fix.** Make the invariant explicit in both paths:
+- **Debug path.** `debug_assert!` **is** permitted in library code. It is
+  compiled out in release, so it is a development aid, not a release panic —
+  and its condition must be side-effect free (removing it must not change
+  behaviour).
+- **Release path.** The same condition must surface as a **typed error**,
+  never a panic. `assert!`, `panic!`, and `unwrap` on library paths stay
+  flagged (this resolves the standing tension with the reachable-panic
+  concern: `debug_assert!` is exempt, the release-path panic is not).
+**Surface.** review-only — not mechanizable. By construction this is the
+class of invariant no type and no lint can express.
+</example>
+
+<example name="crate-missing-forbid-unsafe">
+**Trigger.** A diff adding a new crate to a workspace whose crate root
+(`lib.rs` / `main.rs`) lacks `#![forbid(unsafe_code)]`, or a crate root using
+`deny(unsafe_code)` rather than `forbid`. `deny` is weaker: an inner
+`#[allow(unsafe_code)]` re-opens the door; `forbid` removes that re-entry
+path. The rule only pays if it holds across **every** crate — one exempt
+crate is where the unsafe lands.
+**Check.** Does the repo already have a mechanical check for this — a
+repo-level guard script or a CI step asserting totality across crate roots?
+**Fix.** If such a check exists, **cite it and defer**; the guard owns the
+verdict, not this review. If the repo has none, this is a review finding on
+the new crate root, and the recommendation includes adding a repo-level
+check so the next crate is caught mechanically rather than by review
+attention.
+**Surface.** MECHANICAL where the repo provides it, review-only otherwise.
+Ambient-authority-elimination ADRs of this class are the usual home for the
+requirement; cite the repo's own ADR when one exists.
+</example>
 
 <example name="unsafe-block-soundness">
 **Trigger.** New or modified `unsafe { ... }` block.
@@ -384,29 +506,7 @@ unsafe fn read_value(&self) -> T {
 ```
 </example>
 
-<example name="narrowing-as-cast">
-**Trigger.** `as` cast that narrows (e.g. `usize as u32`, `i64 as i32`,
-`u32 as u8`).
-**Check.** Can the source value exceed the target range at runtime?
-**Fix.** `try_into()` returning `Result`, or the explicit
-`checked_` / `wrapping_` / `saturating_` op that documents intent.
-
-Problem shape:
-
-```rust
-let n: u32 = some_usize as u32;
-```
-
-Preferred shape:
-
-```rust
-let n: u32 = some_usize.try_into()
-    .map_err(|_| Error::IndexTooLarge)?;
-```
-</example>
-
 Other security checks:
-- `panic!` / `unwrap` reachable from untrusted input → DoS vector.
 - Crypto: RustCrypto preferred; flag MD5 / SHA-1 used for password hashing
   or signing (collision-broken); prefer `ring` / `rustls` over `openssl`
   unless justified.
@@ -427,7 +527,9 @@ Other security checks:
 | `.unwrap()` outside tests/`main` | `?`, or `.expect("<invariant>")` | unwrap erases context; expect with documented invariant survives review |
 | `Box<dyn Error>` in public API | `thiserror`-derived enum | callers can match variants; downstream error chains stay structured |
 | `.clone()` reflexively | `&` borrow / `Cow<'_, T>` / `Arc<T>` | clone hides ownership intent and costs; the right abstraction names it |
-| `x as SmallerInt` (narrowing `as`) | `x.try_into()?` / `checked_*` / `wrapping_*` | `as` silently truncates; the alternatives surface overflow at the type level |
+| Bare `let _ = <expr>` discarding a `Result` / `#[must_use]` value | `drop(guard)`, a named helper fn, or `if let Err(e) = … { tracing::debug!(…) }` | non-doc comments are banned, so the justification must live in a name; a bare `let _` cannot be distinguished from an oversight |
+| Recursion, loop, or allocation sized by untrusted input with no cap | explicit depth/iteration cap with a typed error; `.take(N)` / `by_ref().take(N)` | stack overflow aborts uncatchably and unbounded alloc is a DoS; ownership does not bound either |
+| `deny(unsafe_code)` on a crate root, or a new crate root with neither | `#![forbid(unsafe_code)]` | `deny` leaves an inner `#[allow]` re-entry path open; the guarantee only pays if it is total across crates |
 | Type admits illegal states (bool/`Option` state soup, stringly-typed, `assert!`-guarded partial fn, non-empty `Vec` by convention) | `enum` of legal shapes / newtype with boundary-validating constructor / correct-by-construction type (`NonEmptyVec`, typed state machine) | make illegal states *unrepresentable*, not merely rejected — restructure the type, don't bolt on a predicate (types-as-axioms, bead `config-54u`; hopper R16) |
 | Any `//` or `/* … */` comment in `*.rs` (incl. `// SAFETY:`, `// TODO`, `// FIXME`, `// NOTE`, `#[allow]` justifications, commented-out code, ADR-link annotations) | Delete; if the code needed the comment to be readable, refactor (rename / extract / newtype) so it reads as its own explanation. Move durable rationale to an ADR, the commit message, or a bd task. Promote to `///` doc comment **only** when the enclosing item is a `pub` API or `unsafe fn` / `unsafe trait` whose rustdoc contract is mandatory | per AGENTS.md § House style — Rust comments and hopper R15: non-doc comments drift silently; doc comments are not a default home for rationale either — they exist to document a code contract |
 
