@@ -164,7 +164,7 @@ On each non-trivial Rust TDD increment (post-green, pre-commit):
 
 1. Create review-request bead with the diff context + change rationale in the bead's `description` field. For small diffs (< ~20 lines): `bd create "Review: <one-line summary>" --type task --labels review-request --description "<inline context>" --json`. For larger diffs: `bd create "Review: <one-line summary>" --type task --labels review-request --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. Do not stage the body under `.ooda/`; the bead `description` is the durable home.
 2. Continue with other in-scope work while linus picks up out-of-band via `bd ready --json --label review-request`. If a review must be solicited within the turn, emit a back-brief to moltke requesting linus dispatch; otherwise poll the bead's labels.
-3. Linus reviews, comments APPROVE or NEEDS WORK, relabels accordingly, and on APPROVE also closes the paired review-report evidence bead.
+3. Linus reviews, comments APPROVE or NEEDS WORK, relabels accordingly, and on APPROVE also closes the paired review-report evidence bead. On NEEDS WORK the round's report bead stays open until superseded by the next round's report (or swept by gardener on the terminal `ReviewRejected` path).
 4. On `review:approved`: proceed to commit. Record: `bd audit record --kind tool_call --actor hopper --issue-id <id> --tool-name "commit" --exit-code 0`.
 5. On `review:needs-work`: fix the findings, re-request (same bead, new comment). Max 2 rounds.
 6. After 2× NEEDS WORK: `Outcome::Surprise { kind: SurpriseKind::ReviewRejected { bead } }` → handback to moltke.

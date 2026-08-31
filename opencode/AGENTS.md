@@ -846,8 +846,17 @@ pair programming:
        open in `review:approved` state.
    Keeping (a) before (c) preserves APPROVE/NEEDS-WORK signal on closed beads
    for historical bd queries. Hopper proceeds.
-5. On NEEDS WORK: linus relabels `review:needs-work`. Hopper fixes, re-requests
-   (max 2 rounds before `SurpriseKind::ReviewRejected` → moltke).
+5. On NEEDS WORK: linus relabels `review:needs-work`. The round-N report bead
+   stays OPEN — its findings are live, unactioned work. Hopper fixes,
+   re-requests (max 2 rounds before `SurpriseKind::ReviewRejected` → moltke).
+6. **Supersede-on-create.** Before creating a round-N report bead with N ≥ 2,
+   linus first closes the round-(N-1) report bead:
+   `bd close <prev-report-id> --reason "superseded by round-<N> review"`.
+   A report bead therefore outlives its round only while its findings are
+   still unactioned. On the terminal 2×-NEEDS-WORK → `ReviewRejected` path the
+   final report bead is left OPEN **by design** (findings handed to moltke
+   unactioned); gardener's evidence sweep (`agents/gardener.md` rules 3–4)
+   closes it on package conclusion.
 
 ### Pointer discipline with beads
 

@@ -85,14 +85,14 @@ uses label-based signaling:
 3. Linus reads the bead's `description` field (`bd show <id>`) for diff context — hopper now writes the diff context as the bead's description, not as a comment pointer.
 4. Linus reviews using the same three axes (idioms, quality, security) plus the TDD-evidence and type-driven axes below, and validation.
 5. Linus builds the full review body (see `## Report` shape).
-6. Linus registers the full report as an evidence bead (Bucket A in the three-bucket model):
+6. Linus registers the full report as an evidence bead (Bucket A in the three-bucket model). **Supersede-on-create:** if this is round N ≥ 2 for the same review-request bead, FIRST close the round-(N-1) report bead — `bd close <prev-report-id> --reason "superseded by round-<N> review"` — then create the new one:
    - For small reports (≤ ~20 lines): `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --description "<inline body>" --json`.
    - For larger reports: `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. The body lands directly in the bead's `description` field.
    - If no mission id is available, use labels `evidence,review-report` and name the missing mission id in the body.
 7. Linus writes verdict on the review-request bead:
    - **APPROVE:** `bd comment <id> "APPROVE: <one-line summary>"` + `bd label remove <id> review-request` + `bd label add <id> review:approved` + `bd audit record --kind label --actor linus --issue-id <id> --tool-name "review" --exit-code 0`. Then `bd close <report-bead-id> --reason "review:approved"` to close the paired review-report evidence bead created in step 6, and `bd close <id> --reason "review:approved"` to close the review-request bead itself (the body lives in the bead's description and survives closure).
-   - **NEEDS WORK:** `bd comment <id> "NEEDS WORK: <actionable findings>"` + `bd label remove <id> review-request` + `bd label add <id> review:needs-work` + `bd audit record --kind label --actor linus --issue-id <id> --tool-name "review" --exit-code 1`.
-8. Reply uses the same output contract, adding `Bead: <id>` for the review-request bead and `Report bead: <id|->` for the evidence bead.
+   - **NEEDS WORK:** `bd comment <id> "NEEDS WORK: <actionable findings>"` + `bd label remove <id> review-request` + `bd label add <id> review:needs-work` + `bd audit record --kind label --actor linus --issue-id <id> --tool-name "review" --exit-code 1`. The round-N report bead stays OPEN — its findings are unactioned. It is closed by the supersede-on-create step of round N+1 (step 6), or, on the terminal 2×-NEEDS-WORK → `ReviewRejected` path, left OPEN by design and swept by gardener (`agents/gardener.md` rules 3–4) on package conclusion.
+8. Reply uses the same output contract, adding `Bead: <id>` for the review-request bead and `Report bead: <id> (round <N>; superseded <id|->)` for the evidence bead (`Report bead: -` when none was created). Naming the superseded id makes a skipped supersede-close visible to moltke in the handoff rather than silent.
 
 ### Read-only discipline in pair programming
 
@@ -597,7 +597,7 @@ Verdict: <APPROVE|NEEDS WORK|PASS|PASS WITH NOTES|FAIL>
 Bead: <bd-id|->
 Issues: Critical=<n> High=<n> Medium=<n> Low=<n> Info=<n>
 Validation: Check=<PASS|FAIL|SKIPPED(reason):exit_code> Clippy=<...> Test=<...> Audit=<...> Deny=<...>
-Report bead: <bd-id|->
+Report bead: <bd-id|-> (round <N>; superseded <bd-id|->)
 ```
 
 End with the AGENTS.md handoff line:
