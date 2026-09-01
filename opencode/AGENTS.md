@@ -336,12 +336,30 @@ Three rules earn their keep:
      operations are one unit of work, and splitting them into separate
      tool-calls buys nothing.
    - **Pipes with an evidence-producing left stage** (`cargo … | grep`,
-     `pytest … | head`) MANDATE a `pipefail` guard: prefix with
-     `set -o pipefail;` (bash) or check `PIPESTATUS[0]` explicitly, so a
-     failing left stage cannot masquerade as a clean right-stage result.
-     Without the guard, `cmd_that_fails | grep pattern` exits 0 (grep's
-     code) even though `cmd_that_fails` exited non-zero — the single most
-     common silent-failure shape this doctrine guards against.
+     `pytest … | head`) MANDATE a `pipefail` guard: prefix the command
+     string with the literal `set -o pipefail;`, so a failing left stage
+     cannot masquerade as a clean right-stage result. Without the guard,
+     `cmd_that_fails | grep pattern` exits 0 (grep's code) even though
+     `cmd_that_fails` exited non-zero — the single most common
+     silent-failure shape this doctrine guards against.
+
+     `set -o pipefail` is the **only** sanctioned guard; it works in both
+     zsh and bash. Do **not** inspect a pipe-status array instead. The
+     fleet shell is zsh (`$0` = `/bin/zsh`, `ZSH_VERSION` 5.9), where
+     `PIPESTATUS` is undefined and zsh's own `pipestatus` is 1-indexed —
+     so `${PIPESTATUS[0]}` expands to the empty string and the guard
+     `[ "${PIPESTATUS[0]}" -eq 0 ]` evaluates the empty string as `0` and
+     reports **clean**. Measured: `false | grep -q x` then that guard
+     printed `clean` with exit 0, while `set -o pipefail; false | grep -q x`
+     exited 1. A pipe-status-array guard fails *open* — it is worse than no
+     guard, because it looks like verification.
+
+     Enforcement surface (prose; trigger + named artefact): when a bash
+     tool-call contains a pipe whose left stage is evidence-producing or
+     state-changing and the command string does not begin with
+     `set -o pipefail;`, produce a review reject (linus; `code-review`
+     skill) and, for hopper mid-mission, `Outcome::Surprise` — the
+     pipeline's exit code is not admissible evidence.
    - **Empty stdout from an evidence-producing or state-changing pipeline
      is still `Outcome::Surprise`** (preserved, and elevated: this is the
      backstop that catches a `pipefail` guard you forgot, not a
