@@ -281,7 +281,8 @@ If you have absorbed ≥ ~5 subordinate Task completions in a single invocation
 and the package is incomplete, write a resume checkpoint to a bd bead
 (`bd create "resume: <package_or_mission_id>" --type task --labels
 "mission:<id>,resume-checkpoint" --stdin` with body fed in on
-stdin) containing:
+stdin — a fresh bead each time, never a bare `--stdin` over an existing
+checkpoint body, which would replace it) containing:
 
 (a) `commander_intent` verbatim
 (b) completed sub-missions with their artefact bead ids

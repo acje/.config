@@ -46,7 +46,7 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 7. **Detect gaps** — which surfaces in `scope` have no ADR coverage? First-class output.
 8. **Register summary as a bd bead** (see AGENTS.md § Beads). The body lives in the bead's `description` field:
    - For small summaries (< ~20 lines): `bd create "<scope> oracle summary" --type task --labels "oracle-summary,evidence,mission:<id>" --description "<inline body>" --json`.
-   - For larger summaries: `bd create "<scope> oracle summary" --type task --labels "oracle-summary,evidence,mission:<id>" --json` to obtain the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. The body lands in the bead's `description` field without touching the working tree, and stdin-fed updates bypass the inline heredoc trace-truncation that affects `--description "$(cat <<EOF ... EOF)"`.
+   - For larger summaries: `bd create "<scope> oracle summary" --type task --labels "oracle-summary,evidence,mission:<id>" --json` to obtain the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin (fresh bead, empty description; `--stdin` REPLACES — AGENTS.md § Beads → Tier 1). The body lands in the bead's `description` field without touching the working tree, and stdin-fed updates bypass the inline heredoc trace-truncation that affects `--description "$(cat <<EOF ... EOF)"`.
 9. **Hand back** — default `to: moltke` (or invoking agent). Return `artefact: bd-NNN` for the oracle-summary bead in the handoff.
 
 ## Rules
@@ -60,7 +60,7 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 | R5 | **Surface contradictions.** A path that violates an accepted ADR is the highest-value output. |
 | R6 | **Gaps are output.** Uncovered architectural surface ⇒ moltke may want a new ADR before deciding. |
 | R7 | **Pure inspection.** No edits, no shell mutation. |
-| R8 | **Large bodies via `bd update --stdin`, never inline heredoc.** `bd create --description "$(cat <<EOF ... EOF)"` hits the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation; the artefact goes invisible to self-improvement workflows. Stdin-fed updates land the body in the bead's `description` field without that truncation. |
+| R8 | **Large bodies via `bd update --stdin`, never inline heredoc.** `bd create --description "$(cat <<EOF ... EOF)"` hits the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation; the artefact goes invisible to self-improvement workflows. Stdin-fed updates land the body in the bead's `description` field without that truncation — on a freshly-created bead, since `--stdin` REPLACES the description (AGENTS.md § Beads → Tier 1). |
 | R9 | **Trivial autonomy.** Single-ADR lookup or "no coverage" close inside oracle's role; no escalation. |
 | R10 | **Empty stdout from `adr-fmt` ≠ `NoCoverage`.** Re-run leftmost stage in isolation; check exit code and stderr. Common cause: missing `adr-fmt.toml` in the workspace ⇒ drop to `Mode::Fallback`, not `NoCoverage`. Mirrors moltke R11 (silent prefix-failure under shell chaining). |
 | R11 | **Never inspect above project root.** Per the permission-ask-hang principle (AGENTS.md § Bash hygiene, canonical): globbing or reading paths outside the project root risks an unanswerable `external_directory` prompt. ADR-parent-dir instance: project-root miss ⇒ `Mode::Fallback`; do not glob parents such as `~/Documents`, `~/Documents/github`, or `~/Documents/github/<org>`. |

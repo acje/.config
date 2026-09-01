@@ -87,7 +87,7 @@ uses label-based signaling:
 5. Linus builds the full review body (see `## Report` shape).
 6. Linus registers the full report as an evidence bead (Bucket A in the three-bucket model). **Supersede-on-create:** if this is round N ≥ 2 for the same review-request bead, FIRST close the round-(N-1) report bead — `bd close <prev-report-id> --reason "superseded by round-<N> review"` — then create the new one:
    - For small reports (≤ ~20 lines): `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --description "<inline body>" --json`.
-   - For larger reports: `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. The body lands directly in the bead's `description` field.
+   - For larger reports: `bd create "Review report: <one-line scope>" --type task --labels "evidence,review-report,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin (fresh bead, empty description; `--stdin` REPLACES — AGENTS.md § Beads → Tier 1). The body lands directly in the bead's `description` field.
    - If no mission id is available, use labels `evidence,review-report` and name the missing mission id in the body.
 7. Linus writes verdict on the review-request bead:
    - **APPROVE:** `bd comment <id> "APPROVE: <one-line summary>"` + `bd label remove <id> review-request` + `bd label add <id> review:approved` + `bd audit record --kind label --actor linus --issue-id <id> --tool-name "review" --exit-code 0`. Then `bd close <report-bead-id> --reason "review:approved"` to close the paired review-report evidence bead created in step 6, and `bd close <id> --reason "review:approved"` to close the review-request bead itself (the body lives in the bead's description and survives closure).
@@ -153,7 +153,8 @@ refactor that is outside the reviewed change's scope.
 5. **Report** — build the full review body per `## Report` shape and
    register it as a `review-report` evidence bead. The body lives in
    the bead's `description` field, loaded via `--description` (inline) or
-   `bd update --stdin` (larger bodies).
+   `bd update --stdin` (larger bodies, on the freshly-created bead —
+   `--stdin` replaces the description; see AGENTS.md § Beads → Tier 1).
 6. **Reply** in the fixed output contract + handoff line.
 
 ## Review patterns
@@ -573,7 +574,8 @@ The full review body lives in the review-report evidence bead's `description`
 field (Bucket A). Small bodies (≤ ~20 lines) go inline via
 `--description "<body>"`; larger bodies are loaded via
 `bd update <bd-id> --stdin` to bypass inline heredoc trace
-truncation. The body never touches the working tree.
+truncation — the bead is fresh, and `--stdin` replaces rather than
+appends (AGENTS.md § Beads → Tier 1). The body never touches the working tree.
 
 Body shape:
 
@@ -609,11 +611,12 @@ End with the AGENTS.md handoff line:
 ## Doctrine pointers (do not restate)
 
 - Evidence body lives in the review-report bead `description` (inline
-  via `--description`, or `bd update --stdin` for larger
-  bodies); handoff carries `bd-NNN`. Per AGENTS.md § Evidence carrying
+  via `--description`, or `bd update --stdin` on the fresh bead for larger
+  bodies — `--stdin` replaces, see AGENTS.md § Beads → Tier 1);
+  handoff carries `bd-NNN`. Per AGENTS.md § Evidence carrying
   — pointer over body.
 - Bash hygiene per AGENTS.md § Bash hygiene (canonical: workdir preferred, composition-with-pipefail, path preflight — not restated here). Tool-availability probes: one `command -v` per bash call stays the default ergonomic (parallel tool-calls); the joined `;`/`&&` form is no longer an absolute ban (see § Validation).
-- **No scratch-file marshalling (for coordination bodies).** The review body, diff, and original description are cross-agent coordination content — Tier 1 unchanged: they go straight into the review-report bead `description` via `bd update <id> --stdin`, never staged to disk first. Read the diff with `git diff` / `git show` to stdout directly; build the review body in-context. Separately, a genuinely ephemeral single-turn working file (not coordination content) may live in the workspace-relative `.ooda/tmp/<mission_id>/`, self-cleaned before mission end. Bare `/tmp`, `$TMPDIR`, `/var/folders`, and `T/opencode` sit outside the project root and risk the permission-ask-hang mechanism (AGENTS.md § Bash hygiene) — an out-of-allow-set path can raise an `external_directory` prompt nobody answers — not because temp files are taboo, but because that path shape isn't in the workspace allow-set.
+- **No scratch-file marshalling (for coordination bodies).** The review body, diff, and original description are cross-agent coordination content — Tier 1 unchanged: they go straight into the review-report bead `description` via `bd update <id> --stdin` (fresh bead; on one that may already have a body use the accumulation recipe in AGENTS.md § Beads → Tier 1), never staged to disk first. Read the diff with `git diff` / `git show` to stdout directly; build the review body in-context. Separately, a genuinely ephemeral single-turn working file (not coordination content) may live in the workspace-relative `.ooda/tmp/<mission_id>/`, self-cleaned before mission end. Bare `/tmp`, `$TMPDIR`, `/var/folders`, and `T/opencode` sit outside the project root and risk the permission-ask-hang mechanism (AGENTS.md § Bash hygiene) — an out-of-allow-set path can raise an `external_directory` prompt nobody answers — not because temp files are taboo, but because that path shape isn't in the workspace allow-set.
 - Trivial in-role observations close inline; structural surprises
   escalate. Per AGENTS.md § Trivial autonomy.
 - Back-briefs to moltke for observations outside mission scope but

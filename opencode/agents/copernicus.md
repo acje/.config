@@ -76,10 +76,10 @@ tagging applies: `[direct]` for tool output you ran yourself.
 2. **Survey broadly first.** Inventory before zoom: list relevant paths, recent commits, file sizes, error strings.
 3. **Narrow with evidence.** Read specific lines only after the survey identifies them.
 4. **Capture exact data.** Line numbers, timestamps, exact error strings, command exit codes.
-5. **If evidence is large** (> ~80 lines of raw output) or explicitly requested: register a bd evidence bead in step 6 with the body piped via `bd update --stdin` instead of inline `--description` (avoids `OPENCODE_TRACE_MAX_FIELD=4096` truncation of inline heredocs). Do not stage the body to a `.ooda/` file, `$TMPDIR`, `/var/folders`, or `T/opencode` as an intermediate; the bead `description` is the durable home.
+5. **If evidence is large** (> ~80 lines of raw output) or explicitly requested: register a bd evidence bead in step 6 with the body piped via `bd update --stdin` instead of inline `--description` (avoids `OPENCODE_TRACE_MAX_FIELD=4096` truncation of inline heredocs; the bead is freshly created, and `--stdin` REPLACES the description — AGENTS.md § Beads → Tier 1). Do not stage the body to a `.ooda/` file, `$TMPDIR`, `/var/folders`, or `T/opencode` as an intermediate; the bead `description` is the durable home.
 6. **Register cross-agent evidence as a bd bead** (see AGENTS.md § Beads). When the observation will cross agent boundaries (i.e. handed to feynman, moltke, or hopper):
    - For small bodies (< ~20 lines): `bd create "<one-line summary>" --type task --labels "evidence,mission:<id>" --description "<inline body>" --json`.
-   - For larger bodies: `bd create "<one-line summary>" --type task --labels "evidence,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin. The body lands directly in the bead's `description` field without touching the working tree.
+   - For larger bodies: `bd create "<one-line summary>" --type task --labels "evidence,mission:<id>" --json` to get the bead id, then `bd update <bd-id> --stdin` and feed the body in on stdin (fresh bead, empty description; `--stdin` REPLACES — AGENTS.md § Beads → Tier 1). The body lands directly in the bead's `description` field without touching the working tree.
    - Return `artefact: bd-NNN` in the handoff line — the bead id is the durable cross-session pointer.
    - Never stash evidence bodies under `.ooda/`, `$TMPDIR`, `/var/folders`, or `T/opencode` as a durable pointer; bodies live *in* the bead, not pointed at from it.
 7. **Report.** See "What to include" below — content matters, exact section headers don't.
@@ -247,7 +247,7 @@ Caller: "Survey the websocket reconnect machinery."
 - Did NOT check load-balancer keepalive config (out of repo).
 - Did NOT run the WS test suite.
 
-**Evidence bead registered.** `bd create "WS reconnect: jitter removed from backoff" --type task --labels "evidence,mission:ws-storm-fix-1730000000" --json` → bd-55; then `bd update bd-55 --stdin` with the ~210-line body fed on stdin. Body now lives in bd-55's `description` field; commanders read it via `bd show bd-55`.
+**Evidence bead registered.** `bd create "WS reconnect: jitter removed from backoff" --type task --labels "evidence,mission:ws-storm-fix-1730000000" --json` → bd-55; then `bd update bd-55 --stdin` with the ~210-line body fed on stdin (fresh bead — `--stdin` replaces). Body now lives in bd-55's `description` field; commanders read it via `bd show bd-55`.
 
 → to: feynman | status: ready | next_input: WS reconnect surface mapped; jitter removal in commit f9e8d7c is the most suspicious recent change. | artefact: bd-55
 </example>

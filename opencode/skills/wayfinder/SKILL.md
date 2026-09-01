@@ -143,8 +143,12 @@ preferences for this effort>
 <!-- work ruled beyond the destination; closed, never graduates -->
 ```
 
-Update it with `bd update <map-id> --stdin` (pipe the revised description
-in; never write it to a scratch file first — see AGENTS.md § Beads).
+The map epic is updated **iteratively** — it always already has a body, so a
+bare `bd update <map-id> --stdin` would REPLACE the whole map, not extend it.
+Use the safe accumulation recipe (AGENTS.md § Beads → Tier 1): read the current
+description with `bd show <map-id> --json | jq -r '.[0].description'`, capture
+it into a variable, then pipe old-plus-new to `bd update <map-id> --stdin`.
+Never write the map to a scratch file first.
 
 ### Tickets
 
@@ -304,7 +308,8 @@ without one, you pick the next decision, not the user.
    block names. If in doubt, load `skills/grill-me`.
 4. Record the resolution: `bd comment <id> "<answer>"`, then `bd close <id>
    --reason "<gist>"`, and append a context pointer (the ticket's name +
-   id) to the map epic's Decisions-so-far (`bd update <map-id> --stdin`).
+   id) to the map epic's Decisions-so-far — via the safe accumulation recipe,
+   never a bare `--stdin`, which would replace the map (see Chart step 5).
 5. Add newly-surfaced tickets (create-then-wire, as in Chart step 4);
    graduate any fog the answer has made specifiable, clearing each
    graduated patch from **Not yet specified** so it lives only as its new

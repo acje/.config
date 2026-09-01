@@ -142,7 +142,9 @@ producer agent has two equivalent options:
    in via stdin or set it via `bd update <id> --stdin` after
    create, so it lands directly in the bead description without an
    inline heredoc hitting the trace limit. The body never touches the
-   working tree.
+   working tree. This is the fresh-bead recipe: `--stdin` REPLACES the
+   description, so on a bead that may already have a body use the safe
+   accumulation recipe instead (§ Beads → Tier 1).
 
 Either way the handoff line carries `artefact: bd-NNN`. Commanders use
 `bd show bd-NNN` to read the body lazily; `bd list --label evidence`
@@ -245,7 +247,8 @@ Hopper mid-mission: "I need to find every .rs file under crates/ whose tests blo
 Call subagents via the Task tool. Inline communication is the default for small
 payloads. Cross-agent evidence belongs in a bd bead (Bucket A): the body lives
 in the bead's `description` field (loaded via `--description` or
-`bd update --stdin`), and the bead id is the pointer. Don't
+`bd update --stdin`, which replaces rather than appends — see § Beads
+→ Tier 1), and the bead id is the pointer. Don't
 re-summarise large evidence through yourself (avoids the telephone game).
 
 `.ooda/` is the narrow Tier-2 escape hatch described in § Beads. Cross-agent bodies default to bd; any cross-agent material staged under `.ooda/` must still be indexed by a bead and handed off as `bd-NNN`, never as the file path.
@@ -761,10 +764,41 @@ memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
 1. **Tier 1 — PRIMARY.** bd bead `description` field. Default for all
    cross-agent coordination bodies: briefs, contracts, evidence, reports,
    summaries, and commit-message drafts. Pointer = `bd-NNN` in the handoff
-   line. Recipe: `printf %s "$BODY" | bd update bd-NNN --stdin` (or
-   `--body-file -`); never write the body to a file first. Unchanged by
-   the scratch tier below: ephemeral scratch is never a substitute for a
-   coordination body landing here.
+   line. Unchanged by the scratch tier below: ephemeral scratch is never a
+   substitute for a coordination body landing here.
+
+   **`bd update --stdin` REPLACES the description; it does not append.**
+   Verified against bd 1.2.2: description `AAA`, then
+   `printf %s BBB | bd update <id> --stdin`, yields `BBB` — the prior body is
+   gone. `--body-file -` is an alias and behaves identically. Neither
+   `bd note` (appends to the separate `notes` field) nor `bd comment` (adds a
+   comment) writes to `description`; there is no append-to-description flag.
+
+   - **Fresh-bead recipe** — bead created this turn, description empty:
+     `printf %s "$BODY" | bd update bd-NNN --stdin`. Never write the body to a
+     file first.
+   - **Safe accumulation recipe** — DEFAULT for any bead that may already have
+     a body (mission contracts, wayfinder map epics, checkpoint beads):
+
+     ```
+     set -o pipefail
+     PREV=$(bd show bd-NNN --json | jq -r '.[0].description') || exit 1
+     printf '%s\n\n%s\n' "$PREV" "$NEW_SECTION" | bd update bd-NNN --stdin
+     ```
+
+     `bd show --json` returns an **array** — the description is at `.[0]`, not
+     `.description`. Capture into a variable first; do not read and write the
+     same bead inside one pipeline.
+
+   **Enforcement surface** (prose; trigger + named artefact): before piping to
+   `bd update <id> --stdin` on a bead you did not create in this turn, run
+   `bd show <id> --json | jq -r '.[0].description'` and confirm it is empty. A
+   non-empty result means the fresh-bead recipe would destroy a live body —
+   use the accumulation recipe instead. A diff or review showing bare
+   `--stdin` against a pre-existing bead is a review reject (linus;
+   `code-review` skill), and `Outcome::Surprise` for hopper mid-mission. If it
+   has already fired, the clobbered body is recoverable from
+   `bd history --json`.
 2. **Tier 2 — ESCAPE-HATCH.** `.ooda/` (gitignored). Two sanctioned uses:
 
    - **(a) Bodies that cannot live in a bead** — binary or oversized
@@ -839,8 +873,9 @@ Moltke creates epics (`--type epic`) + sub-task children with
 `bd dep add <epic> --blocked-by <child>` — the epic depends on its children, so
 children surface in `bd ready` while the epic stays blocked until they close.
 Evidence producers create tasks with `--labels evidence,mission:<id>` and put the body
-in `--description` (or `bd update --stdin` for bodies > 4KB to avoid trace
-truncation). Handoff lines carry `artefact: bd-NNN`; readers fetch the body via
+in `--description` (or `bd update --stdin` on the freshly-created bead for
+bodies > 4KB to avoid trace truncation; `--stdin` replaces, so see § Beads
+→ Tier 1 before using it on a bead that may already have a body). Handoff lines carry `artefact: bd-NNN`; readers fetch the body via
 `bd show bd-NNN` only when the next decision needs it. See `bd --help` for full CLI.
 
 ### Review loop ↔ linus (intra-session, Bucket C)
