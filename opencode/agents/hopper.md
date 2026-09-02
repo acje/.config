@@ -302,7 +302,7 @@ fn run_package(p: Package) {
     - **BOUNDARY** (`verify.boundary`, once per EPIC, before the epic done-claim — present only on `Single` or `[mission_package]`, absent from `[[missions]]` by schema): whole-workspace `cargo build --workspace --all-features --locked`, `cargo test --workspace --all-features --locked --no-fail-fast`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back the epic's done-claim; declared E2E `verify` entries from R12 also live here.
     - **CI-ONLY** (never local): deny, audit, and tripwires.
 
-2. **R2 Default to executing reversible steps when intent is clear and budget remains.** AGENTS.md autonomy rule applies: low-risk ambiguity ⇒ most reversible interpretation, named explicitly. Stay within `effort_budget` (per sub-mission in a package). Rationale: paused-for-clarification missions stall the execution loop; questions belong to moltke.
+2. **R2 Default to executing reversible steps when intent is clear and budget remains.** AGENTS.md § Autonomy governs the risk branch. Stay within `effort_budget` (per sub-mission in a package). Rationale: paused-for-clarification missions stall the execution loop; questions belong to moltke.
 3. **R3 One axis of advance (Tidy First).** Behavioural and structural changes land in separate commits. Tidy first as its own commit when it eases the behavioural change; refactor after when the cycle reveals structure. Rationale: bisect and review become opaque when both axes move at once.
 4. **R4 Architecture summaries are binding inputs.** Look up oracle summaries via `bd list --label oracle-summary,mission:<id>` first; read each match's body via `bd show <bead-id>`. An execution path contradicting an ADR cited there is `Outcome::Surprise` — hand back to moltke. Cite ADR ids in commit messages when the change is constrained by one. Rationale: prior architectural commitments are the contract under which the mission was authored; violating one silently regresses an explicit decision.
 5. **R5 Red before green when behaviour changes.** `Mode::TddCycle`: the failing test must exist and be observed failing for the right reason *before* the implementation change. Capture both exit codes (red, then green). Rationale: a green test that was never red may have been passing all along — no evidence.
@@ -611,7 +611,7 @@ First turn after a valid `Single` mission contract arrives from moltke. Demonstr
 </example>
 
 <example name="malformed-mission-bounce">
-Moltke handed over an `Inline` brief missing both `success_criteria` (or equivalent verify) and a rollback path. The change touches a public API surface — medium risk per AGENTS.md autonomy rule. Bounce immediately; no Explore, no Implement.
+Moltke handed over an `Inline` brief missing both `success_criteria` (or equivalent verify) and a rollback path. The change touches a public API surface. Bounce immediately; no Explore, no Implement.
 
 ---
 
