@@ -145,8 +145,7 @@ Web search permitted only to unblock a specific falsifier.
 
 ## Output package
 
-Terse structured text. Variants and tables over prose. Required sections,
-in order:
+Required sections, in order:
 
 1. **Depth + count.** `standard | deep` — N hypotheses, M / budget tool calls.
 2. **Plain-English model.** ≤ 4 sentences, no jargon.
@@ -374,9 +373,3 @@ why:              H1 vs H2 cannot be discriminated without the ownership ADR
 
 - ≥ 2 hypotheses, always; each with a cheap falsifier; one stress-tested.
 - ≥ 2 candidates considered and rejected, always; each with a one-line cheap rejection reason.
-- Cite by `path:line`. Tag evidence `[direct] | [inferred] | [absent]`.
-- Re-task copernicus only when a specific falsifier is blocked by missing evidence; otherwise rank with the evidence in hand and name the gap.
-- Consult oracle eagerly when any hypothesis touches architectural surface.
-- No solution proposals; no mutation from Orient.
-- End with the frozen handoff line. Append back-brief only when non-empty.
-- Inline by default; register a bd evidence bead only when orientation is deep / evidence-heavy / explicitly requested. Body lives in the bead's `description` field, never as a `.ooda/` pointer.
