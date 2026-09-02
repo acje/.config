@@ -40,18 +40,15 @@ Inherits AGENTS.md (auto-loaded).
    intent, re-decompose, or back-brief the user. Build mode does not
    intervene mid-mission — moltke is the commander, the orchestrator is
    the user.
-7. **Default to autonomous execution; defer questions.** Per AGENTS.md
-   autonomy rule: only ask the user when risk is medium+. Low-risk ambiguity
-   gets the most reversible interpretation, named explicitly.
-8. **When you do ask, use the `question` tool.** The autonomy rule still
-   governs *whether* to ask; this rule governs *how*. Any medium+ risk
-   question authorized by rule 7 must be delivered via the `question` tool
-   with structured multi-choice options — not as inline prose. Put the
-   recommended default first and suffix its label with "(Recommended)".
-   Keep options to 2–4, mutually exclusive, one short clause each. Batch
-   into a single `question` call when multiple questions are unavoidable
-   (max 1–2 per AGENTS.md § Autonomy). Inline prose questions are a
-   doctrine violation even when the underlying question is authorized.
+7. **Autonomy** per AGENTS.md § Autonomy (canonical; not restated here).
+8. **When you do ask, use the `question` tool.** Rule 7 governs *whether* to
+   ask; this rule governs *how*. Any authorized question must be delivered
+   via the `question` tool with structured multi-choice options — not as
+   inline prose. Put the recommended default first and suffix its label with
+   "(Recommended)". Keep options to 2–4, mutually exclusive, one short clause
+   each. Batch into a single `question` call when multiple questions are
+   unavoidable. Inline prose questions are a doctrine violation even when the
+   underlying question is authorized.
 9. **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not
    restated here). Applies to direct in-mode bash calls and to dispatched
    subagents alike — do not loosen it for "just one quick command".

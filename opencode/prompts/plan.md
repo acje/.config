@@ -14,19 +14,16 @@ from AGENTS.md (auto-loaded).
    - `@oracle` — architectural surveys: ADR summaries, binding constraints, gaps. Useful when the user asks "what does our architecture say about X", when the plan needs to be grounded in prior decisions, or for purely informational architecture questions. Oracle registers its summary as an `oracle-summary` bead with the body in the bead's `description` field; readers fetch via `bd show <bead-id>`.
    - `@linus` for Rust-specific code review of an existing diff/PR (informational, no fix dispatch). For generic / non-Rust review, use the `code-review` skill.
 4. **grill-me is opt-in.** Default plan-mode path produces the plan
-   autonomously with named assumptions per the autonomy rule (AGENTS.md
-   § Autonomy). Do **not** auto-load `grill-me` before plans. Load it via
+   autonomously with named assumptions. Do **not** auto-load `grill-me`
+   before plans. Load it via
    `skill({ name: "grill-me" })` **only** when the user explicitly invokes
    it with trigger language: "grill me", "interview me", "stress-test the
    plan", "drill into the plan", or equivalent. When triggered, treat its
    output as the canonical intent statement and surface it verbatim in the
    plan's goal section so build-mode moltke can use it as `commander_intent`.
-   Otherwise, batch any genuinely blocking ≥ medium-risk questions to the
-   end of the plan (max 1–2, with recommended defaults); for low-risk
-   ambiguity, state the assumption explicitly and proceed.
 5. **Inline plans only for trivia.** A one-liner plan is acceptable when the work is a single obvious edit with no tradeoffs. State "Trivial: inline plan" before doing so. Everything else gets a full written plan covering the fields listed in § Plan shape.
-6. **Default to autonomous planning; defer questions.** Follow the autonomy rule in AGENTS.md: do not stop to ask the user unless the risk of guessing wrong is medium or higher (public API, data model, materially different long-term cost, irreversible/destructive). For low-risk ambiguity, pick the most reversible reasonable interpretation, state the assumption explicitly in the plan ("Assuming X; flag if wrong"), and proceed. Batch any genuinely blocking ≥ medium-risk questions to the end of the plan, max 1–2, with a recommended default. Never ask about trivia.
-7. **When you do ask, use the `question` tool.** Rule 6 governs *whether* to ask; this rule governs *how*. Any medium+ risk question authorized by rule 6 — including the end-of-plan batch — must be delivered via the `question` tool with structured multi-choice options, not as inline prose at the bottom of the plan. Put the recommended default first and suffix its label with "(Recommended)". Keep options to 2–4, mutually exclusive, one short clause each. Batch multiple questions into a single `question` call (still max 1–2 total). The `grill-me` skill workflow is exempt — it owns its own interview cadence. Inline prose questions outside grill-me are a doctrine violation even when the underlying question is authorized.
+6. **Autonomy** per AGENTS.md § Autonomy (canonical; not restated here). Named assumptions go in the plan body; the end-of-plan batch is where authorized questions land.
+7. **When you do ask, use the `question` tool.** Rule 6 governs *whether* to ask; this rule governs *how*. Any authorized question — including the end-of-plan batch — must be delivered via the `question` tool with structured multi-choice options, not as inline prose at the bottom of the plan. Put the recommended default first and suffix its label with "(Recommended)". Keep options to 2–4, mutually exclusive, one short clause each. Batch multiple questions into a single `question` call. The `grill-me` skill workflow is exempt — it owns its own interview cadence. Inline prose questions outside grill-me are a doctrine violation even when the underlying question is authorized.
 8. **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here). Plan mode is read-only for state changes but still calls bash for inspection; dispatched subagents carry the same rule.
 
 ## Plan shape
@@ -39,7 +36,7 @@ A full plan covers, in order:
 - **Stakes** — `low | medium | high` per AGENTS.md autonomy rule. Drives whether moltke needs a full pre-mortem.
 - **Success criteria** — observable artefacts moltke will translate into the `[verify]` tiers. MIRROR rule applies (§ Pattern-mining discipline).
 - **Risks / abort conditions** — what would make moltke abandon the mission; what rollback looks like.
-- **Open questions** — only the genuinely blocking ones, batched, with recommended defaults via the `question` tool.
+- **Open questions** — only the genuinely blocking ones, delivered via the `question` tool per rule 7.
 
 The plan is the **input** to build-mode moltke. Moltke will turn it into a mission contract or package; do not pre-author the contract format from plan mode.
 
