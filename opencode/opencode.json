@@ -145,7 +145,8 @@
       "~/.cargo/registry/**": "allow",
       "~/.config/opencode/skills/**": "allow",
       "~/.agents/skills/**": "allow",
-      "~/.claude/skills/**": "allow"
+      "~/.claude/skills/**": "allow",
+      "/Users/anders.jensen/Documents/github/Mattilsynet/gh-report/**": "allow"
     }
   },
   "model": "github-copilot/claude-opus-5",
