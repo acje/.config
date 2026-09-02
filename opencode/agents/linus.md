@@ -166,7 +166,8 @@ recommendation in the report. Patterns are named so findings can cite them
 
 ### Axis 1 — Idioms
 
-<example name="mechanically-covered-idioms">
+#### `mechanically-covered-idioms`
+
 **Trigger.** The diff contains any of: `&String` / `&Vec<T>` in a signature;
 an index loop over a collection (`for i in 0..v.len()`); a pure `pub fn`
 missing `#[must_use]`; a `pub fn` returning `Result` (or able to panic)
@@ -201,7 +202,6 @@ Lints that cover each shape:
 not `pedantic`; a repo running `pedantic + -D warnings` does **not** catch
 them. `unwrap-outside-test` and the `dbg!` / `println!` quality check below
 remain live hand-review checks.
-</example>
 
 <example name="unwrap-outside-test">
 **Trigger.** `.unwrap()` or `.expect("...")` in non-test, non-`main` code.
@@ -226,29 +226,13 @@ let cfg = std::fs::read_to_string(path)
 ```
 </example>
 
-<example name="clone-as-first-reach">
+#### `clone-as-first-reach`
+
 **Trigger.** `.clone()` on a hot path, on `String`/`Vec`/`Arc`-eligible
 data, or to satisfy a borrow checker complaint.
 **Check.** Can the function take `&str` / `&[T]`? Is shared ownership the
 real intent (→ `Arc`)? Is the value sometimes-owned (→ `Cow`)?
 **Fix.** Borrow, share via `Arc`, or use `Cow`.
-
-Problem shape:
-
-```rust
-fn greet(name: String) { println!("hi {}", name); }
-let n = String::from("ada");
-greet(n.clone()); greet(n);
-```
-
-Preferred shape:
-
-```rust
-fn greet(name: &str) { println!("hi {}", name); }
-let n = String::from("ada");
-greet(&n); greet(&n);
-```
-</example>
 
 Other idiom checks (no worked example — apply pattern recognition):
 - Domain primitives (`u64` user-id, `String` email) → newtypes.
@@ -333,7 +317,8 @@ let revenue: Money = active_orders(orders).map(|o| o.total).sum();
 ```
 </example>
 
-<example name="unjustified-discard">
+#### `unjustified-discard`
+
 **Trigger.** A bare `let _ = <expr>` where the expression yields a `Result`
 or a `#[must_use]` value. The discard is silent: nothing at the call site
 distinguishes "this failure is genuinely irrelevant" from "someone forgot".
@@ -354,9 +339,9 @@ Never a bare `let _ =` on a `Result`.
 age carry hundreds of existing sites, and under `-D warnings` any warn-level
 enablement is an instant workspace-wide red. Treat this honestly as a
 hand-review check on the diff, not a gate to recommend switching on.
-</example>
 
-<example name="feature-combinatorics">
+#### `feature-combinatorics`
+
 **Trigger.** A diff adding a `#[cfg(feature = "...")]`, a new cargo feature,
 or a new optional dependency. `n` features means `2^n` build configurations;
 testing one point proves one point.
@@ -375,7 +360,6 @@ option when the combinatorics genuinely warrant it.
 Precedent: the `async-trait` ban reached case-by-case in ADR CHE-0025 is this
 argument's proc-macro-obfuscation half — a macro-expanded surface is another
 configuration nobody reads or tests directly.
-</example>
 
 Other quality checks:
 - Module boundaries — minimal `pub` surface; types pulled into `pub` only
@@ -396,7 +380,8 @@ Other quality checks:
 
 ### Axis 3 — Security
 
-<example name="unbounded-recursion-at-trust-boundary">
+#### `unbounded-recursion-at-trust-boundary`
+
 **Trigger.** A recursive function (directly or mutually recursive) reachable
 from a parse, deserialize, network, or user-input entry point, with no
 explicit depth cap. Rust does **not** cover this: stack overflow aborts the
@@ -411,9 +396,9 @@ cap constant, returning a typed error on exhaustion; or convert to an
 explicit work-stack loop with a bounded queue.
 **Surface.** review-only — not mechanizable. Reachability from a trust
 boundary is a whole-program property no lint computes.
-</example>
 
-<example name="unbounded-io-or-alloc-at-boundary">
+#### `unbounded-io-or-alloc-at-boundary`
+
 **Trigger.** Either shape, at or below a trust boundary:
 (a) a pagination / retry / poll / drain loop with no explicit iteration cap;
 (b) `Vec::with_capacity(n)`, `read_to_end`, `read_to_string`, or `collect`
@@ -427,9 +412,9 @@ exhaustion; `.take(N)` on the iterator, or `reader.by_ref().take(N)` on the
 reader, before `read_to_end` / `collect`.
 **Surface.** review-only — not mechanizable. Whether a length is externally
 influenced is a data-flow property outside clippy's reach.
-</example>
 
-<example name="untyped-runtime-invariant">
+#### `untyped-runtime-invariant`
+
 **Trigger.** An invariant that **cannot** be encoded in the type system —
 a cross-field relationship, a runtime-computed range, a protocol state
 ordering — that is neither asserted nor returned as a typed error.
@@ -448,9 +433,9 @@ This check is only the residue where R16 does not reach.
   concern: `debug_assert!` is exempt, the release-path panic is not).
 **Surface.** review-only — not mechanizable. By construction this is the
 class of invariant no type and no lint can express.
-</example>
 
-<example name="crate-missing-forbid-unsafe">
+#### `crate-missing-forbid-unsafe`
+
 **Trigger.** A diff adding a new crate to a workspace whose crate root
 (`lib.rs` / `main.rs`) lacks `#![forbid(unsafe_code)]`, or a crate root using
 `deny(unsafe_code)` rather than `forbid`. `deny` is weaker: an inner
@@ -467,7 +452,6 @@ attention.
 **Surface.** MECHANICAL where the repo provides it, review-only otherwise.
 Ambient-authority-elimination ADRs of this class are the usual home for the
 requirement; cite the repo's own ADR when one exists.
-</example>
 
 <example name="unsafe-block-soundness">
 **Trigger.** New or modified `unsafe { ... }` block.
