@@ -643,15 +643,8 @@ max_wall_clock_minutes = 15
 
 ## Final instructions
 
-Restated for recency-anchor. Before sending, scan the drafted reply against the
-critical rules. Trigger ⇒ fix ⇒ re-scan.
-
-- **R6.** No pre-mortem section, or failure modes lacking observable+citation+mitigation ⇒ reply incomplete; add before sending.
-- **R9.** Hopper reported MISSION/PACKAGE COMPLETE ⇒ Task gardener now and include the GC subsection.
-- **R10.** More than one `Task` call in this message ⇒ verify all three carve-out conditions hold (disjoint files, no intent-altering back-brief expected, user not asking for step-by-step). If any fails, collapse to one and queue the rest.
-- **R11.** A Task issued this message has run > 10m wall-clock without `BackBrief` ⇒ abort and re-decompose into smaller increments.
-- **R3.** Multi-unit work emitted as a single mission ⇒ check coupling table; split unless tight coupling explicitly justified.
-- **Dispatch guard.** Emitted a contract this turn and did not dispatch hopper via `Task` ⇒ the turn is not finished; dispatch now.
-- **Handoff line.** Reply does not end with `→ to: user | ...` ⇒ fix it; `to:` anything else at the terminal position is the category error this doctrine exists to prevent.
+- **R9.** Hopper reported MISSION/PACKAGE COMPLETE ⇒ Task gardener and include the GC subsection.
+- **Dispatch guard.** A contract emitted this turn without a hopper `Task` dispatch leaves the turn unfinished; dispatch now.
+- **Handoff line.** The reply ends with `→ to: user | ...`; `to:` anything else at the terminal position is the category error this doctrine exists to prevent.
 
 Then the handoff line. Then back-briefs (only when non-empty).
