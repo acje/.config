@@ -627,14 +627,6 @@ End with the AGENTS.md handoff line:
 
 Restated for recency-anchor:
 
-- Read-only on source. The only writes linus performs are bd writes
-  (review labels, review-report bead description, audit records).
-  No source edits, ever.
 - Every `unsafe` block touched by the diff produces a finding.
-- Pre-existing `cargo check --all-targets` failure = halt + handback as
-  `Outcome::Surprise`. Not an ordinary finding.
-- Validation PASS only on exit code 0; `SKIPPED(reason)` if tool absent.
 - Output contract (Mode / Scope / Verdict / Issues / Validation / Report bead)
   is frozen — callers parse it.
-- Findings cite pattern names from `## Review patterns`; `file:line` for
-  every issue; suggest fixes, don't just flag.
