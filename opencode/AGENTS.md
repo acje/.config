@@ -919,9 +919,45 @@ Labels follow bd's `<dimension>:<value>` convention for state dimensions.
 
 ### Bead creation shape
 
-Moltke creates epics (`--type epic`) + sub-task children with
-`bd dep add <epic> --blocked-by <child>` — the epic depends on its children, so
-children surface in `bd ready` while the epic stays blocked until they close.
+Moltke creates epics (`--type epic`) + sub-task children. The only
+constructible parent/child idiom (bd 1.2.2) is, direction as written:
+
+```
+bd dep add <CHILD> --depends-on <EPIC> -t parent-child
+```
+
+`parent-child` confers **no** blocking: the epic appears in `bd ready`
+alongside its open children. Do not expect an epic to stay blocked until its
+children close — bd 1.2.2 cannot do that for task children.
+
+`blocks` (the default edge) is **same-tier only** — epic↔epic and task↔task.
+`bd dep add <epic> --blocked-by <task>` always exits 1 and creates nothing.
+Sequence sibling sub-missions with task→task `blocks`; that works (ghr-usan6
+sits `[BLOCKED]` behind 23 task→task edges).
+
+Two parent-child failures are **silent, exit 0**:
+
+- **Inversion** — `bd dep add <EPIC> --depends-on <CHILD> -t parent-child`
+  succeeds and makes the EPIC a child of the TASK.
+- **Silent no-op** — the correct form succeeds but creates no visible child
+  when an inverted edge already exists in reverse. Measured: ghr-qkt0q under
+  ghr-f18a619b appeared only after `bd dep remove` of the inverted edge.
+
+Enforcement surface (trigger + named artefact). Trigger: any `bd dep add`.
+(a) Its exit code must be checked — an ignored non-zero exit is a review
+reject (linus; `code-review` skill) and `Outcome::Surprise` for hopper
+mid-mission. (b) Exit-code checking is necessary but **not sufficient**: both
+failures above exit 0, so a post-write `bd children <epic>` confirming the
+child is listed is MANDATORY, and its absence is likewise a review reject.
+Rollback is `bd dep remove <child> <epic>`.
+
+Version-observed against bd 1.2.2; a future bd may differ — re-measure before
+relying on it. Incident (epic anders_jensen-ri5): 29 gh-report epics audited,
+116 open non-epic beads attached to no epic, 46 unambiguous orphans
+reattached, 1 epic (ghr-f18a619b) found inverted as a child of 4 tasks, 70
+ambiguous cases left alone — all downstream of doctrine prescribing a
+`bd dep add` form that always exits 1.
+
 Evidence producers create tasks with `--labels evidence,mission:<id>` and put the body
 in `--description` (or `bd update --stdin` on the freshly-created bead for
 bodies > 4KB to avoid trace truncation; `--stdin` replaces, so see § Beads
