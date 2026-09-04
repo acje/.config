@@ -1108,6 +1108,47 @@ Agents must state which mode they ran in (capability-available vs. fallback)
 so the caller knows whether output reflects authoritative tooling or a
 best-effort scan.
 
+### Sourcing an in-house CLI tool (unpublished)
+
+In-house Rust CLI tools are installed **from their canonical git repo**, not
+from a path, a vendored copy, or crates.io. This is the standing pattern for
+`adr-fmt` and for any future tool on the same footing (e.g. `comment-free`):
+
+```
+cargo +<pinned-toolchain> install --git https://github.com/<org>/<tool> --locked <tool>
+```
+
+Three rules make it work:
+
+1. **`cargo install --git` ignores the source repo's `rust-toolchain.toml`.**
+   It builds with the *invoking* toolchain. Pass `+<version>` explicitly
+   matching the tool's pin, or the install fails with "requires rustc X or
+   newer". Measured 2026-09-04: `adr-fmt` pins 1.98.0, local `stable` was
+   1.97.1, the unqualified install errored.
+2. **`--locked` is mandatory.** It uses the tool repo's committed
+   `Cargo.lock`, so the build is the one the tool's own CI exercised.
+3. **A path-installed binary is unverifiable.** `cargo install` records
+   provenance and prints it on replace; a `--path` install records a
+   *local directory*, which can be renamed or deleted while the binary keeps
+   working and keeps answering the same `--version`. Incident 2026-09-04:
+   `~/.cargo/bin/adr-fmt` was a ghost build from
+   `~/Documents/github/acje/adr-fmt/crates/adr-fmt`, a directory that no
+   longer exists; oracle had been running it for an unknown period. Nothing
+   surfaced this until a `--git` install replaced it and printed the old
+   source path.
+
+**Version is not an identity.** Two divergent builds of the same tool at the
+same `version =` are indistinguishable at the CLI. When more than one copy of
+a tool exists, treat `--version` output as non-evidence and establish
+provenance from the install record (`cargo install --list`) instead.
+
+Enforcement surface (prose; trigger + named artefact). **Trigger:** a diff
+adding or retaining `cargo install --path` for an in-house tool in CI or
+setup docs. **Artefact:** review reject (linus; `code-review` skill) — a path
+install pins CI to a copy that is not the canonical repo, which is how forks
+go unnoticed. Vendoring a tool as a workspace member is a separate decision
+requiring a recorded rationale, not a default.
+
 ## graphify
 
 Structural knowledge graph at `graphify-out/graph.json`.
