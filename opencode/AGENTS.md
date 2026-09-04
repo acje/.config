@@ -419,6 +419,35 @@ Three rules earn their keep:
    re-checks after real mutations (`git add`, commit, apply, checkout, stash,
    reset, or equivalent) because they re-confirm changed tree state and are
    correct.
+7. **Never round-trip machine-readable output through `echo`.** The fleet
+   shell is zsh, whose *builtin* `echo` interprets backslash escapes by
+   default (no `BSD_ECHO`). Capturing a tool's JSON into a variable and
+   replaying it with `echo "$JSON"` silently rewrites the payload: a `\n`
+   inside a JSON string loses its backslash and becomes a **raw newline
+   inside a string**, which is invalid JSON. Measured 2026-09-04:
+
+   ```
+   J='{"a":"x\\ny"}'
+   printf '%s' "$J" | jq -c .   # {"a":"x\\ny"}   correct
+   echo      "$J" | jq -c .     # {"a":"x\ny"}    backslash eaten
+   ```
+
+   Use `printf '%s'`, redirect to a file under `.ooda/tmp/<mission_id>/`, or
+   pipe the producer straight into the consumer without a variable
+   round-trip. This is the same failure class as the `PIPESTATUS` guard in
+   rule 2 — the shell corrupts the evidence and the corruption looks like a
+   defect in the data.
+
+   Enforcement surface (prose; trigger + named artefact). **Trigger:** a
+   command replaying captured machine-readable output via `echo "$VAR"`.
+   **Artefact 1:** review reject (linus; `code-review` skill). **Artefact 2:**
+   a parse error from a tool that emits well-formed output by contract is
+   `Outcome::Surprise`, **not** evidence the data is corrupt — re-emit via
+   `printf '%s'` and re-parse *before* concluding anything about the source.
+   Incident: a `jq` "control characters … must be escaped" error on
+   `bd list --json` was misread as a corrupt bead body, costing a phantom
+   defect hunt and a full scan of 4138 beads (24.8 MB) that found nothing.
+   The bead store was clean; `echo` was the defect.
 
 Empty stdout from an evidence-producing or state-changing pipeline (`cargo`,
 `pytest`, build tools) is `Outcome::Surprise`, not a clean result — re-run
