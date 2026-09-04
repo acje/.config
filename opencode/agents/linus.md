@@ -234,6 +234,32 @@ data, or to satisfy a borrow checker complaint.
 real intent (→ `Arc`)? Is the value sometimes-owned (→ `Cow`)?
 **Fix.** Borrow, share via `Arc`, or use `Cow`.
 
+#### `guard-then-match-split`
+
+**Trigger.** A diff introducing or retaining one or more leading
+`if <cond> { return <literal>; }` guards immediately preceding a `match`
+that decides the same thing the guards decide — one predicate fragmented
+across guards and a match rather than expressed as one table.
+**Check.** Do the guards reject a *sentinel spelling* of a state the match
+already has a case for (`""` as absent, `Some("")` as a second absent, `0`
+as unset, a magic default)? If so this is a typing defect, not a layout
+defect: `illegal-state-representable` (hopper R16) is the primary check —
+a newtype with no empty inhabitant, so absence has exactly one spelling.
+**Fix.** Fix the type first so the guards have nothing left to reject, then
+express the decision as a single exhaustive match over the inputs.
+**Exempt — do NOT flag** (per AGENTS.md § House style — Rust control flow):
+genuine preconditions in a function that is not otherwise a match; `?`
+propagation and `let … else` on a fallible parse; `continue` guards inside
+a loop; early returns that short-circuit expensive work rather than express
+part of the decision; guards that establish the scrutinee's validity (e.g.
+rejecting an empty slice before matching on `slice[0]`).
+**Not** "always use exhaustive match" — that would collide with CHE-0021's
+`#[non_exhaustive]` error enums and with COM-0010's Context, which endorses
+guard clauses. No ADR governs statement shape; this is fleet doctrine.
+**Surface.** review-only. No clippy lint and no CI tripwire enforces this;
+do not claim one. A regex for the shape measured 1/8 precision as a defect
+detector (gh-report workspace, 2026-09-04) — not a sanctioned surface.
+
 Other idiom checks (no worked example — apply pattern recognition):
 - Domain primitives (`u64` user-id, `String` email) → newtypes.
 - Public growable enums/structs missing `#[non_exhaustive]`.

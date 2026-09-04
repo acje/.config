@@ -462,6 +462,56 @@ Linus enforces this in review (see `agents/linus.md`); shape details for
 hopper-produced code live in `agents/hopper.md` § R15. Other agent
 prompts must not contradict this section.
 
+## House style — Rust control flow
+
+**Fleet-wide rule.** A single decision must not be SPLIT between leading
+`if … { return … }` guards and a `match` that expresses the rest of the
+same decision. Express that decision as one exhaustive match over its
+inputs. Where the guards exist only to reject a sentinel spelling of a
+state the match already has a case for — `""` as absent, `Some("")` as a
+second absent, `0` as unset, a magic default — fix the **type** first
+(hopper R16, make illegal states unrepresentable) so the guards have
+nothing left to reject; the single match then falls out as a consequence
+rather than as a style choice to remember.
+
+This is **not** "always use exhaustive match". Guard clauses are
+endorsed, and mandating exhaustiveness generally would collide with
+`#[non_exhaustive]` error enums. The rule is about **fragmentation of one
+decision**, not about the presence of guards.
+
+**Exempt — these are not the target:**
+
+- Genuine preconditions in a function that is not otherwise a match.
+- `?` propagation and `let … else` on a fallible parse.
+- `continue` guards inside a loop.
+- Early returns that short-circuit expensive work rather than express
+  part of the decision.
+- Guards that establish the match scrutinee's validity (e.g. rejecting an
+  empty slice before matching on `slice[0]`).
+
+**No ADR governs this** — the ADR corpus covers toolchain, dependency,
+lint, and unsafe policy, and `COM-0010`'s Context explicitly endorses
+guard clauses; nothing constrains statement shape. This is fleet
+doctrine, not ADR-derived.
+
+**Enforcement surface** (trigger + named artefact, per § Adding to this
+file):
+
+- **Trigger.** A diff introducing or retaining one or more
+  `if <cond> { return <literal>; }` guards immediately preceding a
+  `match` that decides the same thing the guards decide.
+- **Artefact 1.** Linus review reject — `guard-then-match-split` in
+  `agents/linus.md` § Review patterns → Axis 1.
+- **Artefact 2.** A standard-mode checklist row in
+  `skills/code-review/SKILL.md` § Phase 2.
+- **Artefact 3.** For hopper mid-mission, this is a refactor opportunity
+  under R17 (surface it), **not** `Outcome::Surprise`.
+
+No clippy lint and no CI tripwire enforces this; do not claim one. A
+regex over `crates/**/*.rs` for the shape was measured at 1/8 precision
+as a defect detector (7 raw hits, 7 exempt, on the gh-report workspace
+2026-09-04) and is therefore **not** a sanctioned surface.
+
 ## When to call automaton
 
 Any agent (including hopper and gardener) may call `automaton` when it hits a

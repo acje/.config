@@ -57,6 +57,7 @@ ask the user.
 | Patterns | Matches existing codebase conventions |
 | Error handling | Errors caught, propagated, or surfaced — not swallowed |
 | Tests | New behavior has new tests; regressions have regression tests |
+| Control flow (Rust) | Is one decision SPLIT between leading `if … { return … }` guards and a `match` deciding the same thing? Where the guards only reject a sentinel (`""`/`Some("")`/`0`/magic default), flag the **type**, not the layout. Exempt: genuine preconditions, `?`/`let … else`, loop `continue` guards, early returns short-circuiting expensive work, guards establishing the scrutinee's validity. Not "always use exhaustive match". See AGENTS.md § House style — Rust control flow |
 
 ### Phase 3 — Validate
 
