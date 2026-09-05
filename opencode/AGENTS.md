@@ -153,6 +153,27 @@ browses metadata without inlining bodies.
 Never stage evidence bodies on disk as the durable home. The bead
 `description` field is the durable home; the working tree is not.
 
+**A pointer to an empty body is a broken pointer.** The `artefact: bd-NNN`
+contract promises a dereferenceable body; a bead labelled `evidence`,
+`oracle-summary`, `review-report`, or `mission-brief` whose `description` is
+empty or whitespace-only breaks it, and the reader discovers this only after
+paying for the `bd show`. Measured: survey finding **S4** counted 248 such
+beads. The write can fail silently — `--stdin` REPLACES, and a failed pipe
+leaves the description empty — so the **producing agent must confirm the body
+landed before handing off**:
+
+```
+bd show <id> --json | jq -r '.[0].description' | head -c 200
+```
+
+Enforcement surface (trigger + named artefact). **Trigger:** emitting
+`artefact: bd-NNN` in a handoff line for a bead whose `description` is empty
+or whitespace-only. **Artefact 1:** `bd-doctor` `EMPTY_EVIDENCE` (Error,
+exit 1) — `cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor --
+--all`. **Artefact 2:** review reject (linus; `code-review` skill).
+**Artefact 3:** `Outcome::Surprise` for hopper mid-mission — the handoff does
+not ship until the body is confirmed present.
+
 **This applies to `Task` invocations too.** A task prompt that inlines a
 full mission brief will be truncated in traces and inflates the calling
 agent's context. Mission briefs live in a bd bead (label `mission-brief`
@@ -949,12 +970,35 @@ Labels follow bd's `<dimension>:<value>` convention for state dimensions.
 
 ### Bead creation shape
 
-Moltke creates epics (`--type epic`) + sub-task children. The only
-constructible parent/child idiom (bd 1.2.2) is, direction as written:
+**This section is AUTHORITATIVE for bd parentage and membership idioms.**
+Agent prompts and skills derive from it by cross-reference; they do not
+restate it (a restatement that drifts is a COM-0027-shape defect). The one
+sanctioned specialization is `skills/wayfinder/SKILL.md`, which adds
+graph-consuming requirements on top of this base — see § Mission membership.
+
+Moltke creates epics (`--type epic`) + sub-task children. The **prescribed**
+idiom is create-time parentage (verified against bd 1.2.2 — `bd create --help`
+lists `--parent string   Parent issue ID for hierarchical child`):
+
+```
+bd create "<title>" --type task --parent <EPIC> --labels "mission:<id>"
+```
+
+Prefer it because it is **atomic**: the child is born under the epic, in the
+correct direction, in one write. Both silent failure modes documented below
+are structurally unreachable through it — there is no second call to invert,
+and no pre-existing reverse edge for it to no-op against.
+
+`bd dep add … -t parent-child` remains **constructible** and is the fallback
+for re-parenting a bead that already exists:
 
 ```
 bd dep add <CHILD> --depends-on <EPIC> -t parent-child
 ```
+
+Use it only when create-time `--parent` was not available (the bead predates
+the decision to parent it). Its hazards are the rationale for preferring
+`--parent`, not a reason to avoid parentage altogether.
 
 `parent-child` confers **no** blocking: the epic appears in `bd ready`
 alongside its open children. Do not expect an epic to stay blocked until its
@@ -973,20 +1017,59 @@ Two parent-child failures are **silent, exit 0**:
   when an inverted edge already exists in reverse. Measured: ghr-qkt0q under
   ghr-f18a619b appeared only after `bd dep remove` of the inverted edge.
 
-Enforcement surface (trigger + named artefact). Trigger: any `bd dep add`.
-(a) Its exit code must be checked — an ignored non-zero exit is a review
-reject (linus; `code-review` skill) and `Outcome::Surprise` for hopper
-mid-mission. (b) Exit-code checking is necessary but **not sufficient**: both
-failures above exit 0, so a post-write `bd children <epic>` confirming the
-child is listed is MANDATORY, and its absence is likewise a review reject.
-Rollback is `bd dep remove <child> <epic>`.
+Enforcement surface (trigger + named artefact). **Trigger:** any `bd dep add
+… -t parent-child`. (a) Its exit code must be checked — an ignored non-zero
+exit is a review reject (linus; `code-review` skill) and `Outcome::Surprise`
+for hopper mid-mission. (b) Exit-code checking is necessary but **not
+sufficient**: both failures above exit 0, so a post-write `bd children <epic>`
+confirming the child is listed is MANDATORY, and its absence is likewise a
+review reject. Rollback is `bd dep remove <child> <epic>`. (c) **Runnable
+artefact:** `bd-doctor` detects both residues after the fact —
+`INVERTED_PARENT` (an epic sitting as the child of a non-epic task) and
+`CHILDLESS_EPIC` (`type=epic` with zero parent-child children), both Error,
+exit 1:
+
+```
+cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor -- --all
+```
+
+(`scripts/src/bin/bd-doctor.rs` in `Mattilsynet/scripts`; read-only.)
 
 Version-observed against bd 1.2.2; a future bd may differ — re-measure before
-relying on it. Incident (epic anders_jensen-ri5): 29 gh-report epics audited,
-116 open non-epic beads attached to no epic, 46 unambiguous orphans
-reattached, 1 epic (ghr-f18a619b) found inverted as a child of 4 tasks, 70
-ambiguous cases left alone — all downstream of doctrine prescribing a
-`bd dep add` form that always exits 1.
+relying on it. Evidence that the two-step form fails in practice at scale:
+survey finding **S2** counted 59 inverted parent edges, and **S3** counted 355
+childless epics, across the audited workspaces — both artefacts of doctrine
+that previously prescribed `bd dep add` as the *only* idiom. Earlier incident
+(epic anders_jensen-ri5): 29 gh-report epics audited, 116 open non-epic beads
+attached to no epic, 46 unambiguous orphans reattached, 1 epic (ghr-f18a619b)
+found inverted as a child of 4 tasks, 70 ambiguous cases left alone.
+
+### Mission membership — label by default, edges where the graph is read
+
+A prior version of this file mandated that every bead be wired into a mission
+epic by a parent-child edge. **That mandate is retired on evidence** (survey
+findings **S1** and **S6**): 4618 beads — about 75% of the store — carry no
+parent edge, yet closure demonstrably works (only 3 stale epics out of 506),
+because `gardener` resolves a mission's children by `mission:<id>` **label**,
+not by traversing the graph. "% of beads parented" measures graph
+*completeness*, which nothing consumes; what matters is graph *integrity*
+where a workflow actually reads it. This is a deliberate supersession, not
+drift — do not reintroduce the mandate.
+
+| Mechanism | Status |
+|---|---|
+| `mission:<id>` **label** | **Default, sanctioned** membership mechanism. Gardener already resolves children by it (`agents/gardener.md` Rules 4 and 6). Every non-epic bead carries one. |
+| **parent-child edge** | **Required only where a workflow queries the graph** — currently `skills/wayfinder/SKILL.md`, whose frontier is literally `bd ready --parent <map-id> -u`. Elsewhere optional; **its absence is not a defect.** |
+
+Enforcement surface (trigger + named artefact). **Trigger:** creating a
+non-epic bead reachable by *neither* mechanism — no `mission:<id>` label and
+no parent-child edge. **Artefact:** `bd-doctor` `MISSING_MISSION_LABEL`
+(Error, exit 1). A bead that is merely unparented but correctly labelled is
+`bd-doctor` `ORPHAN`, which is **Info by default** and becomes an Error
+**only** under `--strict-parentage` — the flag graph-consuming workflows opt
+into (§ wayfinder). Do not read a default-run `ORPHAN` line as a defect; on
+the audited store it is 418-count background noise against 4 real
+`INVERTED_PARENT` and 2 real `EMPTY_EVIDENCE` findings.
 
 Evidence producers create tasks with `--labels evidence,mission:<id>` and put the body
 in `--description` (or `bd update --stdin` on the freshly-created bead for

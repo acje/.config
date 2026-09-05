@@ -153,10 +153,29 @@ Never write the map to a scratch file first.
 ### Tickets
 
 Each ticket is a **child bd task** of the map epic, wired by the `--parent`
-flag at create time. `bd dep add` is reserved solely for blocking edges
-between tickets (see below) — it defaults to a `blocks` edge, not
-parent-child, so it must never be used to wire parentage. The bead id is
-its identity. Its description is the question, sized to one session:
+flag at create time — the prescribed idiom, defined authoritatively in
+AGENTS.md § Beads → Bead creation shape and not restated here. `bd dep add`
+is reserved solely for blocking edges between tickets (see below).
+
+Wayfinder is the **documented specialization** of AGENTS.md § Mission
+membership: parent-child edges are optional fleet-wide, but MANDATORY here,
+because this skill is the one workflow that actually queries the graph — the
+frontier is literally `bd ready --parent <map-id> -u`, so a missing edge
+silently drops a ticket off the map. Accordingly wayfinder maps are checked
+with `bd-doctor --strict-parentage`, under which `ORPHAN` is promoted from
+Info to Error:
+
+```
+cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor -- --all --strict-parentage
+```
+
+Enforcement surface (trigger + named artefact). **Trigger:** a wayfinder
+ticket created without `--parent <map-id>`. **Artefact:** `bd-doctor
+--strict-parentage` `ORPHAN` (Error, exit 1); the ticket never appears in the
+frontier query, so the omission is load-bearing, not cosmetic.
+
+The bead id is its identity. Its description is the question, sized to one
+session:
 
 ```
 ## Question
