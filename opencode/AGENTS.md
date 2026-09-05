@@ -947,11 +947,51 @@ label-state machine distinguishes it from generic coordination, but
 mechanically it is an A-shaped bead — body in description, no paired files.
 ### Database discovery
 
-Every agent that uses bd runs `bd where` at session start. If it exits
-non-zero (no active workspace), the agent runs `bd init` in the project
-root (`git rev-parse --show-toplevel`) and proceeds. No halt, no ask.
-Override discovery with `--db <path>` or `BEADS_DIR` env when targeting a
-scratch or non-default workspace.
+Every agent that uses bd runs `bd where` at session start. What follows a
+non-zero exit depends on **where the agent is standing** — `bd init` is a
+store-manufacturing operation, not a recovery step:
+
+| CWD | `bd where` exits non-zero → |
+|---|---|
+| Inside a git repo (`git rev-parse --show-toplevel` succeeds) | `bd init` at the repo root, proceed. No halt, no ask. |
+| Not inside a git repo — including `$HOME` itself | **Do not run `bd init`.** Report the failure and halt. |
+
+There is no home-level bd store and no non-repo bd store. An agent that
+starts under `$HOME` outside any repo and "recovers" by running `bd init`
+manufactures a store that then captures every later session starting
+anywhere beneath it. Discovery failure outside a repo is a loud failure,
+not a thing to fix in place.
+
+**Pin discovery; do not trust the ambient walk.** bd treats "this repo has
+a `.beads/` directory" and "that directory contains a database" as
+*separate* conditions, so a repo carrying a git-tracked `.beads/` skeleton
+with no database inside does **not** stop bd's upward walk — it silently
+resolves to whatever ancestor store exists. Pass `bd -C <repo-root>` or set
+`BEADS_DIR` when the target workspace matters. Measured mitigation, so the
+claim is not overstated: a repo with **no** `.beads` directory at all
+already fails cleanly today (`bd where` in `Mattilsynet/comment-free`
+returns `Error: No active beads workspace found`). The leak reaches an
+ancestor store only via non-repo parent directories or via hollow-`.beads`
+repos — those two shapes, not every repo.
+
+**`bd --db <path>` fails open.** Pointed at a directory that is not a bd
+store, it does **not** error: it silently falls back to auto-discovery and
+returns a *different* store's contents, at exit 0. A clean exit code is
+therefore not evidence you are talking to the store you named.
+
+Enforcement surfaces (trigger + named artefact, per § Adding to this file):
+
+| Trigger | Artefact |
+|---|---|
+| A bd store exists at `$HOME/.beads` | `bd-doctor` `HOME_STORE_PRESENT` (Error, exit 1) — `cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor -- --all` |
+| A diff or session running `bd init` outside a git repo root | Review reject (linus; `code-review` skill); `Outcome::Surprise` for hopper mid-mission |
+| Asserting on the **exit code** of a `bd --db` / `bd -C` call to establish *which* store answered | Review reject; assert on an expected id prefix or bead count instead, never on exit status |
+
+Prose alone will not hold this. The same section that governs additions
+here records the measured precedent: a prose-only ban on full-workspace
+verification at the inner tier was violated in **84.2%** of 1647
+invocations, and only a schema change stopped it. `HOME_STORE_PRESENT` is
+the runnable half of this rule; the table above is the readable half.
 
 ### Label conventions
 
