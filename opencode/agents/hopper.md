@@ -151,7 +151,7 @@ Beads are hopper's durable memory layer. The review loop ↔ linus is the primar
 
 ### Session start
 
-1. `bd where` — if exit ≠ 0, run `bd init` in the project root (`git rev-parse --show-toplevel`) and proceed.
+1. `bd where` — if exit ≠ 0, branch on where you are standing, per AGENTS.md § Beads → Database discovery (authoritative): inside a git repo, `bd init` at `git rev-parse --show-toplevel` and proceed; outside any repo (including `$HOME`), do **not** `bd init` — report the failure and halt.
 2. If active workspace found, read `bd ready --json --label review-request` to check for pending reviews from a prior session.
 
 ### Mission beads
