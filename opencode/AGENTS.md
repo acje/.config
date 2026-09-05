@@ -962,6 +962,20 @@ manufactures a store that then captures every later session starting
 anywhere beneath it. Discovery failure outside a repo is a loud failure,
 not a thing to fix in place.
 
+**The invariant is "no bd STORE at `$HOME/.beads`", not "that path does not
+exist".** The literal form is unachievable: bd writes an anonymous-metrics
+spool to that home-fixed path on every invocation, independent of which
+workspace resolves. Measured 2026-09-05 — deleting `~/.beads` saw it
+reappear within seconds holding only `eventsData/eventkit.lock` plus
+`*.evtq` files (library: storj `eventkit`), payload shape
+`{"distinct_id":…,"app_name":"beads","app_version":"1.2.2","platform":"darwin","events":[…]}`;
+no other bd store on the machine has an `eventsData/`. Opt out with
+`bd metrics off`, which persists globally to `~/.config/bd/config.yaml`
+(`metrics.disabled: true`) and needs no workspace, so it cannot pollute a
+repo database. `HOME_STORE_PRESENT` is already specified for this: it keys
+on store markers (`config.yaml` + `embeddeddolt`), so a bare telemetry
+directory reads 0 by design. Do not read a lone `eventsData/` as a store.
+
 **Pin discovery; do not trust the ambient walk.** bd treats "this repo has
 a `.beads/` directory" and "that directory contains a database" as
 *separate* conditions, so a repo carrying a git-tracked `.beads/` skeleton
