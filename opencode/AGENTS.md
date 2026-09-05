@@ -937,6 +937,7 @@ scratch or non-default workspace.
 | Label | Meaning |
 |---|---|
 | `review-request` | Hopper requests linus review of a TDD increment |
+| `review:tier=tidy` \| `=standard` \| `=adversarial` | Evidence budget for the review; absence resolves to `adversarial` |
 | `review:approved` | Linus approved the increment |
 | `review:needs-work` | Linus rejected; hopper must fix and re-request |
 | `mission:<id>` | Bead belongs to mission `<id>` |
@@ -993,6 +994,54 @@ bodies > 4KB to avoid trace truncation; `--stdin` replaces, so see § Beads
 → Tier 1 before using it on a bead that may already have a body). Handoff lines carry `artefact: bd-NNN`; readers fetch the body via
 `bd show bd-NNN` only when the next decision needs it. See `bd --help` for full CLI.
 
+### Review tiers (Bucket C) — tier the rigour, never the standard
+
+`§ Iteration speed #3` tiers *verification*. The review loop was never tiered,
+so it applied maximum adversarial rigour uniformly. Measured 2026-09-05 on one
+package: linus issued **1379 tool calls against hopper's 1159** — the reviewer
+did more I/O than the implementer — and **6 of 24 commits were `tidy:`**
+(deleting private doc blocks) yet received full execution-proof review.
+
+The tier is a **label on the review-request bead**, not prose:
+
+| Label | Applies to | Evidence linus may spend |
+|---|---|---|
+| `review:tier=tidy` | Structural-only: deletions, renames, moves, doc-comment removal, formatting. No behavioural delta. | Read-level only. Confirm the diff is genuinely structural, test count unchanged, gates green. **No execution proofs, no class sweep, no downstream plants.** |
+| `review:tier=standard` | Behavioural change outside the adversarial triggers below. | Read plus targeted execution on the changed surface. Class sweep scoped to the changed file. |
+| `review:tier=adversarial` | Any adversarial trigger (below). | Full rigour: execution proofs, workspace-wide class sweep, downstream compile plants, four-step guard proof. |
+
+**Adversarial triggers — any one forces the top tier:** guards / tripwires /
+CI gates; `unsafe`; public API surface change; parsing or emitting
+machine-readable records; path handling; error-or-verdict modelling (the
+"error is not a negative finding" class); and **enforcement tooling itself** —
+any tool whose verdict other work relies on, where a false-clean propagates
+silently.
+
+Three rules make the tier fail-safe rather than a discount:
+
+1. **Hopper applies exactly one tier label on create.** A review-request bead
+   carrying no tier label is malformed and linus treats it as
+   `adversarial` — absence resolves to the *most* expensive tier, so
+   under-declaring by omission buys nothing.
+2. **Linus may escalate a tier, never de-escalate.** Escalation is recorded in
+   the verdict line with the trigger that caused it. A reviewer who finds a
+   behavioural delta inside a `tidy:` diff escalates and says so.
+3. **A class sweep is performed once per class per package, not once per
+   finding.** The sweeping increment records the class and its full site list
+   in the report bead; later increments in the same package cite that record
+   instead of re-walking the tree.
+
+Tiering governs the **budget of evidence**, never the **standard of
+correctness**. Nothing is waved through at any tier; a `tidy:` diff that turns
+out to change behaviour is escalated, not excused.
+
+Enforcement surface (trigger + named artefact). **Trigger:** a review-request
+bead created without a `review:tier=` label, or a diff touching an adversarial
+trigger reviewed at a lower tier. **Artefact:** linus escalates to
+`adversarial`, states the trigger, and records the mis-tiering as a Low finding
+against the increment — so the miss is visible in the report rather than
+silently cheap.
+
 ### Review loop ↔ linus (intra-session, Bucket C)
 
 The review loop uses label-based signaling, not gates, for intra-session
@@ -1016,7 +1065,14 @@ pair programming:
    for historical bd queries. Hopper proceeds.
 5. On NEEDS WORK: linus relabels `review:needs-work`. The round-N report bead
    stays OPEN — its findings are live, unactioned work. Hopper fixes,
-   re-requests (max 2 rounds before `SurpriseKind::ReviewRejected` → moltke).
+   re-requests. **The cap counts repeat rejections, not rounds.** A round that
+   surfaces a *new* defect class is convergent discovery and does not consume
+   the cap; two rounds rejecting on the *same* class →
+   `SurpriseKind::ReviewRejected` → moltke. Linus states which case applies in
+   its verdict line. Measured 2026-09-05: a round-count cap was overridden
+   twice in one package, both times because each round found a new class — the
+   cap was counting the wrong thing, so it was obeyed by exception rather than
+   by design.
 6. **Supersede-on-create.** Before creating a round-N report bead with N ≥ 2,
    linus first closes the round-(N-1) report bead:
    `bd close <prev-report-id> --reason "superseded by round-<N> review"`.
@@ -1112,7 +1168,9 @@ best-effort scan.
 
 In-house Rust CLI tools are installed **from their canonical git repo**, not
 from a path, a vendored copy, or crates.io. This is the standing pattern for
-`adr-fmt` and for any future tool on the same footing (e.g. `comment-free`):
+`adr-fmt` and for `comment-free` (canonical at
+https://github.com/acje/comment-free), and for any further tool on the same
+footing:
 
 ```
 cargo +<pinned-toolchain> install --git https://github.com/<org>/<tool> --locked <tool>

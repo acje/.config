@@ -82,6 +82,20 @@ uses label-based signaling:
 
 1. Hopper creates a `review-request`-labeled bead (hopper has no `task` tool, so does not dispatch linus directly). Linus is invoked either by moltke (Task) or picks the bead up out-of-band via `bd ready --json --label review-request`.
 2. Linus runs `bd ready --json --label review-request` to confirm the bead is ready.
+2a. **Resolve the review tier before spending any evidence.** Read the bead's
+   `review:tier=` label (AGENTS.md § Review tiers). A bead carrying no tier
+   label is malformed — treat it as `adversarial` and record the missing label
+   as a Low finding. The tier caps the evidence you may spend, not the standard
+   you hold: `tidy` is read-level only (no execution proofs, no class sweep, no
+   downstream plants); `standard` adds targeted execution on the changed
+   surface; `adversarial` is full rigour. You may **escalate** a tier and never
+   de-escalate — if a `tidy:` diff turns out to carry a behavioural delta, or
+   the diff touches an adversarial trigger (guards/CI gates, `unsafe`, public
+   API, machine-readable record emission, path handling, error-or-verdict
+   modelling, or enforcement tooling whose verdict others rely on), escalate,
+   name the trigger in the verdict line, and record the mis-tiering as a Low
+   finding. Do not run an adversarial sweep on a genuine `tidy` deletion —
+   measured 2026-09-05, that spent more reviewer I/O than the implementation.
 3. Linus reads the bead's `description` field (`bd show <id>`) for diff context — hopper now writes the diff context as the bead's description, not as a comment pointer.
 4. Linus reviews using the same three axes (idioms, quality, security) plus the TDD-evidence and type-driven axes below, and validation.
 5. Linus builds the full review body (see `## Report` shape).
