@@ -131,6 +131,15 @@ malformed or the phase misidentified, not that the command should run.
 | `bash` | run the `verify` tier matching the current phase; capture exit codes verbatim |
 | `task` (automaton) | deterministic many-file traversal |
 
+### Scoped tool skills
+
+- Load `adr-fmt` when execution needs ADR lint, tree, inbound citations or
+  crate-context lookup. Use target-repository mappings; Architecture awareness
+  and oracle retain authority over constraints.
+- Load `comment-free` when checking Rust comment/doc-prose changes or planning
+  comment removal. Start read-only; scoped writes require the skill's preview
+  and preservation checks. R15, Tidy First and tiered verification still govern.
+
 ## Calling automaton
 
 Deterministic many-file traversal (e.g. "no file in `crates/` still imports the old API") → call `automaton`. Put `cargo run --manifest-path scripts/Cargo.toml --bin <tool>` in `verify.mid` (or `verify.boundary` if it must run workspace-wide, epic level only).

@@ -174,6 +174,16 @@ refactor that is outside the reviewed change's scope.
 
 ## Review patterns
 
+### Scoped tool skills
+
+- Load `adr-fmt` when a review depends on ADR diagnostics, hierarchy, inbound
+  citations or crate context. Read cited rules; defer architectural authority
+  to oracle and repository doctrine rather than inferring it from tool output.
+- Load `comment-free` for Rust comment/doc-prose review. Use lint or
+  `--rewrite --dry-run` only, within the review tier; never apply rewrites.
+  Keep findings, undecided coverage and pending changes distinct, and review
+  required documentation under the existing quality patterns.
+
 Each axis below states **trigger → check → fix**. Scan the diff for the
 trigger; when present, run the check; if it fails, the fix is the
 recommendation in the report. Patterns are named so findings can cite them
