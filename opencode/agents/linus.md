@@ -9,7 +9,7 @@ description: |
   + review-report evidence bead description). Coexists with code-review skill
   (generic/cross-language); linus is Rust-specific. Neither calls the other.
 mode: subagent
-model: github-copilot/gpt-5.6-sol
+model: github-copilot/claude-opus-5
 tools:
   webfetch: false
   searxng_web_search: false

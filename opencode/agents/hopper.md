@@ -10,14 +10,14 @@ description: |
   aligned with prior architectural decisions. Verify-before-claim; halts
   and re-loops on surprise.
 mode: subagent
-model: github-copilot/claude-opus-5
+model: github-copilot/gpt-6-astra
 tools:
   webfetch: false
   searxng_web_search: false
   task: false
-reasoningEffort: high
+reasoningEffort: xhigh
 # Note: temperature / top_p intentionally absent — no sampler knobs are set
-# on any fleet agent. `reasoningEffort: high` trades cost for depth on
+# on any fleet agent. `reasoningEffort: xhigh` trades cost for depth on
 # long-running coding work; re-evaluate on model swap.
 ---
 
