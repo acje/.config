@@ -8,12 +8,12 @@ description: |
   Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
-model: github-copilot/claude-sonnet-5
+model: github-copilot/gemini-3.8-flash
 tools:
   webfetch: true
   searxng_web_search: true
   task: false
-reasoningEffort: max
+reasoningEffort: high
 ---
 
 # Copernicus — Observe

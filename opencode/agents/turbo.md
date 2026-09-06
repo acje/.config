@@ -6,7 +6,8 @@ description: |
   family, rewrites, then self-audits against per-principle checklists. Output
   destination chosen per-invocation (inline / .ooda artefact / both).
 mode: subagent
-reasoningEffort: low
+model: github-copilot/gpt-6-astra
+reasoningEffort: xhigh
 tools:
   webfetch: false
   searxng_web_search: false

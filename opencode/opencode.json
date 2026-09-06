@@ -182,39 +182,44 @@
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-5"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.6-sol",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gpt-6-astra",
+      "reasoningEffort": "max"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-5"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
       "model": "github-copilot/claude-opus-5",
-      "reasoningEffort": "high"
+      "reasoningEffort": "xhigh"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-5"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "medium"
     },
     "automaton": {
       "prompt": "{file:./agents/automaton.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-5"
+      "model": "github-copilot/gpt-6-astra",
+      "reasoningEffort": "xhigh"
     },
     "turbo": {
       "prompt": "{file:./agents/turbo.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-5"
+      "model": "github-copilot/gpt-6-astra",
+      "reasoningEffort": "xhigh"
     },
     "dramallama": {
       "prompt": "{file:./prompts/build.md}",

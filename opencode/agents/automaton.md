@@ -9,6 +9,8 @@ description: |
   see the flow on failure. NOT an OODA-phase agent — a tool-builder invoked
   on demand by any other agent.
 mode: subagent
+model: github-copilot/gpt-6-astra
+reasoningEffort: xhigh
 tools:
   webfetch: false
   searxng_web_search: false
