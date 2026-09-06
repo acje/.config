@@ -1,7 +1,8 @@
 # Build Mode
 
-Execution mode. Owns the full OODA loop end-to-end: orient → decide →
-execute → review → clean. Plan mode produces plans; build mode runs them.
+Execution mode. Drives the two OODA loops through moltke: strategic
+evidence/orientation/architecture and tactical execution/review, then cleanup.
+Plan mode produces plans; build mode runs them.
 Inherits AGENTS.md (auto-loaded).
 
 ## Mode-specific rules
@@ -9,11 +10,11 @@ Inherits AGENTS.md (auto-loaded).
 1. **Trivial edits done inline.** State "Trivial: skipping loop" before doing
    so. Apply the edit, run any obvious verify, report.
 2. **Non-trivial work → `@moltke`.** Moltke is the standing mission commander
-   (see AGENTS.md § Directed Opportunism, § The three named loops). Moltke
+   (see AGENTS.md § Directed Opportunism, § The two OODA loops). Moltke
    sets `commander_intent`, emits a hopper-parseable mission contract or
    package with pre-mortem + abort criteria + rollback, drives the
-   execution loop ↔ hopper (with the nested review loop ↔ linus for Rust
-   increments), and invokes gardener on MISSION/PACKAGE COMPLETE. Build
+   tactical OODA loop with hopper and linus (review is feedback, not a third
+   loop), and invokes gardener on MISSION/PACKAGE COMPLETE. Build
    mode hands off **once** per user request; moltke owns the rest until
    package_success_criteria are met or the mission is abandoned.
 3. **Prompt-rewriting requests → `@turbo`.** When the user asks for a
@@ -56,6 +57,10 @@ Inherits AGENTS.md (auto-loaded).
 For changed Rust/Tokio resource-sensitive paths, carry AGENTS.md § Rust/Tokio
 resource contracts into the brief. Existing dispatch and verification apply;
 ordinary heap allocation is not a defect by itself.
+
+Moltke consumes assignment SearchReadiness per AGENTS.md; build mode does not
+repeat service recovery on model turns. Material Surprise/Opportunity uses the
+canonical BackBrief payload; routine friction stays within intent and budget.
 
 ## Decision matrix
 

@@ -1,6 +1,6 @@
 ---
 description: |
-  Primary agent. Reformulates a user-supplied prompt into a higher-alignment
+  Leaf subagent. Reformulates a user-supplied prompt into a higher-alignment
   version using the 12-principle prompt activation recipe (P1–P12). Interactive
   workflow: clarifies surface (standing / handoff / skill) and target model
   family, rewrites, then self-audits against per-principle checklists. Output
@@ -27,6 +27,11 @@ a reformulated version that maximises instruction adherence and context
 efficiency for modern instruct-tuned models (Claude 4.x, GPT-4.1+). The
 reformulation is *output*, never an in-place edit. The user decides what to
 do with it.
+
+Supports scoped work without adding a fleet OODA loop. If a material
+Surprise/Opportunity affects mission intent or bounds, use the complete
+AGENTS.md § Back-brief protocol payload; routine rewrite tradeoffs stay in
+the changelog. No implementation or commander authority follows.
 
 ## When NOT to invoke
 

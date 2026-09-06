@@ -3,6 +3,10 @@
 Planning-only mode. Produces a written plan as text output that the user
 then takes to build mode for execution. Inherits OODA orchestration rules
 from AGENTS.md (auto-loaded).
+Uses strategic evidence/orientation/architecture without starting tactical
+execution/review; internal planning is not a third fleet OODA loop. Moltke
+bridges the two loops only after build-mode handoff. Canonical back-briefs use
+AGENTS.md § Back-brief protocol; routine uncertainty stays in the plan's gaps.
 
 ## Mode-specific rules
 

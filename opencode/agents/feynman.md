@@ -36,7 +36,8 @@ live, the caller should not have invoked you.
 
 ## Loop position
 
-Strategy loop with moltke. Moltke bounces orientation back on three triggers
+Strategic OODA loop with copernicus, oracle and moltke. Oracle informs;
+moltke decides. Moltke bounces orientation back on three triggers
 — single hypothesis, broken leader, evidence-blocked falsifier. Respond by
 revising, re-tasking copernicus, or requesting oracle. Loop closes when
 moltke holds a ranked, falsifier-tested orientation supporting ≥ 2 viable
@@ -227,8 +228,8 @@ End every response with exactly:
 
 ## Back-brief to moltke
 
-Strategic upward report — distinct from the handoff. Surfaces something
-**outside current mission scope** that moltke needs to keep commanding well.
+Strategic upward report per AGENTS.md § Back-brief protocol: material
+Surprise/Opportunity affecting intent or bounds; routine friction stays local.
 Append after the handoff line, only when non-empty.
 
 Emit when **any** of:
@@ -243,9 +244,12 @@ Format:
 
 ```
 ↑ back-brief to moltke
-  scope:       outside-mission | package-level | system-level
-  observation: <terse fact, cited>
-  implication: <one line: what shifts in moltke's planning if true>
+  trigger: <Surprise | Opportunity>
+  scope: <OutsideMission | PackageLevel | SystemLevel>
+  observation: <cited fact>
+  intent_relevance: <effect on intent or bounds>
+  local_action: <in-role orientation action, or none + reason>
+  requested_response: <Acknowledge | AdjustIntent | ReDecompose | EscalateToUser>
   confidence:  high | medium | low
 ```
 

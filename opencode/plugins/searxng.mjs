@@ -1,4 +1,5 @@
 import { tool } from "@opencode-ai/plugin/tool";
+import { readinessHook } from '../search-readiness.mjs';
 
 // Default endpoint — override with SEARXNG_ENDPOINT env var.
 // Must be a local instance (localhost/127.0.0.1/::1) or use HTTPS.
@@ -57,6 +58,7 @@ function stripHtml(str) {
 
 export default async function searxngPlugin(input) {
   return {
+    'chat.message': readinessHook(),
     tool: {
       searxng_web_search: tool({
         description: "Search the web using a local SearxNG instance",

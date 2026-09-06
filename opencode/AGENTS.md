@@ -524,8 +524,12 @@ and call automaton.
 
 ## Directed Opportunism
 
-Moltke now runs the mission command structure end-to-end per Bungay's *Art of Action*.
-The build/plan orchestrator hands off to moltke once for non-trivial work; moltke:
+Moltke runs the mission command structure end-to-end. This is a local adaptation
+of directed opportunism, informed by secondary [Bungay book notes](https://www.lostbookofsales.com/notes/book-summary-art-of-action-by-stephen-bungay/)
+(config-5de), not a verbatim Bungay protocol. Knowledge, alignment and effects
+gaps motivate evidence, intent checks and verified feedback respectively.
+Build mode hands off to moltke once for non-trivial work; plan mode returns a
+written plan to the user without dispatching moltke. During execution moltke:
 
 (a) sets `commander_intent` + boundaries (Auftragstaktik),
 (b) emits the contract/package to hopper,
@@ -541,47 +545,49 @@ which all subordinates back-brief. Moltke drives until package_success_criteria
 are met (→ gardener → user) or the mission is abandoned (→ user with a written
 reason).
 
-## The three named loops
+## The two OODA loops
 
-Three cyclic relationships sit inside moltke's standing-commander role:
+Exactly two fleet OODA loops share moltke as their bridge:
 
-- **Strategy loop — moltke ↔ feynman.** Closes when orientation supports a real
-  decision (ranked hypotheses, working falsifiers, ≥ 2 viable options). Moltke
-  bounces back to feynman on single-hypothesis or evidence gaps; feynman may
-  re-task copernicus.
-- **Execution loop — moltke ↔ hopper.** Closes when package_success_criteria
-  are met (→ gardener) or the package is abandoned. Hopper reports on every
-  sub-mission complete or on surprise; moltke adjusts intent, re-decomposes,
-  or escalates back to the strategy loop.
-- **Review loop — hopper ↔ linus.** Nested inside the execution loop. On each
-  non-trivial Rust TDD increment, hopper creates a review-request bead
-  (label `review-request`), linus reviews and comments APPROVE or NEEDS WORK.
-  Hopper proceeds on APPROVE; on NEEDS WORK hopper fixes and re-requests.
-  Two rejections on the same defect class trigger `SurpriseKind::ReviewRejected`
-  → moltke; new classes do not consume that cap. See § Beads.
+- **Strategic OODA loop — copernicus / feynman / oracle / moltke.** Copernicus
+  observes; feynman orients with ranked hypotheses and falsifiers; oracle
+  informs architectural constraints, never decides; moltke chooses intent
+  and bounds. Feedback closes on an actionable contract or package.
+- **Tactical OODA loop — hopper / linus / moltke.** Hopper executes and
+  verifies; linus provides Rust review feedback; moltke commands, independently
+  checks outcomes and adjusts the next increment. Completion routes through
+  moltke to gardener and user; material surprise can reopen strategic work.
 
-Oracle is consulted from inside moltke's Decide phase when the decision touches
-architectural surface — inputs to option enumeration, not a decision-maker itself.
-Plan mode may also dispatch oracle directly for informational architecture surveys before moltke is involved.
-
-The strategy loop, execution loop, and review loop ↔ linus together define
-moltke's standing-commander responsibility: orient (feynman), execute (hopper),
-review (linus), clean (gardener).
+The hopper ↔ linus review iteration is tactical feedback, not a third OODA
+loop. Existing review-request labels, APPROVE/NEEDS WORK, review tiers and
+two repeat rejections on the same defect class remain unchanged (§ Beads).
+References below to a "review loop" mean only this nested feedback mechanism.
+Internal role workflows are not additional fleet OODA loops. Automaton and
+turbo support scoped work; gardener closes mission state. Plan mode may consult
+oracle without starting tactical execution.
 
 ## Back-brief protocol
 
 Subordinate agents emit upward strategic reports — back-briefs — to moltke
-when they observe something outside their current mission scope but materially
-relevant to commander_intent. Routes to moltke regardless of who tasked the
-agent.
+on a Surprise or Opportunity materially affecting commander_intent or bounds.
+Routes to moltke regardless of who tasked the agent. Routine friction and
+low-risk improvements stay local within authorized scope, role and budget;
+local action never silently expands those boundaries.
 
 ```rust
 struct BackBrief {
+    trigger: BackBriefTrigger,
     scope: BriefScope,
-    observation: String,         // terse, cited
-    implication: String,         // what shifts in planning if true
-    confidence: Confidence,      // High | Medium | Low
+    observation: String,
+    intent_relevance: String,
+    local_action: String,
+    requested_response: RequestedResponse,
+    confidence: Confidence,
 }
+
+enum BackBriefTrigger { Surprise, Opportunity }
+enum RequestedResponse { Acknowledge, AdjustIntent, ReDecompose, EscalateToUser }
+enum Confidence { High, Medium, Low }
 
 enum BriefScope {
     OutsideMission,
@@ -590,11 +596,66 @@ enum BriefScope {
 }
 ```
 
-Each subagent's prompt defines when and how to emit. Moltke triages each
-back-brief into one of: Acknowledge, AdjustIntent, ReDecompose, EscalateToUser.
+Each producer uses this canonical payload (including examples); role-specific
+triggers specialize it, never replace fields. Requested response is a
+recommendation, not command authority. Moltke chooses the response and retains
+`ReportMismatch` for independent verification discrepancies.
 
-Back-briefs are signal-preserving: only material strategic shifts. Routine
-status goes in the reply body, not in a back-brief.
+Append only when non-empty, after the unchanged handoff line:
+
+```text
+↑ back-brief to moltke
+  trigger: <Surprise | Opportunity>
+  scope: <OutsideMission | PackageLevel | SystemLevel>
+  observation: <fact with path:line, bead id, or command + exit code>
+  intent_relevance: <effect on intent or bounds>
+  local_action: <action within authority, or none + reason>
+  requested_response: <Acknowledge | AdjustIntent | ReDecompose | EscalateToUser>
+  confidence: <high | medium | low>
+```
+
+Worked examples (illustrative, not executed evidence):
+
+```text
+↑ back-brief to moltke
+  trigger: Surprise
+  scope: PackageLevel
+  observation: runtime.rs:55 dispatches the old string name outside this sub-mission's file scope
+  intent_relevance: symbol-only rename leaves runtime dispatch broken
+  local_action: rolled back only the failed sub-mission; retained prior green increments
+  requested_response: ReDecompose
+  confidence: high
+
+↑ back-brief to moltke
+  trigger: Opportunity
+  scope: PackageLevel
+  observation: scripts/src/bin/find-orphan-callsites.rs:1 already provides the requested inventory
+  intent_relevance: reuse may remove a planned tool-building sub-mission
+  local_action: inspected its input/output contract; did not change package scope
+  requested_response: ReDecompose
+  confidence: medium
+```
+
+Enforcement: when a material Surprise/Opportunity is reported, its named
+artefact is this complete `BackBrief` payload in the report/evidence bead.
+Missing fields are a commander review gap, not an invitation to invent facts.
+
+## Assignment search readiness
+
+`plugins/searxng.mjs` installs `search-readiness.mjs` on `chat.message`.
+For a message resolved to moltke, the helper appends synthetic text
+`SearchReadiness: <Ready|Recovered|Degraded|Blocked> (<reason>)`.
+This is an assignment/message hook, not a per-model-turn probe. Moltke consumes
+the result once and carries it through the assignment; no repeated recovery
+on continuations. Missing status is unknown, not Ready.
+
+Ready/Recovered permits research dispatch, not a guarantee of relevant evidence.
+For Degraded/Blocked/missing status, moltke explicitly proceeds degraded on
+non-research work; if search is load-bearing and no authorized evidence path
+remains, report blocked with the missing capability. Do not expand permissions
+or run destructive recovery. Research remains with copernicus/feynman.
+Bounds, override restrictions, safe recovery and unverified post-restart
+integration are documented in README § Assignment search readiness.
 
 ## External / web research
 

@@ -2,92 +2,99 @@
 
 **Nine subagents**: five OODA-phase agents (`copernicus`, `feynman`,
 `moltke`, `hopper`, `linus`) plus four specialists (`gardener`,
-`automaton`, `oracle`, `turbo`). Each is named after a historical
-figure whose documented method maps to its phase or specialty.
+`automaton`, `oracle`, `turbo`). Names are role mnemonics, not claims
+about historical people or model behavior.
 
-| Role        | Agent        | Why this person                                                                            |
+| Role        | Agent        | Responsibility                                                                            |
 |-------------|--------------|--------------------------------------------------------------------------------------------|
-| Observe     | `copernicus` | Patient naked-eye observation, decades of data before theory                               |
-| Orient      | `feynman`    | The Feynman Technique: explain simply, find gaps, stress-test against examples             |
+| Observe     | `copernicus` | Gather cited evidence; no hypotheses                               |
+| Orient      | `feynman`    | Rank hypotheses, name falsifiers, stress-test against examples             |
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
-| Act         | `hopper`     | Speed and decisiveness in execution                                                        |
-| Act         | `linus`      | Rust-specialist code reviewer — idioms, unsafe soundness, cargo-audit/deny. Read-only. Nested inside the execution loop. |
+| Act         | `hopper`     | Execute scoped increments with verification                                                        |
+| Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. Read-only on source; tactical feedback. |
 | Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks                      |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
 | Specialist  | `turbo`      | Prompt rewriting via the P1–P12 activation recipe. Leaf-only; emits output, never in-place edits. |
 
-## The loop (with the two named cycles inside it)
+## The two OODA loops
 
-```text
-                                  USER
-                                ┌───┴───┐
-                      plan mode │       │ build mode
-                  (orient only; │       │ (owns the full
-                   no execution)│       │  OODA loop)
-                                │       │
-                                ▼       ▼
-                                └───────┘
-   ┌──── STRATEGY LOOP ────┐        │      ┌────── EXECUTION LOOP ──────┐
-   │                       │        │      │                            │
-   │   Copernicus          │        │      │      Hopper ◄──────┐       │
-   │      ▲ │              │        │      │        ▲ │         │       │
-   │      │ │ observations │        │      │contract│ │complete │review │
-   │ tasking│              │        │      │        │ │/surprise│ req/  │
-   │      │ ▼              │        ▼      │        │ ▼         │verdict│
-   │    Feynman ───────────┼─► Moltke ◄────┼────────┘           │       │
-   │            hypotheses │        ▲      │      Linus ────────┘       │
-   │           + falsifiers│        │      │   (review loop, nested)    │
-   │                       │        │      │                            │
-   └───────────────────────┘        │      └────────────────────────────┘
-                                    │
-                       back-briefs from any
-                       subordinate route to Moltke
-                                    │
-                                    ▼
-                       ┌── SPECIALISTS (on demand) ──┐
-                       │   Oracle      (ADR guidance)│
-                       │   Automaton   (Rust CLI)    │
-                       │   Gardener    (bd-state GC) │
-                       │   Turbo       (prompt rewrite)│
-                       └─────────────────────────────┘
+```mermaid
+flowchart LR
+    U([User]) --> B[Build mode]
+    B -->|Non-trivial mission| M
+
+    subgraph Strategic[Strategic OODA · evidence and direction]
+        direction TB
+        C[Copernicus · Observe]
+        F[Feynman · Orient]
+        O[Oracle · Architectural constraints]
+        C -->|Evidence| F
+        F -->|Targeted evidence gaps| C
+    end
+
+    M{{Moltke · Decide and command}}
+
+    subgraph Tactical[Tactical OODA · execution and feedback]
+        direction TB
+        H[Hopper · Execute and verify]
+        L[Linus · Review Rust]
+        H -->|Review request| L
+        L -->|Verdict and findings| H
+    end
+
+    M -->|Observation task| C
+    M -->|Orient or re-orient| F
+    F -->|Hypotheses and falsifiers| M
+    M -->|Consult architecture| O
+    O -->|Constraints and gaps| M
+    M -->|Intent, bounds and contract| H
+    H -->|Results and verification evidence| M
+    L -->|Independent review verdict| M
+
+    Strategic -.->|Surprise / Opportunity backbrief| M
+    Tactical -.->|Surprise / Opportunity backbrief| M
+
+    M -->|Verified completion| G[Gardener · Close mission state]
+    G -->|Closures and retained work| M
+    M -->|Outcome and evidence| U
+
+    classDef commander fill:#17324d,color:#fff,stroke:#5986b3,stroke-width:3px
+    class M commander
 ```
 
-Both named loops pivot on moltke:
+Solid arrows show tasking and routine feedback; dashed arrows show material
+Surprise/Opportunity backbriefs. Moltke connects both loops, verifies outcomes,
+and adjusts intent or decomposition; authorized local adaptation stays local.
+Review is feedback within tactical OODA, not a third loop.
 
-- **Strategy loop** — `moltke → feynman → copernicus` outbound; observations and hypotheses + falsifiers return inbound. Closes when orientation supports a real decision (≥ 2 viable options + working falsifiers).
-- **Execution loop** — `moltke → hopper` outbound (mission contract); complete or surprise returns inbound. Closes when `package_success_criteria` are met (→ gardener → user) or the package is abandoned.
-- **Review loop ↔ linus** — nested inside the execution loop. On each non-trivial Rust TDD increment, hopper creates a review-request bead, linus reviews and comments APPROVE or NEEDS WORK. Two rejections on the same defect class trigger escalation to moltke; new classes do not consume that cap.
+Supporting paths omitted for clarity: plan mode returns a written plan to the
+user without execution; Automaton supplies scoped tools; Turbo emits prompt
+rewrites. Material backbriefs from these specialists also route to Moltke.
 
-Specialists (oracle, automaton, gardener) are dispatched by moltke from inside whichever loop needs them. Back-briefs from any subordinate route upward to moltke regardless of who tasked them.
+Exactly two fleet loops pivot on moltke:
 
-Boyd's insight: whoever cycles the loop fastest *and most accurately* dominates.
-Orientation shapes everything downstream — get it right or pay later.
+- **Strategic OODA** — Copernicus observes, Feynman orients, Oracle informs architectural constraints, Moltke decides intent and bounds. Closes on an actionable contract/package.
+- **Tactical OODA** — Hopper executes/verifies, Linus reviews Rust, Moltke commands and independently checks results. Closes on verified completion or abandonment; surprise may reopen strategic work.
+
+Hopper ↔ Linus review iteration is tactical feedback, **not a third OODA loop**.
+Review labels, tiers and two repeat rejections on the same defect class remain
+unchanged. Internal role workflows are not additional fleet loops.
 
 ## Mission command (Auftragstaktik)
 
 **Moltke is the supreme commander** during a mission. The orchestrator
-(plan mode) hands off to moltke once for non-trivial work; moltke drives the
+(build mode) hands off to moltke once for non-trivial work; moltke drives the
 mission to completion. Moltke is the only role with authority to task any
 agent directly during a mission, and the only role to which all subordinates
 **back-brief** strategic shifts.
 
-**Three named loops** sit inside moltke's standing-commander role:
+This is a local directed-opportunism adaptation informed by secondary
+[Bungay book notes](https://www.lostbookofsales.com/notes/book-summary-art-of-action-by-stephen-bungay/)
+(config-5de), not a verbatim historical protocol. Knowledge, alignment and
+effects gaps motivate evidence, intent checks and verified feedback.
 
-- **Strategy loop — moltke ↔ feynman.** Closes when orientation supports a
-  real decision (ranked hypotheses, working falsifiers, ≥ 2 viable options).
-  Moltke bounces back to feynman on single-hypothesis or evidence gaps;
-  feynman may re-task copernicus.
-- **Execution loop — moltke ↔ hopper.** Closes when `package_success_criteria`
-  are met (→ gardener → user) or the package is abandoned (→ user with a
-  written reason). Hopper reports on every sub-mission complete or on
-  surprise; moltke adjusts intent, re-decomposes, or escalates back to the
-  strategy loop.
-- **Review loop — hopper ↔ linus.** Nested inside the execution loop. Hopper
-  creates review-request beads; linus reviews and comments APPROVE or NEEDS
-  WORK. See AGENTS.md § Beads for the full protocol.
-
-**Specialists** sit beside the loop and are dispatched on demand:
+**Specialists** support these responsibilities on demand:
 
 - `oracle` — consulted by moltke during the Decide phase when a decision
   touches architectural surface (data model, public API, cross-module
@@ -103,14 +110,13 @@ agent directly during a mission, and the only role to which all subordinates
   activation recipe (`opencode/turbo/prompt-activation-recipe.md`). Emits
   output as text or `.ooda/` artefact; never edits prompt files in place.
 
-Linus is **not** a specialist — it sits inside the execution loop as the
-review counterpart to hopper. See § Three named loops above.
+Linus is the tactical review counterpart to hopper; Oracle participates in
+strategic work as an informational specialist, never a decision-maker.
 
-**Back-briefs** route upward from any subordinate to moltke when an observation
-exceeds the current mission scope but is strategically relevant — load-bearing
-assumption now suspect, new constraint, major architectural opportunity, or
-dead-end that invalidates the package premise. Moltke triages each back-brief
-into one of `Acknowledge | AdjustIntent | ReDecompose | EscalateToUser`.
+**Back-briefs** report material Surprise/Opportunity affecting intent or bounds.
+The canonical payload is in AGENTS.md § Back-brief protocol. Requested response
+is a recommendation; Moltke decides. Routine friction and low-risk adaptation
+stay local within authorized scope and budget, never silently expanding either.
 
 ## Plan mode vs build mode
 
@@ -122,10 +128,10 @@ Two opencode prompt modes orchestrate the agents differently:
   routes through `copernicus → feynman (→ oracle)` to produce a written
   plan as text output. Never edits source. Never dispatches moltke —
   moltke lives in build mode.
-- **Build mode** owns the full OODA loop. Trivial → inline edit. Turbo
+- **Build mode** drives both OODA loops through Moltke. Trivial → inline edit. Turbo
   prompt rewrites → `@turbo` directly. Everything else → `@moltke`, which
-  authors the mission contract, drives the execution loop ↔ hopper (with
-  the nested review loop ↔ linus for Rust), and invokes gardener on
+  authors the mission contract, drives tactical execution and Rust review
+  feedback, and invokes gardener on
   MISSION/PACKAGE COMPLETE.
 
 Build mode also accepts a plan-mode-produced plan as input: hand the plan
@@ -208,9 +214,12 @@ style: fixed grammar, parseable, no decoration.
 → to: <agent|user> | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <bd-id|->
 
 ↑ back-brief to moltke
+  trigger: <Surprise | Opportunity>
   scope: <OutsideMission | PackageLevel | SystemLevel>
   observation: <terse, cited>
-  implication: <what shifts in planning>
+  intent_relevance: <effect on intent or bounds>
+  local_action: <action within authority, or none + reason>
+  requested_response: <Acknowledge | AdjustIntent | ReDecompose | EscalateToUser>
   confidence: <high | medium | low>
 ```
 
@@ -232,6 +241,61 @@ generation.
 10. **Interleaved thinking between tool calls** — feynman's stress-test loop and hopper's verify-after-each-step enforce this.
 11. **Explicit effort ceilings** — `max_files_changed`, `max_tool_calls`, `max_wall_clock_minutes` in every moltke contract.
 12. **Failure-mode awareness** — known anti-patterns are forbidden by name in each agent's Rules section (single-hypothesis orientation, unverified success claims, single-option "decisions").
+
+## Assignment search readiness
+
+`plugins/searxng.mjs` registers `search-readiness.mjs` on `chat.message`.
+When `output.message.agent` resolves to `moltke`, the hook appends synthetic
+`SearchReadiness: <Ready|Recovered|Degraded|Blocked> (<reason>)` text. It runs
+at that message/assignment boundary, not on `chat.params` or every model turn.
+Moltke consumes the status once and carries it through the assignment. Missing
+status is unknown, not Ready. This does not change explicit search-tool policy:
+research belongs to Copernicus/Feynman, not Moltke/Hopper.
+
+| Status | Meaning / commander action |
+|---|---|
+| Ready | Functional probe returned at least one titled HTTP(S) result; research dispatch allowed, relevance not guaranteed. |
+| Recovered | Existing owned resources recovered and functional retest passed. |
+| Degraded | Empty upstream results, failed override/retest, or concurrent Busy; explicitly proceed degraded for non-research work. |
+| Blocked | Unsafe endpoint, uncertain command outcome, failed identity/inspection or deadline; no unsafe recovery. |
+
+For Degraded/Blocked/missing status, if research is load-bearing and no
+authorized evidence path remains, Moltke reports blocked with the missing
+capability rather than inventing evidence or expanding permissions.
+
+**Bounds:** 60-second total cooperative deadline, 5-second probe deadline
+including body reading, 1 MiB response payload, 32 KiB each command stdout and
+stderr (64 KiB combined). One active operation per helper instance; concurrent
+assignments receive Degraded Busy immediately, without a waiter queue. Command
+timeout or output overflow latches uncertainty until plugin reload: no later
+mutation is attempted. Killing a Podman client does not roll back daemon work.
+These are admission limits and cooperative JS timers, not real-time or process
+memory guarantees; transport chunks, buffer/JSON copies, runtime and kernel
+memory are excluded.
+
+**Recovery:** only with no nonempty `SEARXNG_ENDPOINT` override, using default
+`http://localhost:19217/search`. Inspect the existing `searxng` machine and its
+explicit connection identity; start a stopped machine at most once and recheck
+fresh metadata. Validate existing container name, image, full ID and sole
+`127.0.0.1:19217 → 8080/tcp` mapping. Use `podman -c searxng` and the pinned
+container ID to start or restart once, then one functional retest. Missing,
+ambiguous or wrong-owned resources block; never create/init/run/replace/remove
+resources or call the destructive local `start.sh`. Empty results do not
+trigger recovery.
+
+**Overrides:** credential-free HTTP(S) `localhost`/`127.0.0.1` endpoints only,
+probe-only even when explicitly set to the default URL. Public HTTPS, IPv6 and
+other spellings are rejected before probing. This conservative helper subset
+does not redefine the existing explicit search tool's endpoint validation.
+
+**Evidence and limits:** config-8ea records mocked recovery, targeted tests and
+a live read-only functional probe. Cold-service recovery was not exercised.
+Actual post-restart Task/direct/API assignment and synthetic-message delivery
+remain **unverified**. Quit and restart opencode after prompt/plugin edits;
+running sessions retain startup bindings. Confirm the received status and trace
+before claiming a specific invocation path is integrated. Local checks are
+`node --test opencode/search-readiness.test.mjs` from repo root and
+`opencode debug config`; neither proves post-restart delivery by itself.
 
 ## Conditional tools
 
@@ -428,7 +492,7 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 │   └── prompt-activation-recipe.md   P1–P12 recipe; single source of truth for turbo
 ├── plugins/
 │   ├── graphify.js              Injects a knowledge-graph reminder before bash calls when graphify-out/ exists
-│   ├── searxng.mjs              Web search tool (copernicus, feynman)
+│   ├── searxng.mjs              Web search tool + Moltke chat.message readiness hook
 │   └── tracer.mjs               Session trace writer → .ooda/traces/
 ├── skills/
 │   ├── agent-browser/SKILL.md   Browser automation (probe-then-fallback)
@@ -438,6 +502,8 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 │   ├── obsidian-second-brain/SKILL.md  Read-only navigation of a PARA-style Obsidian vault
 │   ├── quality-sweep/SKILL.md   29-dimension SDLC quality sweep → HTML report
 │   └── wayfinder/SKILL.md       Plan oversized work as bd decision tickets
+├── search-readiness.mjs          Bounded assignment probe + existing-resource recovery
+├── search-readiness.test.mjs     Targeted helper tests; recovery simulated
 ├── package.json                 Pins @opencode-ai/plugin SDK (currently 1.17.15)
 ├── package-lock.json            Lockfile; tracked
 ├── commands/                    Custom slash commands (invoke with /command-name)
@@ -465,7 +531,7 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 - Simon Willison — *Subagents (Agentic Engineering Patterns)*: <https://simonwillison.net/guides/agentic-engineering-patterns/subagents/>
 - Boyd's OODA loop: <https://en.wikipedia.org/wiki/OODA_loop>
 - Moltke & Auftragstaktik: <https://en.wikipedia.org/wiki/Helmuth_von_Moltke_the_Elder>
-- Stephen Bungay — *The Art of Action* (directed opportunism, mission command in practice).
+- Stephen Bungay — *The Art of Action*, via [secondary book notes](https://www.lostbookofsales.com/notes/book-summary-art-of-action-by-stephen-bungay/); fleet schema is a local adaptation.
 - Feynman Technique: <https://fs.blog/feynman-technique/>
 - Klein pre-mortem: <https://hbr.org/2007/09/performing-a-project-premortem>
 - ADR (Architecture Decision Records): <https://adr.github.io/>

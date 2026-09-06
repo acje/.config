@@ -183,9 +183,8 @@ bootstrap-only or unsolvable, `to: <caller>` with `status: blocked` and reason.
 
 ## Back-brief to moltke
 
-Back-brief = strategic upward report. Distinct from the handoff line, which
-routes the *next* tactical step. A back-brief surfaces something *outside* your
-current mission scope that moltke needs to know to keep commanding well.
+Use AGENTS.md § Back-brief protocol for material Surprise/Opportunity affecting
+intent or bounds. Routine friction and in-scope tool reuse stay local.
 
 Emit a back-brief when you observe any of:
 
@@ -201,9 +200,12 @@ Format (append after the handoff line, only when non-empty):
 
 ```
 ↑ back-brief to moltke
-  scope: <one-line: "outside current mission" | "package-level" | "system-level">
-  observation: <terse fact, cited if applicable>
-  implication: <one line: what shifts in moltke's planning if true>
+  trigger: <Surprise | Opportunity>
+  scope: <OutsideMission | PackageLevel | SystemLevel>
+  observation: <cited fact>
+  intent_relevance: <effect on intent or bounds>
+  local_action: <action within authority, or none + reason>
+  requested_response: <Acknowledge | AdjustIntent | ReDecompose | EscalateToUser>
   confidence: <high | medium | low>
 ```
 
@@ -220,13 +222,16 @@ Rules:
 5. No back-briefs about preferences, style, or "would be nice." Only material
    strategic shifts.
 
-Example:
+Illustrative example (not an executed observation):
 
 ```
 ↑ back-brief to moltke
-  scope: package-level
-  observation: tool find-orphan-callsites already exists in scripts/src/bin/ from a prior package; current request would duplicate it
-  implication: caller should reuse, not rebuild; saves a sub-mission
+  trigger: Opportunity
+  scope: PackageLevel
+  observation: scripts/src/bin/find-orphan-callsites.rs:1 provides the requested inventory
+  intent_relevance: reuse may eliminate a planned sub-mission
+  local_action: inspected its contract; did not duplicate the tool or alter scope
+  requested_response: ReDecompose
   confidence: high
 ```
 

@@ -76,7 +76,8 @@ Pick mode from context: if invoked with a `review-request` bead id (via moltke T
 
 ## Pair programming with hopper
 
-Nested inside the execution loop (see AGENTS.md § The three named loops). Linus
+Tactical OODA feedback with hopper and moltke (AGENTS.md § The two OODA loops),
+not a third fleet loop. Linus
 reviews each non-trivial Rust TDD increment hopper produces. The review loop ↔ linus
 uses label-based signaling:
 
@@ -148,7 +149,7 @@ callees, and types that impose obligations on the code under review (a
 stringly-typed parameter forced by a caller, a partial function the reviewed
 code must defend against, a type that should be an `enum`). Findings in ring
 (b) are typically `Info`/`Low` and, when they exceed the diff's scope, also
-warrant a back-brief to moltke (`ArchOpportunity`) rather than a blocking
+warrant a canonical back-brief to moltke (`Opportunity`) rather than a blocking
 verdict on the current increment. Do not gate APPROVE on a constraint-giver
 refactor that is outside the reviewed change's scope.
 
@@ -658,9 +659,11 @@ End with the AGENTS.md handoff line:
   description. Scratch is not a permission exemption.
 - Trivial in-role observations close inline; structural surprises
   escalate. Per AGENTS.md § Trivial autonomy.
-- Back-briefs to moltke for observations outside mission scope but
-  materially relevant (e.g. systemic clippy violations beyond the diff).
-  Per AGENTS.md § Back-brief protocol.
+- Back-briefs to moltke for material Surprise/Opportunity affecting intent or
+  bounds (e.g. systemic violations beyond the diff, or reusable review evidence).
+  Use every field in AGENTS.md § Back-brief protocol, including cited observation,
+  intent relevance, local review action and requested response. Routine findings
+  stay in the review report; do not expand review scope without authority.
 
 ## Final instructions
 

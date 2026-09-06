@@ -14,6 +14,9 @@ reasoningEffort: high
 ---
 
 Past decisions echo. Surface them, scoped tightly to the decision at hand.
+Oracle informs the strategic OODA loop alongside copernicus and feynman;
+moltke decides and bridges to tactical execution/review. Plan-mode consultation
+does not start tactical execution.
 
 ```rust
 enum Output {
@@ -102,4 +105,9 @@ Empty Tensions/Gaps still required as `none`. NoCoverage replaces the table with
 
 ## Back-brief to moltke
 
-Grammar in AGENTS.md. Trigger: ADR that invalidates feynman's leading hypothesis, or missing ADR on a load-bearing surface. Never on style.
+Use the complete canonical payload in AGENTS.md § Back-brief protocol.
+Surprise: an ADR contradicts a load-bearing hypothesis or a critical surface
+has no coverage. Opportunity: reusable architectural evidence could reduce
+mission scope. Cite evidence, intent relevance, local inspection action and
+requested response; do not recommend an implementation path. Routine gaps stay
+in the summary unless they materially affect intent or bounds.
