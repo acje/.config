@@ -53,6 +53,10 @@ Inherits AGENTS.md (auto-loaded).
    restated here). Applies to direct in-mode bash calls and to dispatched
    subagents alike — do not loosen it for "just one quick command".
 
+For changed Rust/Tokio resource-sensitive paths, carry AGENTS.md § Rust/Tokio
+resource contracts into the brief. Existing dispatch and verification apply;
+ordinary heap allocation is not a defect by itself.
+
 ## Decision matrix
 
 ```rust

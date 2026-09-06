@@ -40,6 +40,11 @@ A full plan covers, in order:
 
 The plan is the **input** to build-mode moltke. Moltke will turn it into a mission contract or package; do not pre-author the contract format from plan mode.
 
+For changed Rust/Tokio resource-sensitive paths, include the boundary,
+budgets, exhaustion choices, evidence and gaps from AGENTS.md § Rust/Tokio
+resource contracts in the existing plan sections. Dispatch is unchanged;
+no blanket allocator restriction follows.
+
 ## Examples
 
 <example name="trivial-inline-plan">

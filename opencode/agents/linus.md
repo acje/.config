@@ -420,6 +420,26 @@ Other quality checks:
 
 ### Axis 3 — Security
 
+#### `resource-contract-gap` / `resource-bound-violated`
+
+**Trigger.** Changed resource-sensitive paths under AGENTS.md § Rust/Tokio
+resource contracts, not ordinary heap use.
+**Check.** Read the mission/review bead's budgets and exclusions. Trace aggregate
+item/byte/task accounting, waiters, retries and retained results; admission
+must precede unbounded spawning/retention. Check permit lifetimes on success,
+error and cancellation, buffer capacity/shared backing/pools, checked arithmetic,
+and explicit exhaustion. Check backpressure, partial-I/O cancellation, bounded
+batches, blocking-work admission and supervised shutdown against the contract.
+An application bound is not a process-memory bound; a finite allocation test
+does not establish universal no-allocation. Check measurement conditions and
+untested/excluded paths.
+**Fix.** Missing boundary/budget/policy/evidence → `resource-contract-gap`;
+breached budget or invalid bound claim → `resource-bound-violated`. Request
+the missing contract or corrected accounting and applicable boundary,
+saturation, stalled-consumer, concurrency, cancel/shutdown and overflow tests.
+**Surface.** Existing review tiers; edited guards require existing guard proof.
+Do not demand a no-allocation regime or unrelated resource audit.
+
 #### `unbounded-recursion-at-trust-boundary`
 
 **Trigger.** A recursive function (directly or mutually recursive) reachable
@@ -440,16 +460,19 @@ boundary is a whole-program property no lint computes.
 #### `unbounded-io-or-alloc-at-boundary`
 
 **Trigger.** Either shape, at or below a trust boundary:
-(a) a pagination / retry / poll / drain loop with no explicit iteration cap;
+(a) an individual pagination / retry / poll / drain work unit without a bound
+or deadline (service lifetime loops instead require reachable shutdown);
 (b) `Vec::with_capacity(n)`, `read_to_end`, `read_to_string`, or `collect`
 fed by a non-literal, externally-influenced length with no cap.
 **Check.** Can a hostile or merely broken peer make the loop run forever, or
 make the allocation arbitrarily large? A `Content-Length`, a page-count
 field, and a "next cursor" that never goes empty are all externally
 influenced.
-**Fix.** An explicit max-iterations constant with a typed error on
-exhaustion; `.take(N)` on the iterator, or `reader.by_ref().take(N)` on the
-reader, before `read_to_end` / `collect`.
+**Fix.** Use a named work/size limit with explicit exhaustion. `.take(N)`
+caps consumption, not completeness: when a truncated prefix is invalid,
+validate framing or detect excess (for example a checked, budgeted extra
+unit) and reject, rather than accepting the prefix as complete. Bound retained
+capacity and aggregate concurrent work per the resource contract.
 **Surface.** review-only — not mechanizable. Whether a length is externally
 influenced is a data-flow property outside clippy's reach.
 
@@ -553,14 +576,14 @@ Other security checks:
 | `Box<dyn Error>` in public API | `thiserror`-derived enum | callers can match variants; downstream error chains stay structured |
 | `.clone()` reflexively | `&` borrow / `Cow<'_, T>` / `Arc<T>` | clone hides ownership intent and costs; the right abstraction names it |
 | Bare `let _ = <expr>` discarding a `Result` / `#[must_use]` value | `drop(guard)`, a named helper fn, or `if let Err(e) = … { tracing::debug!(…) }` | non-doc comments are banned, so the justification must live in a name; a bare `let _` cannot be distinguished from an oversight |
-| Recursion, loop, or allocation sized by untrusted input with no cap | explicit depth/iteration cap with a typed error; `.take(N)` / `by_ref().take(N)` | stack overflow aborts uncatchably and unbounded alloc is a DoS; ownership does not bound either |
+| Unbounded input-driven recursion, work, or allocation | Named depth/work/size budgets with explicit exhaustion; service lifetime loops need reachable shutdown and bounded work between checks. `.take(N)` caps consumption, not completeness: validate framing or detect excess and reject when truncated prefixes are invalid | Ownership alone does not bound resources; a bounded prefix is not proof of complete input |
 | `deny(unsafe_code)` on a crate root, or a new crate root with neither | `#![forbid(unsafe_code)]` | `deny` leaves an inner `#[allow]` re-entry path open; the guarantee only pays if it is total across crates |
 | Type admits illegal states (bool/`Option` state soup, stringly-typed, `assert!`-guarded partial fn, non-empty `Vec` by convention) | `enum` of legal shapes / newtype with boundary-validating constructor / correct-by-construction type (`NonEmptyVec`, typed state machine) | make illegal states *unrepresentable*, not merely rejected — restructure the type, don't bolt on a predicate (types-as-axioms, bead `config-54u`; hopper R16) |
 | Any `//` or `/* … */` comment in `*.rs` (incl. `// SAFETY:`, `// TODO`, `// FIXME`, `// NOTE`, `#[allow]` justifications, commented-out code, ADR-link annotations) | Delete; if the code needed the comment to be readable, refactor (rename / extract / newtype) so it reads as its own explanation. Move durable rationale to an ADR, the commit message, or a bd task. Promote to `///` doc comment **only** when the enclosing item is a `pub` API or `unsafe fn` / `unsafe trait` whose rustdoc contract is mandatory | per AGENTS.md § House style — Rust comments and hopper R15: non-doc comments drift silently; doc comments are not a default home for rationale either — they exist to document a code contract |
 
 ## Validation
 
-Run each command with `workdir` set to the crate root (never `cd && ...`).
+Run each command with `workdir` set to the crate root per AGENTS.md § Bash hygiene.
 Record exit code verbatim. Never fabricate PASS.
 
 ```
@@ -575,22 +598,10 @@ If project clippy config is stricter than `-D warnings`, defer to it.
 If the first command (`cargo check --all-targets`) fails on baseline,
 apply rule 3 (Surprise) — do not proceed.
 
-**Availability-probe hygiene (default ergonomic).** When checking
-whether `cargo-audit` / `cargo-deny` are installed, prefer **one
-`command -v` per bash call**, issued as two separate one-statement bash
-tool-calls batched in a single message — parallel tool-calls remain the
-default ergonomic per AGENTS.md § Bash hygiene rule 2. The prior
-absolute ban on the joined `;`/`&&` form (`command -v cargo-audit;
-command -v cargo-deny`) is lifted: `command -v` touches no path and
-raises no permission event, so it does not hit the permission-ask-hang
-mechanism (AGENTS.md § Bash hygiene, canonical) the original ban
-misattributed — probe P1 ran the joined form clean 3× this session with
-no reproduction. This is not a claim the joined form is safe in
-general, only that the stated mechanism doesn't apply and the stall
-didn't reproduce; re-tighten if a real trace resurfaces it. Skipping
-the probe and letting `cargo audit` / `cargo deny check` report their
-own absence directly remains the simplest option when the probe only
-gates an optional step.
+Follow AGENTS.md § Bash hygiene for command composition, availability checks,
+and evidence recovery. Active permissions and read-only review scope still
+apply. Record actual command exits and distinguish unavailable checks from
+failed checks; neither is PASS. Historical probe observations: config-jui.
 
 ## Report
 
@@ -639,8 +650,12 @@ End with the AGENTS.md handoff line:
   bodies — `--stdin` replaces, see AGENTS.md § Beads → Tier 1);
   handoff carries `bd-NNN`. Per AGENTS.md § Evidence carrying
   — pointer over body.
-- Bash hygiene per AGENTS.md § Bash hygiene (canonical: workdir preferred, composition-with-pipefail, path preflight — not restated here). Tool-availability probes: one `command -v` per bash call stays the default ergonomic (parallel tool-calls); the joined `;`/`&&` form is no longer an absolute ban (see § Validation).
-- **No scratch-file marshalling (for coordination bodies).** The review body, diff, and original description are cross-agent coordination content — Tier 1 unchanged: they go straight into the review-report bead `description` via `bd update <id> --stdin` (fresh bead; on one that may already have a body use the accumulation recipe in AGENTS.md § Beads → Tier 1), never staged to disk first. Read the diff with `git diff` / `git show` to stdout directly; build the review body in-context. Separately, a genuinely ephemeral single-turn working file (not coordination content) may live in the workspace-relative `.ooda/tmp/<mission_id>/`, self-cleaned before mission end. Bare `/tmp`, `$TMPDIR`, `/var/folders`, and `T/opencode` sit outside the project root and risk the permission-ask-hang mechanism (AGENTS.md § Bash hygiene) — an out-of-allow-set path can raise an `external_directory` prompt nobody answers — not because temp files are taboo, but because that path shape isn't in the workspace allow-set.
+- Bash hygiene per AGENTS.md § Bash hygiene; active permissions and review
+  scope remain binding.
+- Coordination bodies and ephemeral scratch follow AGENTS.md § Beads →
+  Canonical storage hierarchy. Review bodies, diffs and original descriptions
+  go directly into beads, not scratch; use safe accumulation for an existing
+  description. Scratch is not a permission exemption.
 - Trivial in-role observations close inline; structural surprises
   escalate. Per AGENTS.md § Trivial autonomy.
 - Back-briefs to moltke for observations outside mission scope but

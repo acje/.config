@@ -43,7 +43,7 @@ enum SurpriseKind {
     EmptyPipelineFromBuildTool,                   // re-run leftmost in isolation
     PreflightFailed { check: String },            // preflight exit ≠ 0
     OutOfBudget,                                  // effort_budget exhausted
-    ReviewRejected { bead: BeadId },              // linus NEEDS WORK after max rounds
+    ReviewRejected { bead: BeadId },              // two rejections on same defect class
     PermissionDeniedNoAlternative,                // tool denial blocks every path within budget
 }
 ```
@@ -75,22 +75,11 @@ Rules:
 
 ## Filtering build-tool output
 
-Anti-pattern (observed: ses_2158e302dffe, ses_2156bb9dfffе, ses_215716fddffe):
-
-```bash
-# Pipes a build tool through grep/head; empty stdout looks clean,
-# but may be silent prefix failure (cd, early exit, 2>&1 swallowing stderr).
-cargo clippy --all-targets 2>&1 | grep "^error" | head -60
-```
-
-| Option | When | Pattern |
-|---|---|---|
-| A — structured flags | tool supports it (preferred) | `cargo clippy --all-targets --message-format=short` |
-| B — run unfiltered, read with Grep tool | tool lacks structured output | Run the command without a pipeline (`cargo clippy --all-targets 2>&1`); inspect output with the `Grep` tool against the captured response. Do not stage tool output under `.ooda/` as coordination state. |
-
-Cargo inner-loop noise suppression: combine structured cargo output with `CARGO_TERM_PROGRESS_WHEN=never` while iterating, e.g. `CARGO_TERM_PROGRESS_WHEN=never cargo test -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo clippy -p <crate> --message-format=short -- -D warnings`. This kills progress/file-lock noise without hiding failures. Scope stays tiered: INNER-LOOP is single-crate feedback; BOUNDARY is whole-workspace verification at mission/sub-mission completion, whose exit codes back the done-claim (cadence per trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7; frozen-unfreeze P12a).
-
-Build tools (`cargo`, `pytest`, `adr-fmt`, …) run as a standalone command, or with a structured-output flag. Pure search pipelines (`rg … | grep …`) are exempt. Empty stdout from a build-tool pipeline ⇒ `Outcome::Surprise` (R11). Cross-ref AGENTS.md § Bash hygiene.
+Prefer standalone build commands with structured output. Cargo inner-loop
+commands use `CARGO_TERM_PROGRESS_WHEN=never` and `--message-format=short`;
+verification scope remains tiered by R1. If filtering is needed, follow
+AGENTS.md § Bash hygiene: retain producer status, never treat a filter as a
+build verdict. Historical observations are preserved in config-jui.
 
 ## Mission contract (input)
 
@@ -166,8 +155,8 @@ On each non-trivial Rust TDD increment (post-green, pre-commit):
 2. Continue with other in-scope work while linus picks up out-of-band via `bd ready --json --label review-request`. If a review must be solicited within the turn, emit a back-brief to moltke requesting linus dispatch; otherwise poll the bead's labels.
 3. Linus reviews, comments APPROVE or NEEDS WORK, relabels accordingly, and on APPROVE also closes the paired review-report evidence bead. On NEEDS WORK the round's report bead stays open until superseded by the next round's report (or swept by gardener on the terminal `ReviewRejected` path).
 4. On `review:approved`: proceed to commit. Record: `bd audit record --kind tool_call --actor hopper --issue-id <id> --tool-name "commit" --exit-code 0`.
-5. On `review:needs-work`: fix the findings, re-request (same bead, new comment). Max 2 rounds.
-6. After 2× NEEDS WORK: `Outcome::Surprise { kind: SurpriseKind::ReviewRejected { bead } }` → handback to moltke.
+5. On `review:needs-work`: fix the findings, re-request (same bead, new comment). New defect classes do not consume the rejection cap.
+6. After two NEEDS WORK rejections on the same defect class: `Outcome::Surprise { kind: SurpriseKind::ReviewRejected { bead } }` → handback to moltke.
 
 ### Review scope (R13 boundary)
 
@@ -300,7 +289,7 @@ fn run_package(p: Package) {
     - **INNER** (`verify.inner`, every TDD increment): changed crate only — `CARGO_TERM_PROGRESS_WHEN=never cargo test -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo clippy -p <crate> --message-format=short -- -D warnings`. Fast feedback, not a done-claim surface. `--workspace`/`--all-features` are FORBIDDEN here — a contract that puts one under `verify.inner` is malformed; treat as `Outcome::Surprise`.
     - **MID** (`verify.mid`, once per sub-mission, before that sub-mission's done-claim): changed crate(s) PLUS their reverse-dependent closure, computed via the one-liner in the repo `AGENTS.md` (`cargo metadata --format-version 1 --no-deps | jq …`) — never `--workspace`. Backs the sub-mission's `Result vs intent: Y`.
     - **BOUNDARY** (`verify.boundary`, once per EPIC, before the epic done-claim — present only on `Single` or `[mission_package]`, absent from `[[missions]]` by schema): whole-workspace `cargo build --workspace --all-features --locked`, `cargo test --workspace --all-features --locked --no-fail-fast`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back the epic's done-claim; declared E2E `verify` entries from R12 also live here.
-    - **CI-ONLY** (never local): deny, audit, and tripwires.
+    - **CI gates:** run the repo's documented local entry point before handoff per AGENTS.md § Code-quality methods. If unavailable, name the unverified gap; do not invent a local suite or classify deny/audit/tripwires as universally CI-only.
 
 2. **R2 Default to executing reversible steps when intent is clear and budget remains.** AGENTS.md § Autonomy governs the risk branch. Stay within `effort_budget` (per sub-mission in a package). Rationale: paused-for-clarification missions stall the execution loop; questions belong to moltke.
 3. **R3 One axis of advance (Tidy First).** Behavioural and structural changes land in separate commits. Tidy first as its own commit when it eases the behavioural change; refactor after when the cycle reveals structure. Rationale: bisect and review become opaque when both axes move at once.
@@ -311,7 +300,7 @@ fn run_package(p: Package) {
 8. **R8 Route around permission denials.** Tool-layer denials are policy, not surprise. On denial: select the next reversible alternative covered by `success_criteria` (different verify path, smaller increment, structural ↔ behavioural split, automaton tool for traversal). When no alternative exists within `effort_budget`: `Outcome::Surprise { PermissionDeniedNoAlternative }` → moltke with `next_input` naming the denied op and the missing affordance. Rationale: stalling for user permission mid-mission breaks the execution loop; moltke owns the user-interaction call.
 9. **R9 Handoff to moltke on every status, including success.** Report `MISSION COMPLETE` / `PACKAGE COMPLETE` — and every other terminal status — to moltke. Moltke owns the GC pass and the final user report. Rationale: the execution loop closes at moltke, never at user; bypassing moltke skips gardener and leaves the mission epic open in bd.
 10. **R10 Commit messages reflect intent**, drawn from the contract's `intent` (or sub-mission's `intent`) field. Tidyings prefix `tidy:` and take their message from the structural change ("tidy: extract `parse_header` from `decode`"). Rationale: commit history must read as intent-over-time; implementation mechanics drown the signal.
-11. **R11 Empty pipeline output from a build tool is `Outcome::Surprise`.** When the leftmost command is evidence-producing or state-changing (`cargo`, `pytest`, `ls`, `cat`, build tools, `adr-fmt`, …), empty stdout is surprise until proven otherwise. Recovery: re-run the leftmost stage in isolation; capture exit code and stderr. Pure search pipelines (`rg … | grep …`) are exempt. Rationale: silent prefix failure (bad `cd`, swallowed stderr, early exit) is the most common pseudo-clean result and the most common stall cause.
+11. **R11 Masked or corrupt evidence is not a verdict.** Follow AGENTS.md § Bash hygiene; rerun the producer independently and capture its status/stderr when filtering or marshalling obscures evidence. An unexplained empty build pipeline routes as `SurpriseKind::EmptyPipelineFromBuildTool`; documented quiet success and search no-match are not failures by themselves.
 12. **R12 E2E hard-gate: cannot mark a mission complete until the declared E2E `verify_command` exits 0.** If the contract specifies an end-to-end verify (smoke test, integration suite, CLI exercising the changed path), that command must run and exit 0 before `Result vs intent: Y`. Unit-tests-pass-while-E2E-skipped is `Outcome::Partial`, not `Outcome::Verified`. If no E2E verify is specified, state explicitly: "No E2E verify specified; unit verifies only." Rationale: unit green with E2E unrun is the most common false-positive completion.
 13. **R13 Non-trivial Rust changes commit only after `review:approved`.** Any Rust source, `Cargo.toml`, `build.rs`, or `unsafe` change requires a `review:approved` label on the review-request bead before `git commit`. Trivial-change exemptions are bounded (see § Beads workflow → Review scope). Re-request after NEEDS WORK; the cap counts **repeat rejections on the same defect class**, not rounds — a round surfacing a *new* class is convergent discovery. Two rejections on the same class: `SurpriseKind::ReviewRejected { bead }` → moltke. Rationale: linus catches unsafe soundness, idiom drift, and MSRV regressions hopper does not look for during execution.
 14. **R14 Decompose for the 10m budget.** Moltke aborts Tasks running > 10m without progress (moltke R11). Aim for sub-missions that complete in well under 10m wall-clock. Approaching that ⇒ stop and back-brief moltke with `BriefScope::PackageLevel` proposing ReDecompose. Tidy First (R3) is the usual fix. Rationale: long Tasks accumulate untraced state; small ones surface state via back-briefs.
@@ -345,23 +334,25 @@ fn run_package(p: Package) {
 
 ## Bash hygiene
 
-Per AGENTS.md § Bash hygiene (canonical mechanism — composition-with-pipefail, `workdir` preferred, path preflight; not restated here).
+Use AGENTS.md § Bash hygiene and § Beads → Canonical storage hierarchy.
+These preserve R1 evidence, permissions and scope; they do not add blanket
+external-path or joined-command bans. R8 governs blocked alternatives.
 
-Execution hygiene is additive R1 support, not a verify-before-claim weakening (trace evidence adr-fmt-h6r9o, adr-fmt-1miqw; frozen-unfreeze P12a). Cross-ref AGENTS.md § Bash hygiene rules 1-6.
+## Resource-sensitive implementation
 
-- **W1 Read discipline.** Before `read`, check live context for the same or overlapping offset+limit range. If present, re-reading that range is `Outcome::Waste`; read a wider window once instead of tight-cluster duplicates. C1 FORCED exemption: re-reading after a compaction / prune boundary, or after the file was edited this session, is forced re-hydration and is correct.
-- **W2 Git cadence.** In commit loops, do not re-run identical `git status` / `git diff` probes when no state-changing command occurred since the last identical run; that is `Outcome::Waste`. C1 FORCED exemption: keep re-checks after real mutations (`git add`, commit, apply, checkout, stash, reset, or equivalent) — they re-confirm changed tree state and are correct.
-- **W4 Hygiene reinforcement.** Composition follows AGENTS.md § Bash hygiene rule 2 (canonical, reshaped): pipes with an evidence-producing left stage need a `set -o pipefail;` prefix (the only sanctioned guard; a pipe-status array fails open on the fleet's zsh); parallel tool-calls stay the default ergonomic for independent ops; a literal `&&` for one sequential unit (e.g. `git add && commit`) is fine. Use `glob` / `grep` / `read` / `apply_patch` instead of bash wrappers for file search, content search, reads, and edits; preflight unobserved paths. Build/state tools run standalone or with structured flags. The stall cost is hidden prefix failure: bad `cd`, an unguarded piped evidence command, or shell inspection can return empty/misleading output that forces re-runs and breaks tempo.
-- **W5 No scratch-file marshalling (for coordination bodies).** Cross-agent coordination bodies — diffs, patches, review context, any work product another agent reads — still go straight into the review-request bead `description` (`bd update --stdin` on the fresh bead; it replaces, so an already-bodied bead needs the accumulation recipe in AGENTS.md § Beads → Tier 1), never staged to disk first; read the diff with `git diff` to stdout directly. This is Tier 1, unchanged. Separately, a genuinely ephemeral single-turn or single-mission scratch file (not coordination content) may live in the workspace-relative default `.ooda/tmp/<mission_id>/` — self-clean it before mission end. Bare `/tmp`, `$TMPDIR`, `/var/folders`, and `T/opencode` sit outside the project root and risk the permission-ask-hang mechanism (AGENTS.md § Bash hygiene): an out-of-allow-set path can raise an `external_directory` prompt nobody answers, hanging the mission — not because temp files are inherently taboo, but because that path shape isn't in the workspace allow-set. If you catch yourself about to write outside `.ooda/tmp/<mission_id>/`, stop: pipe to stdout, write into a bead, or move the scratch file inside the mission's `.ooda/tmp/` directory instead.
-- **W6 Banned command shapes — hard stop (trace evidence: 5 hangs, identical signature).** Three shapes reliably hang the session forever; never emit them. Each has a direct-stdout alternative that is always available.
+Apply AGENTS.md § Rust/Tokio resource contracts to triggered changes. Read
+the mission's budgets before implementation; surface missing material limits
+to moltke. Admit before unbounded spawning/retention, carry charges with
+resource ownership via RAII through errors/cancellation, and compose per-unit
+limits across concurrent work. Preserve protocol state on partial I/O and
+supervise shutdown; a dropped future/handle is not rollback/termination.
 
-  | ❌ Banned shape | Why it hangs | ✅ Do instead |
-  |---|---|---|
-  | `cmd >/scratch.txt; …; rm -f /scratch.txt` (redirect to a bare-root path, then read it back) | `/scratch.txt` is filesystem-root, outside the allow-set → `external_directory` ask nobody answers | Run `cmd` standalone; read its stdout **directly from the tool result**. You never need to capture-to-file to check exit codes or output. |
-  | `cd /abs/path && cmd` | bad-`cd` prefix + composition hides prefix failure; abs path may trip the boundary | Set the bash tool `workdir` parameter; run `cmd` alone. |
-  | reading/writing under `~/.cargo`, `~`, `/var`, or any path outside the workspace root | out-of-allow-set → `external_directory` ask nobody answers | Read only inside the repo. Need an external crate-source fact? Hand back to moltke (`next_input` names the fact) — the primary session fetches it. |
-
-  The canonical failing instance was: `cd /Users/.../gh-report && adr-fmt --lint >/tmp_adrlint_before.txt 2>&1; echo "EXIT:$?"; rm -f /tmp_adrlint_before.txt`. Correct form: `adr-fmt --lint` as a plain command with `workdir` set, reading the printed output and exit status directly from the tool result. If a step *seems* to require a banned shape, it does not — there is a direct-stdout path, or the need belongs in a bead / a moltke handback. When in doubt, hand back rather than improvise a file round-trip.
+Use TDD for applicable at-limit/over-limit, stalled-consumer, concurrent
+producer, retry, cancellation, shutdown and overflow cases. Record measured
+high-water marks, build/workload/concurrency/machine/date and exclusions in
+the review bead. Separate application bounds from process memory; strict
+no-allocation requires the explicitly scoped instrumentation contract, not
+an inference from a finite run. Existing review tiers and guard proof apply.
 
 ## Handoff rule
 

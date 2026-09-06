@@ -163,7 +163,7 @@ leaves the description empty — so the **producing agent must confirm the body
 landed before handing off**:
 
 ```
-bd show <id> --json | jq -r '.[0].description' | head -c 200
+set -o pipefail; bd show <id> --json | jq -er '.[0].description | select(test("\\S")) | .[:200]'
 ```
 
 Enforcement surface (trigger + named artefact). **Trigger:** emitting
@@ -297,183 +297,53 @@ Anything multi-step, cross-role, or with surprise still escalates per the existi
 
 ## Bash hygiene
 
-Permissions are uniform across all agents — see `opencode.json` `permission.bash`.
-Allow-by-default minus a small denylist of catastrophic commands. No `ask` state;
-no per-agent matrices. Run any allowed command without confirmation.
+Use dedicated file tools for inspection/edits and bash for commands. Existing
+permissions, role/scope limits, secret protection and destructive-operation
+authorization still apply; shell convenience never widens them.
 
 ### Permission-ask-hang (canonical mechanism)
 
-Named principle, cited elsewhere by name rather than re-described: an
-`ask`-class permission prompt (e.g. opencode's `external_directory` dialog,
-or any tool-layer confirmation gate) blocks a **headless subagent forever**
-when no human is watching the session — neither vendor tested implements
-an idle-timeout that auto-answers or auto-cancels the prompt. Evidence:
-opencode issue #35073 (sync subagents hang on ask-prompts — exact
-root-cause match); confirmed two-vendor no-idle-timeout.
+An unanswered `ask`-class permission prompt can stall a headless subagent
+indefinitely. Respect the active policy; choose an allowed, in-scope alternative
+or hand back the missing affordance rather than waiting. An external path or
+joined command is not itself proof that a prompt occurs. Historical reports
+and superseded causal claims are preserved in config-jui.
 
-This is the general mechanism other doctrine cites by name — the
-ADR-parent-dir case (oracle `external_directory`, see `agents/oracle.md`
-R11/R13), the scratch-path allow-set (§ Beads → Canonical storage
-hierarchy, Tier 2b below), and any future case with the same "operation
-raises an ask-prompt, no human answers it, subagent hangs forever" shape.
+1. **Directory and arguments.** Use the tool's `workdir` parameter. Quote
+   paths and arguments containing spaces or shell metacharacters; use `--`
+   where supported for path operands. Treat external text as data, not shell
+   code: no `eval` or interpolation into executable command syntax.
+2. **Composition and exits.** Run independent operations in parallel tool
+   calls; use `&&` for dependent steps. Prefix evidence/state pipelines with
+   literal `set -o pipefail;`; do not substitute shell-specific status arrays.
+   Prefer standalone build commands and structured flags. Interpret exits by
+   command contract: search no-match, quiet success, and failure differ.
+   A filter's match/no-match is not the producer's verdict; pipefail alone
+   does not identify which stage failed. If evidence is masked, unexpectedly
+   empty, or corrupt, rerun the producer independently with status and stderr.
+3. **File tools.** Use `glob`, `grep`, `read`, and `apply_patch`/edit tools for
+   search, inspection and edits, not bash wrappers. Bash runs git, consumers,
+   verification and other operational commands.
+4. **Targets.** Confirm directory context and mutation targets before acting,
+   including parent existence before creation and exact scope before deletion
+   or staging. Reuse observed paths; probe unknown paths when the next step
+   depends on them. Do not add redundant availability probes when the actual
+   command can safely report absence.
+5. **Reuse observations.** Read wide enough once. Refresh after mutation,
+   compaction or credible external change; do not re-read unchanged live
+   context merely to satisfy ceremony.
+6. **Git cadence.** Reuse status/diff until state changes or external activity
+   makes them stale. Review current state before staging/commit, stage only
+   intended paths, preserve unrelated work, and respect commit/push authority.
+7. **Machine data.** Pipe producer output directly or use `printf '%s'` with
+   a fixed format; never replay JSON through `echo`. Prefer direct stdout;
+   scratch and coordination bodies follow § Beads → Canonical storage
+   hierarchy, including safe accumulation for existing bead descriptions.
 
-**Does not apply where no `ask`-class prompt is raised.** The original
-joined-`command -v` ban (`command -v a; command -v b`) attributed its
-observed stall to this mechanism, but `command -v` touches no path and
-raises no permission event — the stated mechanism does not apply to it
-(see § Bash hygiene rule 2). Probe P1 (joined `command -v` form) ran
-clean 3× this session with no reproduction. This is evidence the *stated
-cause* was wrong, not proof the joined form is safe in general — if a
-real trace resurfaces a stall on this shape, re-tighten the guidance
-rather than assume the probe result generalises forever.
-
-Three rules earn their keep:
-
-1. **Use the bash tool's `workdir` parameter for directory context,
-   preferred over `cd <path> && <command>`.** Corrected rationale (probe
-   P3): the shell is not silent on a bad `cd` — it prints `cd: no such
-   file or directory` to stderr, and `&&` means the second command never
-   runs. The risk is agent-side misreading (skimming past the stderr
-   line, or misreading "no command output" as "command ran and produced
-   nothing") rather than the shell silently swallowing the failure.
-   `workdir` still wins because it fails at the tool layer where the
-   caller cannot miss it, not because the shell hides anything.
-
-   ```
-   GOOD: bash(command="cargo test", workdir="crates/foo")
-   BAD:  bash(command="cd crates/foo && cargo test")
-   ```
-
-   Applies to **every** agent with bash access — no exceptions for "just one
-   quick command".
-2. **Composition is allowed; guard evidence-producing pipes with
-   `pipefail`.** The prior blanket "one statement per bash call" ban is
-   replaced by a shape distinction:
-
-   - **Parallel tool-calls for independent operations** (e.g. two
-     unrelated `bash` calls, or `git status` + `git diff`) remain the
-     **default ergonomic** — batch them as separate tool-calls in one
-     message rather than joining with `&&` / `;`. This is about tempo and
-     clean per-call exit codes, not a silent-failure risk.
-   - **Literal shell composition for a sequential single logical unit**
-     (e.g. `git add -A && git commit -m "msg"`) is allowed — the
-     operations are one unit of work, and splitting them into separate
-     tool-calls buys nothing.
-   - **Pipes with an evidence-producing left stage** (`cargo … | grep`,
-     `pytest … | head`) MANDATE a `pipefail` guard: prefix the command
-     string with the literal `set -o pipefail;`, so a failing left stage
-     cannot masquerade as a clean right-stage result. Without the guard,
-     `cmd_that_fails | grep pattern` exits 0 (grep's code) even though
-     `cmd_that_fails` exited non-zero — the single most common
-     silent-failure shape this doctrine guards against.
-
-     `set -o pipefail` is the **only** sanctioned guard; it works in both
-     zsh and bash. Do **not** inspect a pipe-status array instead. The
-     fleet shell is zsh (`$0` = `/bin/zsh`, `ZSH_VERSION` 5.9), where
-     `PIPESTATUS` is undefined and zsh's own `pipestatus` is 1-indexed —
-     so `${PIPESTATUS[0]}` expands to the empty string and the guard
-     `[ "${PIPESTATUS[0]}" -eq 0 ]` evaluates the empty string as `0` and
-     reports **clean**. Measured: `false | grep -q x` then that guard
-     printed `clean` with exit 0, while `set -o pipefail; false | grep -q x`
-     exited 1. A pipe-status-array guard fails *open* — it is worse than no
-     guard, because it looks like verification.
-
-     Enforcement surface (prose; trigger + named artefact): when a bash
-     tool-call contains a pipe whose left stage is evidence-producing or
-     state-changing and the command string does not begin with
-     `set -o pipefail;`, produce a review reject (linus; `code-review`
-     skill) and, for hopper mid-mission, `Outcome::Surprise` — the
-     pipeline's exit code is not admissible evidence.
-   - **Empty stdout from an evidence-producing or state-changing pipeline
-     is still `Outcome::Surprise`** (preserved, and elevated: this is the
-     backstop that catches a `pipefail` guard you forgot, not a
-     replacement for one). Re-run the leftmost stage in isolation; capture
-     exit code and stderr. Pure search pipelines (`rg … | grep …`) stay
-     exempt — empty output there is a valid no-match, not a signal of
-     prefix failure.
-
-   **Tool-availability probes** (`command -v <tool>`): parallel tool-calls
-   remain the default ergonomic (batch as separate one-statement bash
-   tool-calls in one message). The prior absolute ban on the `;`/`&&`-joined
-   form is lifted — see Permission-ask-hang above: `command -v` raises no
-   permission event, so it does not hit the mechanism the ban originally
-   cited, and probe P1 ran the joined form clean 3× this session. This is
-   not a claim the joined form is safe in general, only that the stated
-   cause doesn't apply and the stall didn't reproduce; re-tighten if a real
-   trace resurfaces it. When the probe only gates an optional step, prefer
-   skipping it and letting the real command (`cargo audit`, `cargo deny
-   check`) report its own absence.
-
-   ```
-   GOOD (guarded pipe):    bash(command="set -o pipefail; cargo test 2>&1 | tee /tmp/out.log | grep -q 'test result: FAILED'")
-   ```
-
-   Guard example above uses `/tmp` only as the shell tool's own transient
-   redirect target within a single command (never read back cross-turn);
-   an artefact meant to outlive the command belongs in `.ooda/tmp/<mission_id>/`
-   or a bd bead per § Beads → Canonical storage hierarchy, not bare `/tmp`.
-
-   ```
-   GOOD (sequential unit): bash(command="git add -A && git commit -m 'msg'")
-   GOOD (independent ops, parallel tool-calls):
-                           bash(command="command -v cargo-audit")
-                           bash(command="command -v cargo-deny")
-   ```
-3. **File inspection belongs to dedicated tools.** Use `glob` for file search,
-   `grep` for content search, `read` for file contents, and `apply_patch` /
-   edit tools for edits. Do not invoke `find`, `grep`, `cat`, `head`, `tail`,
-   `sed`, or `awk` via `bash` for those jobs; bash wrappers around inspection
-   hide tool-layer evidence and invite silent prefix failures.
-4. **Verify any path you didn't observe in this session before passing it
-   to a tool.** Use `glob` or `read` for preflight. Confabulated paths
-   produce misleading silent failures deep in tool chains.
-5. **Read wider once; do not re-read overlap in live context.** Before reading a
-   path, check whether the same or an overlapping offset+limit range is already
-   in live context this session. If yes, re-reading that range is
-   `Outcome::Waste`; read a wider window once instead of many tiny repeated
-   slices. C1 FORCED exemption: re-reading after a compaction / prune boundary,
-   or after the file was edited this session, is forced re-hydration and is
-   correct.
-6. **Do not re-run identical git state probes without intervening mutation.**
-   Repeating `git status` / `git diff` when no state-changing command occurred
-   since the last identical run is `Outcome::Waste`. C1 FORCED exemption: keep
-   re-checks after real mutations (`git add`, commit, apply, checkout, stash,
-   reset, or equivalent) because they re-confirm changed tree state and are
-   correct.
-7. **Never round-trip machine-readable output through `echo`.** The fleet
-   shell is zsh, whose *builtin* `echo` interprets backslash escapes by
-   default (no `BSD_ECHO`). Capturing a tool's JSON into a variable and
-   replaying it with `echo "$JSON"` silently rewrites the payload: a `\n`
-   inside a JSON string loses its backslash and becomes a **raw newline
-   inside a string**, which is invalid JSON. Measured 2026-09-04:
-
-   ```
-   J='{"a":"x\\ny"}'
-   printf '%s' "$J" | jq -c .   # {"a":"x\\ny"}   correct
-   echo      "$J" | jq -c .     # {"a":"x\ny"}    backslash eaten
-   ```
-
-   Use `printf '%s'`, redirect to a file under `.ooda/tmp/<mission_id>/`, or
-   pipe the producer straight into the consumer without a variable
-   round-trip. This is the same failure class as the `PIPESTATUS` guard in
-   rule 2 — the shell corrupts the evidence and the corruption looks like a
-   defect in the data.
-
-   Enforcement surface (prose; trigger + named artefact). **Trigger:** a
-   command replaying captured machine-readable output via `echo "$VAR"`.
-   **Artefact 1:** review reject (linus; `code-review` skill). **Artefact 2:**
-   a parse error from a tool that emits well-formed output by contract is
-   `Outcome::Surprise`, **not** evidence the data is corrupt — re-emit via
-   `printf '%s'` and re-parse *before* concluding anything about the source.
-   Incident: a `jq` "control characters … must be escaped" error on
-   `bd list --json` was misread as a corrupt bead body, costing a phantom
-   defect hunt and a full scan of 4138 beads (24.8 MB) that found nothing.
-   The bead store was clean; `echo` was the defect.
-
-Empty stdout from an evidence-producing or state-changing pipeline (`cargo`,
-`pytest`, build tools) is `Outcome::Surprise`, not a clean result — re-run
-the leftmost stage in isolation. Pure search pipelines (`rg | grep`) are
-exempt; empty output there is a valid no-match.
+**Enforcement:** an unguarded evidence/state pipeline, machine-data replay
+through `echo`, or a filter mistaken for a producer verdict yields review
+reject (linus / `code-review`) and, for hopper, `Outcome::Surprise`.
+Recovered producer evidence is required before making the claim.
 
 ## House style — Rust comments
 
@@ -562,6 +432,84 @@ regex over `crates/**/*.rs` for the shape was measured at 1/8 precision
 as a defect detector (7 raw hits, 7 exempt, on the gh-report workspace
 2026-09-04) and is therefore **not** a sanctioned surface.
 
+## Rust/Tokio resource contracts
+
+**Trigger:** changes to ingestion, buffering, concurrency, retries, recursion,
+long-running services, or hot paths. Apply to the changed path and its direct
+resource owners, not every heap allocation or unrelated module.
+
+Record the resource contract in the existing mission bead description and
+success criteria; do not extend the mission schema:
+
+- **Boundary:** scope, lifecycle phase, workload, and whether the claim is
+  per request/connection/worker or aggregate process-wide.
+- **Budget:** named limits with units (bytes, items, tasks, attempts, depth,
+  elapsed time); acquisition, ownership, release, and composition across
+  concurrent units. Unknown limits are gaps, not invented constants. Moltke
+  decides material capacity and user-visible overload tradeoffs.
+- **Exhaustion:** explicit reject, wait-with-deadline, drop, disconnect, or
+  degrade behavior, including observable error/result and retained resources.
+- **Evidence:** applicable tests, measurement conditions, and exclusions.
+  Application bounds are not bounds on runtime/dependency allocations,
+  allocator overhead, stacks, or kernel memory; process claims account for
+  those separately or explicitly exclude them.
+
+### Accounting and ownership
+
+Account for queue **items and bytes separately**, plus active tasks, waiting
+producers, retries, and completed results awaiting consumption. A bounded
+channel alone does not bound the system. Admit work before unbounded spawning
+or payload retention; if admission itself waits, bound the waiters and what
+they retain. Compose per-unit limits into an aggregate bound.
+
+Keep permits/charges alive for the actual resource lifetime, including errors
+and cancellation; use ownership and RAII to release exactly once. Account for
+buffer capacity, shared backing allocations, pools, and retained high-water
+capacity, not just logical lengths. Use checked size/accounting arithmetic;
+overflow is an explicit failure, never wrapped admission credit.
+
+Prefer idiomatic safe Rust: RAII, `Result`, async I/O, bounded channels, and
+synchronization appropriate to the workload. No special crate, blanket
+no-allocation, `no_std`, lock-free, or custom-allocator mandate follows.
+
+### Progress, cancellation, and shutdown
+
+Bound individual work units, retry attempts/deadlines, and recursion depth;
+do not impose a finite iteration count on a service's lifetime loop. Such a
+loop instead needs reachable shutdown and bounded work between checks.
+Backpressure names where execution waits, the deadline, and data retained
+while waiting. Cancellation accounts for partial I/O, protocol state, and
+ownership transfer; dropping a future is not rollback of external effects.
+
+Shutdown stops admission, drains or cancels admitted work by policy, and
+supervises task termination. Dropping task handles does not stop tasks.
+Fairness uses bounded batches and deliberate scheduling opportunities;
+an `await` that is immediately ready is not proof of yielding. Blocking work
+uses a bounded admission path with a shutdown policy; `spawn_blocking` alone
+guarantees neither admission control nor cancellation of running work.
+
+### Verification and enforcement
+
+Use existing verify/review tiers and guard-proof rules. Applicable cases
+include at-limit and over-limit input, stalled consumers, concurrent
+producers, retries, cancellation, shutdown, and arithmetic overflow. Record
+measured high-water marks with build, workload, concurrency, machine state,
+date, and exclusions in the review bead; do not infer universal bounds from
+finite tests.
+
+Strict no-allocation applies only when explicitly required for a scoped phase.
+Define what counts as allocation, build configuration, and workload; instrument
+normal, saturation, error, cancellation, and shutdown paths and name excluded
+runtime/dependency activity. A finite zero-allocation run is evidence for that
+run, not a universal guarantee.
+
+**Named review artefacts** (`agents/linus.md`): `resource-contract-gap` when
+a triggered change lacks a usable budget, boundary, exhaustion policy, or
+evidence; `resource-bound-violated` when implementation or measurements breach
+the stated contract. These are findings through existing review tiers, not
+new labels or a fleet-wide CI gate. New or edited enforcement guards still
+require plant → fail → revert → clean evidence (§ Code-quality methods).
+
 ## When to call automaton
 
 Any agent (including hopper and gardener) may call `automaton` when it hits a
@@ -608,8 +556,9 @@ Three cyclic relationships sit inside moltke's standing-commander role:
 - **Review loop — hopper ↔ linus.** Nested inside the execution loop. On each
   non-trivial Rust TDD increment, hopper creates a review-request bead
   (label `review-request`), linus reviews and comments APPROVE or NEEDS WORK.
-  Hopper proceeds on APPROVE; on NEEDS WORK hopper fixes and re-requests (max 2
-  rounds before `SurpriseKind::ReviewRejected` → moltke). See § Beads.
+  Hopper proceeds on APPROVE; on NEEDS WORK hopper fixes and re-requests.
+  Two rejections on the same defect class trigger `SurpriseKind::ReviewRejected`
+  → moltke; new classes do not consume that cap. See § Beads.
 
 Oracle is consulted from inside moltke's Decide phase when the decision touches
 architectural surface — inputs to option enumeration, not a decision-maker itself.
@@ -684,23 +633,23 @@ resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
 
 ### Per-model tendency table
 
-The fleet runs four model profiles across two vendors. Three have measured
-tendencies; the fourth (GPT-6 Astra) has none yet. Opus 5 (oracle, linus)
-self-verifies unprompted and
-over-delegates by default — damp toward brevity, cap delegation, drop
-self-interrogation gates. Do not carry over 4.8-era compensations (heavy
-permission-to-act nudges, self-check gates) onto Opus 5 prompts.
+Bindings are configuration, not live-session or behavioral evidence. As of
+2026-09-06, `opencode.json` configures GPT-6 Astra for build, plan, hopper,
+moltke, feynman, automaton and turbo; Gemini 3.8 Flash for copernicus, oracle
+and gardener; Opus 5 for linus. Historical observations below stay attached
+to the measured model, not reassigned agents. No new tendency is inferred.
 
-| Model | Fleet agents | Tendency (cited) | Prompt-design implication |
+| Model | Configured agents / historical scope | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 5 | oracle, linus | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
-| Sonnet 5 | copernicus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
-| GPT-5.6 (sol/terra) | feynman (sol) | sol/terra is a capability/cost tier only, no documented behavioural split; more concise by default than prior gen (re-check "be concise" instructions still earn keep); infers user intent from context (fewer prescribed steps needed); repeating guardrail phrasing ("ask first", "do not mutate") increases unneeded approval friction — state each instruction once; reasoning.effort defaults medium, xhigh recommended for security/code-review; reasoning.context defaults all_turns (persists across turns) [config-5b6] | dampen over-imperative/repeated guardrails; prefer leaner, once-stated prompts; no sampling-param 400-error evidence found either direction for GPT-5.6 — treat "no exposed temperature field" as the only grounds for the no-sampling-params rule here, not Sonnet-5 parity |
-| GPT-6 Astra | hopper, moltke, build, plan | **UNMEASURED.** No trace observation and no behavioural-tendency evidence exists for this model in this repo. GPT-5.6 sol/terra guidance is **not** evidence about GPT-6 Astra and must not be inherited by family resemblance. Only the models.json facts are known: `reasoning: true`, effort values [low, medium, high, xhigh, max], `temperature: false`, context 1050000 [config-cg7] | none derivable. Do not retune hopper/moltke/build/plan prompt bodies on the basis of an unmeasured tendency; collect `chat.params` and behavioural observations first, then fill this row. `temperature: false` ⇒ set no sampling params |
+| Opus 5 | linus; historical model evidence | Self-verification, over-delegation and longer responses reported [config-qfd] | Model-scoped brevity/delegation guidance; not evidence about reassigned agents |
+| Sonnet 5 | historical only; no current binding | Literal conservative review and non-default sampling errors reported [prompting-claude-sonnet-5, config-92a §6] | Do not transfer to Gemini or GPT bindings |
+| GPT-5.6 (sol/terra) | historical only; no current binding | Concision, intent inference and repeated-guardrail friction reported [config-5b6] | Do not transfer by family resemblance to GPT-6 |
+| GPT-6 Astra | build, plan, hopper, moltke, feynman, automaton, turbo | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params; collect post-restart evidence first |
+| Gemini 3.8 Flash | copernicus, oracle, gardener | No behavioral evidence supplied for these bindings | No model-specific tuning inferred |
 
 ### github-copilot pass-through caveat
 
-All fleet models run via `github-copilot/<model>` — Claude and GPT alike.
+The fleet bindings above use `github-copilot/<model>`.
 `reasoningEffort` / `thinking` route through github-copilot, which may drop or
 preset them regardless of vendor.
 Confirm via a session trace that the knob reached the request — inspect the
@@ -722,15 +671,14 @@ copernicus/`claude-sonnet-5` resolved `max`). These are model-level
 observations: verified-for-model, never verified-for-this-agent — the
 2026-08-10 opus-5 sweep ran on the `build` agent, so it says nothing
 about linus specifically. **Gap**: gpt-5.6-terra
-is no longer bound to any fleet agent (sol carries feynman only), so no
-terra observation is expected or needed; re-open this gap only if terra
-is bound again. **Gap — UNVERIFIED**: `github-copilot/gpt-6-astra`
-(hopper, moltke, build, plan) reasoningEffort pass-through has **no** `chat.params`
-observation in this repo. models.json lists effort values
+and sol are no longer bound to fleet agents; their observations are historical.
+**Gap — UNVERIFIED here**: current GPT-6 Astra and Gemini agent-specific
+reasoningEffort pass-through needs post-restart `chat.params` evidence.
+For GPT-6, models.json lists effort values
 [low, medium, high, xhigh, max], which is evidence the option exists,
-not that it is reached. Do not treat `xhigh` on hopper/moltke/build/plan as
-confirmed until a post-restart trace shows
-`output.options.reasoningEffort: "xhigh"` resolved into the request.
+not that it is reached. Do not treat a configured effort value as confirmed
+until a post-restart trace shows that agent/model and the corresponding
+`output.options.reasoningEffort` resolved into the request.
 
 ## Tracing
 
@@ -903,7 +851,7 @@ memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
 
    **Enforcement surface** (prose; trigger + named artefact): before piping to
    `bd update <id> --stdin` on a bead you did not create in this turn, run
-   `bd show <id> --json | jq -r '.[0].description'` and confirm it is empty. A
+   `set -o pipefail; bd show <id> --json | jq -r '.[0].description'` and confirm it is empty. A
    non-empty result means the fresh-bead recipe would destroy a live body —
    use the accumulation recipe instead. A diff or review showing bare
    `--stdin` against a pre-existing bead is a review reject (linus;
@@ -921,10 +869,9 @@ memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
    - **(b) Tier 2b — workspace-local ephemeral scratch**, at
      `.ooda/tmp/<mission_id>/`: single-turn or single-mission intermediate
      files (a diff staged before reading, a working file mid-transform),
-     self-cleaned by the producing agent before mission end. Being inside
-     the project root, this path never triggers the `external_directory`
-     permission check (see Permission-ask-hang above) that paths outside
-     the root risk. This is scratch, not coordination — cross-agent
+     self-cleaned by the producing agent before mission end. Keep it within
+     the workspace and active permissions; path spelling is not a permission
+     guarantee (see Permission-ask-hang above). This is scratch, not coordination — cross-agent
      coordination bodies still go through Tier 1 above; `.ooda/tmp/` is
      never a substitute for the bd bead `description` field.
 3. **Tier 3 — NEVER (as coordination).** `$TMPDIR` / `/var/folders/.../T/opencode`
@@ -932,8 +879,8 @@ memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
    destination, regardless of any tool-description "pre-approved"
    affordance — that framing is unchanged. For ephemeral scratch
    specifically, `.ooda/tmp/<mission_id>/` (Tier 2b) is the
-   workspace-relative default: it self-cleans and never raises a
-   permission prompt. `$TMPDIR/opencode` remains available only as a
+   workspace-relative default, self-cleaned under active permissions.
+   `$TMPDIR/opencode` remains available only as a
    **lower-preference fallback** — e.g. the bash tool's own build/probe
    scratch affordance, or a turn where no mission id is yet known (probe
    P2: a `$TMPDIR/opencode` round-trip ran clean this session, so the

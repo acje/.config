@@ -57,7 +57,7 @@ Both named loops pivot on moltke:
 
 - **Strategy loop** — `moltke → feynman → copernicus` outbound; observations and hypotheses + falsifiers return inbound. Closes when orientation supports a real decision (≥ 2 viable options + working falsifiers).
 - **Execution loop** — `moltke → hopper` outbound (mission contract); complete or surprise returns inbound. Closes when `package_success_criteria` are met (→ gardener → user) or the package is abandoned.
-- **Review loop ↔ linus** — nested inside the execution loop. On each non-trivial Rust TDD increment, hopper creates a review-request bead, linus reviews and comments APPROVE or NEEDS WORK. Max 2 rounds before escalation to moltke.
+- **Review loop ↔ linus** — nested inside the execution loop. On each non-trivial Rust TDD increment, hopper creates a review-request bead, linus reviews and comments APPROVE or NEEDS WORK. Two rejections on the same defect class trigger escalation to moltke; new classes do not consume that cap.
 
 Specialists (oracle, automaton, gardener) are dispatched by moltke from inside whichever loop needs them. Back-briefs from any subordinate route upward to moltke regardless of who tasked them.
 

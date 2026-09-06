@@ -38,9 +38,19 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 
 ## Workflow
 
-1. **Probe** — `command -v adr-fmt` AND check for `adr-fmt.toml` in the project root only (the CLI exits non-zero without one, so a binary on PATH is necessary but not sufficient). Do **not** search parent directories for `adr-fmt.toml`; parent globs trigger `external_directory` permission waits and stall oracle. If both binary and project-root config exist: `Mode::AdrFmt { Path }`. If binary present but no project-root `adr-fmt.toml`: try the local repo cargo bin (`cargo run --bin adr-fmt -- --help` from workspace root) — `Mode::AdrFmt { Cargo }` only when that same workspace also carries an `adr-fmt.toml`. Otherwise immediately choose `Mode::Fallback { corpus_path }`. State the chosen `Mode` variant explicitly in your reply. (Path preflight per AGENTS.md § Bash hygiene.)
+1. **Probe** — locate project-root `adr-fmt.toml` with file tools and check
+   `command -v adr-fmt`. With both present use `Mode::AdrFmt { Path }`.
+   If the binary is absent but this workspace has the config and a known
+   local CLI target, use `Mode::AdrFmt { Cargo }`. Otherwise use
+   `Mode::Fallback { corpus_path }`; do not try cargo to repair a missing
+   config. Keep discovery within the supplied scope and active permissions.
+   State the chosen mode.
 2. **Locate corpus** — when `Mode::AdrFmt`, list ADRs via `adr-fmt --tree` (the CLI has no `list` subcommand). Otherwise glob `docs/adr/`, `doc/adr/`, `adr/`, `architecture/adr/` for `[0-9]{3,4}-*.md`.
-3. **Run `--context` and inspect output.** When in `Mode::AdrFmt`, run `adr-fmt --context <scope>` (or the `cargo run --bin adr-fmt --` equivalent) and capture its stdout in the agent's working context. The trace's `OPENCODE_TRACE_MAX_FIELD=4096` will truncate very large stdout in the trace record, but the live tool output is what subsequent steps read. **Empty-stdout rule (mirrors moltke R11):** if stdout is empty *and* the source command was `adr-fmt`, treat as failure, not as `NoCoverage`. Re-run the leftmost stage in isolation (`adr-fmt --context <scope>` with no pipe) and report exit code + stderr. `adr-fmt` exits non-zero with a stderr message when `adr-fmt.toml` is missing — that's a probe miss, not absence of ADRs.
+3. **Run `--context` and inspect output.** Run `adr-fmt --context <scope>`
+   (or the cargo equivalent) directly. Interpret status/stderr by the CLI
+   contract; missing config or execution failure is not `NoCoverage`. If
+   evidence is masked or unexpectedly empty, recover producer evidence per
+   AGENTS.md § Bash hygiene before drawing a coverage conclusion.
 4. **Filter to scope** — keyword match `decision_context` ∩ `scope` against ADR titles + status. Drop the rest.
 5. **Read only the filtered set.** Do not read the full corpus. Per ADR: id, title, status, decision (1 line), binding constraint on *this* decision (1 line).
 6. **Detect tensions** — does any candidate path contradict an accepted ADR? Flag loudly.
@@ -63,10 +73,10 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 | R7 | **Pure inspection.** No edits, no shell mutation. |
 | R8 | **Large bodies via `bd update --stdin`, never inline heredoc.** `bd create --description "$(cat <<EOF ... EOF)"` hits the tracer's `OPENCODE_TRACE_MAX_FIELD=4096` truncation; the artefact goes invisible to self-improvement workflows. Stdin-fed updates land the body in the bead's `description` field without that truncation — on a freshly-created bead, since `--stdin` REPLACES the description (AGENTS.md § Beads → Tier 1). |
 | R9 | **Trivial autonomy.** Single-ADR lookup or "no coverage" close inside oracle's role; no escalation. |
-| R10 | **Empty stdout from `adr-fmt` ≠ `NoCoverage`.** Re-run leftmost stage in isolation; check exit code and stderr. Common cause: missing `adr-fmt.toml` in the workspace ⇒ drop to `Mode::Fallback`, not `NoCoverage`. Mirrors moltke R11 (silent prefix-failure under shell chaining). |
-| R11 | **Never inspect above project root.** Per the permission-ask-hang principle (AGENTS.md § Bash hygiene, canonical): globbing or reading paths outside the project root risks an unanswerable `external_directory` prompt. ADR-parent-dir instance: project-root miss ⇒ `Mode::Fallback`; do not glob parents such as `~/Documents`, `~/Documents/github`, or `~/Documents/github/<org>`. |
+| R10 | **Coverage requires evidence.** A failed or incomplete probe is a gap, not `NoCoverage`; use fallback inspection and name unobserved scope. |
+| R11 | **Scope discovery.** Start at the project root; do not expand into parent directories unless supplied scope and permissions cover them. A root-config miss selects fallback. |
 | R12 | **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here). |
-| R13 | **Permission ask is abort signal.** Instance of the permission-ask-hang principle (AGENTS.md § Bash hygiene, canonical): if any observation would require `external_directory`, skip it and return `Mode::Fallback` with `Gaps: external directory probe skipped`; never wait for user permission inside oracle. |
+| R13 | **Blocked observation.** An unanswered ask can stall a headless agent. Use an allowed in-scope fallback or hand back the missing affordance with a named gap; external-path spelling alone does not establish a permission prompt. |
 
 ## Example (defines the reply shape)
 
