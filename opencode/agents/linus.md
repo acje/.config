@@ -287,6 +287,18 @@ a `String` / integer standing in for a constrained domain value
 (stringly-typed); a `Vec<T>` where the code asserts non-emptiness; a partial
 function guarded by an `assert!` / early-return that a type could make
 total. Corresponds to hopper R16.
+**Inventory.** For a changed constrained type or construction/mutation route,
+apply AGENTS.md § Rustling — selective TigerStyle adaptation → Construction-path
+review inventory. Record invariant, caller boundary, public fields/literals,
+constructors/builders, defaults, conversions, serde and mutation routes,
+including absent routes, in the existing review report. Cite preservation or
+a counterexample for each route; include a valid case and an invalid witness
+with the accept/reject assessment. This check is independent of split control
+flow. Private fields alone prove nothing about defining-module bypasses.
+Independent booleans and fallible input boundaries are not defects; judge
+the declared domain invariant, not a stronger invented one. Missing route
+evidence is a review gap, not a clean verdict. Execution follows the existing
+review tier; read-level examples are not compile-fail evidence.
 **Check.** *Can a caller construct an invalid value at all?* If yes, could an
 `enum` (legal shapes only), a newtype with a validating constructor at the
 boundary, or a "correct by construction" datatype (`NonEmptyVec<T>`,

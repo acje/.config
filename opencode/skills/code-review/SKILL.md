@@ -54,6 +54,7 @@ ask the user.
 |----------|-------|
 | Correctness | Does the code do what it claims to? Edge cases handled? |
 | Type safety | Explicit types, no implicit `any`, no unsafe casts |
+| Construction paths (Rust) | Independently of control flow, apply fleet AGENTS.md § Rustling — selective TigerStyle adaptation → Construction-path review inventory to changed constrained types/routes. Use the existing `illegal-state-representable` artefact, as Linus does: record invariant/caller boundary; public fields/literals, constructors/builders, defaults, conversions, serde, mutation and absent routes; preservation/counterexample per route; valid and invalid cases with verdict and test evidence. Private fields do not protect defining-module paths. Accept independent booleans, genuine optionality and fallible input boundaries; do not invent stronger invariants. Missing evidence is a review gap, not safety. Respect review tiers and distinguish read-level assessment from executed tests. |
 | Patterns | Matches existing codebase conventions |
 | Error handling | Errors caught, propagated, or surfaced — not swallowed |
 | Tests | New behavior has new tests; regressions have regression tests |

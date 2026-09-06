@@ -432,6 +432,54 @@ regex over `crates/**/*.rs` for the shape was measured at 1/8 precision
 as a defect detector (7 raw hits, 7 exempt, on the gh-report workspace
 2026-09-04) and is therefore **not** a sanctioned surface.
 
+## Rustling — selective TigerStyle adaptation
+
+Source: [TigerStyle](https://tigerstyle.dev/), assessed in gh-report beads
+`ghr-9e7f5` and `ghr-d4nk2` (2026-09-06). This is a selective Rust
+adaptation, not a new blanket style or a claim about model behaviour.
+
+| Source theme | Decision and rationale | Existing enforcement surface |
+|---|---|---|
+| Explicit Limits | Adapt to scoped items/bytes/tasks, deadlines and ownership; bound service work, not service lifetime. | § Rust/Tokio resource contracts; `resource-contract-gap`, `resource-bound-violated` |
+| Assertions | Adapt to validated input boundaries and legal types; do not replace recoverable input errors with internal panics. Assess both valid and invalid cases. | `illegal-state-representable`; § Code-quality methods, guard proof |
+| Dimensionality | Adapt to legal enum/newtype states, not a preference for fewer states when the domain needs Unknown. Independent booleans remain valid. | `illegal-state-representable`; § Code-quality methods, error is not a negative finding |
+| Static Memory Allocation; no recursion; u32 preference | Reject blanket import: Rust/Tokio permits allocation and bounded recursion; integer width follows the domain. Strict no-allocation needs an explicit phase and measurement. | Existing resource contract, not a new ban |
+| Performance; Nouns And Verbs | Defer new batching, profiling and naming mandates: no measured residual or new review artefact established by this survey. Names with units can express existing budgets. | No new enforcement claimed |
+| Comments and control-flow conventions | Retain the existing Rust-specific rules rather than importing conflicting prescriptions. | `plain-comment-in-rust-source`, `guard-then-match-split` |
+
+### Construction-path review inventory
+
+**Trigger:** a changed constrained type or its construction/mutation routes.
+Apply the existing `illegal-state-representable` review artefact independently
+of the control-flow check. Record the following in the existing review report
+or bead; no new tool, label, regex or CI gate is introduced:
+
+1. Name the invariant and caller boundary (including module visibility).
+   Distinguish untrusted input/DTO values from validated domain values.
+2. Inventory public fields/struct literals, constructors/builders, `Default`,
+   conversions (`From`/`TryFrom`), serde/custom deserialization, and mutation
+   (setters, mutable references, `DerefMut`). Mark absent routes explicitly;
+   inspect direct callers and invariant-bearing defining-module paths too.
+3. For each available route, cite how it preserves the invariant or give a
+   constructible counterexample. A safe primary constructor does not excuse
+   an unchecked alternate route. Private fields constrain outside callers,
+   not code inside the defining module.
+4. Record a valid boundary case and an invalid-state witness, the proposed
+   enum/newtype/private deriving constructor remedy when needed, and an
+   accept/reject verdict with evidence. Name a suitable compile-fail or
+   runtime boundary test; distinguish read-level assessment from an executed
+   test. Incomplete route evidence is a review gap, not proof of safety.
+
+**Artefact:** Linus and the generic code-review skill use the same
+`illegal-state-representable` finding and this inventory. Existing review
+tiers still govern execution depth. Reject a demonstrated illegal domain
+state, not the mere presence of `bool`, `Option`, a primitive, or fallible
+validation. Independent booleans, genuine optionality, and an input boundary
+returning `None`/`Err` are valid; do not invent stronger domain constraints.
+Compile-time exclusion claims must name the caller boundary. For an edited
+executable guard, retain plant → fail → revert → clean evidence; a worked
+review example is judgement evidence, not an automated enforcement proof.
+
 ## Rust/Tokio resource contracts
 
 **Trigger:** changes to ingestion, buffering, concurrency, retries, recursion,
