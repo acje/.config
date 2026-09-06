@@ -200,8 +200,8 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-5",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
