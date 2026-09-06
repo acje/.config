@@ -685,18 +685,18 @@ resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
 ### Per-model tendency table
 
 The fleet runs four model profiles across two vendors. Three have measured
-tendencies; the fourth (GPT-6 Astra) has none yet. Opus 5 (oracle, build,
-plan, linus) self-verifies unprompted and
+tendencies; the fourth (GPT-6 Astra) has none yet. Opus 5 (oracle, linus)
+self-verifies unprompted and
 over-delegates by default — damp toward brevity, cap delegation, drop
 self-interrogation gates. Do not carry over 4.8-era compensations (heavy
 permission-to-act nudges, self-check gates) onto Opus 5 prompts.
 
 | Model | Fleet agents | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 5 | oracle, build, plan, linus | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
+| Opus 5 | oracle, linus | self-verifies unprompted; over-delegates to subagents; responses run longer by default; effort doesn't reliably shrink visible output; adaptive thinking ON by default [config-qfd] | remove self-verification/self-interrogation gates (over-verification risk); cap delegation, don't encourage it; prompt conciseness explicitly |
 | Sonnet 5 | copernicus, gardener, automaton, turbo | literal; context-aware; follows conservative review instructions literally → silent recall loss; non-default sampling params 400-error [prompting-claude-sonnet-5, config-92a §6] | dial back over-imperative tone; state scope explicitly (no silent generalization); decouple discovery from filtering in reviewers; never set non-default temperature/top_p/top_k |
 | GPT-5.6 (sol/terra) | feynman (sol) | sol/terra is a capability/cost tier only, no documented behavioural split; more concise by default than prior gen (re-check "be concise" instructions still earn keep); infers user intent from context (fewer prescribed steps needed); repeating guardrail phrasing ("ask first", "do not mutate") increases unneeded approval friction — state each instruction once; reasoning.effort defaults medium, xhigh recommended for security/code-review; reasoning.context defaults all_turns (persists across turns) [config-5b6] | dampen over-imperative/repeated guardrails; prefer leaner, once-stated prompts; no sampling-param 400-error evidence found either direction for GPT-5.6 — treat "no exposed temperature field" as the only grounds for the no-sampling-params rule here, not Sonnet-5 parity |
-| GPT-6 Astra | hopper, moltke | **UNMEASURED.** No trace observation and no behavioural-tendency evidence exists for this model in this repo. GPT-5.6 sol/terra guidance is **not** evidence about GPT-6 Astra and must not be inherited by family resemblance. Only the models.json facts are known: `reasoning: true`, effort values [low, medium, high, xhigh, max], `temperature: false`, context 1050000 [config-cg7] | none derivable. Do not retune hopper/moltke prompt bodies on the basis of an unmeasured tendency; collect `chat.params` and behavioural observations first, then fill this row. `temperature: false` ⇒ set no sampling params |
+| GPT-6 Astra | hopper, moltke, build, plan | **UNMEASURED.** No trace observation and no behavioural-tendency evidence exists for this model in this repo. GPT-5.6 sol/terra guidance is **not** evidence about GPT-6 Astra and must not be inherited by family resemblance. Only the models.json facts are known: `reasoning: true`, effort values [low, medium, high, xhigh, max], `temperature: false`, context 1050000 [config-cg7] | none derivable. Do not retune hopper/moltke/build/plan prompt bodies on the basis of an unmeasured tendency; collect `chat.params` and behavioural observations first, then fill this row. `temperature: false` ⇒ set no sampling params |
 
 ### github-copilot pass-through caveat
 
@@ -725,10 +725,10 @@ about linus specifically. **Gap**: gpt-5.6-terra
 is no longer bound to any fleet agent (sol carries feynman only), so no
 terra observation is expected or needed; re-open this gap only if terra
 is bound again. **Gap — UNVERIFIED**: `github-copilot/gpt-6-astra`
-(hopper, moltke) reasoningEffort pass-through has **no** `chat.params`
+(hopper, moltke, build, plan) reasoningEffort pass-through has **no** `chat.params`
 observation in this repo. models.json lists effort values
 [low, medium, high, xhigh, max], which is evidence the option exists,
-not that it is reached. Do not treat `xhigh` on hopper/moltke as
+not that it is reached. Do not treat `xhigh` on hopper/moltke/build/plan as
 confirmed until a post-restart trace shows
 `output.options.reasoningEffort: "xhigh"` resolved into the request.
 

@@ -161,12 +161,12 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/claude-opus-5",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "xhigh"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/claude-opus-5",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "xhigh"
     },
     "moltke": {
