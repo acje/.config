@@ -1,6 +1,6 @@
 ---
 name: comment-free
-description: "Use when checking Rust doc-comment word budgets or previewing removal of non-doc comments with comment-free. Distinguishes read-only lint, rewrite preview and explicitly authorized scoped rewrites; preserves required documentation and rationale."
+description: "Use when checking Rust doc-comment word budgets, running the opt-in two-threshold budget gate, or previewing non-doc comment removal with comment-free. Separates read-only checks from authorized rewrites and preserves required documentation."
 ---
 
 # comment-free
@@ -10,9 +10,13 @@ define policy. Linus uses read-only modes only.
 
 ## Preflight
 
-- Read repository instructions and the files in scope. ROOT must be a
-  directory, not a single file. Choose the narrowest authorized directory;
-  if that includes out-of-scope files, use focused edits instead of rewriting.
+- Read repository instructions and the files in scope. ROOT accepts a directory
+  or one regular `.rs` file; omitted ROOT scans cwd without upward discovery.
+  Choose the narrowest authorized scope. Directory scans recursively select
+  Rust files with build/hidden pruning, regardless of Cargo.toml. Leaf file
+  symlinks are rejected; nested source-hiding links are traversal errors.
+  Explicit directory-root links retain traversal. If scope includes unrelated
+  files, narrow it or use focused edits instead of rewriting.
 - Run `command -v comment-free` and `comment-free --help`. Record
   capability-available or fallback; if absent, use source inspection and
   report the mechanical check unavailable. Do not silently install. When
@@ -28,18 +32,63 @@ define policy. Linus uses read-only modes only.
 |---|---|---|
 | Read-only doc lint | `comment-free "<ROOT>"` | Checks doc prose against the default budget, not absence of ordinary comments. |
 | Explicit budget | `comment-free --doc-max-words <N> "<ROOT>"` | Same lint with the selected budget; record N. |
+| Opt-in policy gate | `comment-free --check-doc-budget --doc-advisory-words <A> --doc-max-words <E> --max-warning-files 0 "<ROOT>"` | Read-only independent advisory/enforced evaluation; summary-only details, not reduced coverage. |
 | Read-only rewrite preview | `comment-free --rewrite --dry-run "<ROOT>"` | Shows proposed non-doc comment removal **and rustdoc-link canonicalisation**; no files written. |
 | Authorized rewrite | `comment-free --rewrite "<ROOT>"` | Writes both passes; only after the safeguards below, never during Linus review. |
 
 `--dry-run` and `--context <N>` require `--rewrite`. Do not use the deprecated
 `--rustdoc-link-idioms` alias. Default lint is already read-only.
 
-## Interpret outcomes by mode
+## Opt-in two-threshold gate
+
+Select thresholds from the mission/repository policy, not this example. Supply
+both explicitly: `A <= E`; equal thresholds, including zero, are valid. The
+legacy default of 80 does not supply an omitted gate threshold. Gate mode
+conflicts with `--rewrite`, `--dry-run`/`-n` and `--rustdoc-link-idioms`.
+
+Canonical-source example (verified mechanics: evidence `config-p7w`):
+
+```sh
+cargo run --locked -- --check-doc-budget --doc-advisory-words 80 --doc-max-words 120 --max-warning-files 0 .
+```
+
+Set the command's `workdir` to a verified canonical `acje/comment-free` source
+checkout (`https://github.com/acje/comment-free`). Here `.` targets that source
+checkout itself, not the caller's project. For another target, use the installed
+`comment-free` command from the modes table with its explicit ROOT. Do not run
+`cargo run` in an arbitrary target project expecting it to invoke comment-free.
+If source access is denied, use available installed help and verified evidence;
+do not bypass permissions or infer installation provenance from version alone.
+
+Each candidate Rust path is read once and parsed once. The same AST is evaluated
+separately against advisory and enforced thresholds; findings, undecided items,
+warning files and shown/hidden counters remain independent per threshold.
+Warning-file admission is independent per threshold in native path order.
+`--max-warning-files` defaults to 1; `0` hides detail records, not findings,
+undecided items or errors. All scoped files are still scanned; summaries retain
+full and shown/hidden totals. `unlimited` removes the detail cap. The cap is not
+accepted with rewrite or the deprecated alias.
+
+| Gate exit | Meaning |
+|---|---|
+| `0` | Pass: all inspected payloads evaluated, no enforced findings, no undecided items at either threshold, no errors. Advisory-only findings pass. |
+| `1` | Confirmed enforced violation with no undecided items or errors. |
+| `2` | Unknown/error, overriding any confirmed violation: invalid CLI/thresholds/root, walk/read/parse errors, undecided at either threshold, empty Rust scope, counter overflow, or output write/flush failure. Never treat it as pass or merely an enforced violation. |
+
+Gate JSON Lines use `kind` and `version: 1`: `policy_detail` on stdout,
+`policy_summary` on stderr. Legacy records instead use `record` and `v`
+(doc-lint/diagnostics v3); a legacy `run_error` may accompany gate output on
+stderr. Dispatch by record family/version, not a guessed unified schema. Keep
+the producer exit and both streams; missing/corrupt output is not a clean
+verdict. The envelope and mechanics above come from `config-p7w`; consult the
+matching canonical record grammar only when access is authorized.
+
+## Legacy lint / preview / write exits (not the gate)
 
 | Exit | Meaning |
 |---|---|
 | `0` | Lint: all inspected doc payloads decided within budget, subject to detection limits below. Preview: no pending rewrite. Write: completed, whether or not files changed; not a lint verdict. |
-| `1` | Catastrophic/unmapped I/O error; check unavailable/failed, not clean. |
+| `1` | Catastrophic/unmapped I/O error or exact-counter overflow; check unavailable/failed, not clean. |
 | `2` | Invalid CLI arguments; correct invocation before interpreting results. |
 | `3` | Preview has pending changes; these may be doc links alone, not evidence of an ordinary comment. |
 | `4` | Lint finding **or undecided item**. Read `findings` and `undecided` in `lint_summary`; undecided is not a proven violation. |
@@ -49,12 +98,12 @@ Capture both streams and the producer exit. Findings/rewrite records and
 preview diffs go to stdout; summaries and run diagnostics go to stderr.
 Records are JSON Lines, but the unified diff body and terminal error messages
 are plain text: do not feed mixed output wholesale to a JSON parser. Preserve
-non-JSON stderr as diagnostics. Consult the installed version's
-help and `docs/record-format.md` in its canonical source for record grammar.
+non-JSON stderr as diagnostics. Consult the installed version's help and,
+when authorized, `docs/record-format.md` in its canonical source for grammar.
 
 Macro-valued doc attributes and doc attributes inside macro token bodies can
 be undecided. Docs synthesised by procedural macros without a spelled `doc`
-token are not detected. Neither lint exit 0 nor lexer-based rewriting proves
+token are not detected. Neither lint/gate exit 0 nor lexer-based rewriting proves
 semantic correctness, complete documentation coverage or fleet compliance.
 
 ## Before any write
