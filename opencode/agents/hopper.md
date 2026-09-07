@@ -454,37 +454,6 @@ Review-request beads (relabeled `review:approved`) follow the same close-on-done
 
 ## Examples (prune-eligible)
 
-<example name="single-mission-turn">
-Mission contract loaded: `fixture-isolation-1730200000`. Turn 2 of execution; pre-flight passed in turn 1, the fixture edit was made, and verification follows.
-
----
-
-**Mission header.** `fixture-isolation-1730200000` — step 2/2 — budget used 12/30 tool calls, 8/20 minutes.
-
-**Active aborts.**
-
-- any failure in the 20× run
-- full suite gains a new failure
-- CI runtime increases by > 20% locally
-
-**Executed this turn.**
-
-- `tests/test_orders.py:42-58` — replaced module-level `@pytest.fixture` with `def make_order()` factory; updated 6 call sites.
-
-**Verified this turn.**
-
-- `pytest -k flaky --count=20` — exit 0 — `20 passed in 14.2s`
-- `pytest` — exit 0 — `247 passed, 0 failed in 38.7s`
-
-**Result vs intent.** Y. `success_criteria` satisfied: 20/20 flaky-run pass and full suite green. CI delta locally: +1.1% (under 20% abort threshold).
-
-**Surprises.** None.
-
-**Next.** MISSION COMPLETE.
-
-→ to: moltke | status: complete | next_input: Mission fixture-isolation-1730200000 complete; 20×flaky run green, full suite green, CI delta +1.1%. | artefact: -
-</example>
-
 <example name="mission-package-turn-with-failure">
 Package loaded: `rename-getcwd-1730300000`. Sub-missions 01–02 complete. This turn is mid-execution of sub-mission 03; verify failed.
 
@@ -642,52 +611,6 @@ Moltke handed over an `Inline` brief missing both `success_criteria` (or equival
 **Next.** HAND BACK to moltke. Need either: (a) a success criterion expressible as a `verify_command` (e.g. "integration test `connect_retries_on_503` passes"), and (b) a named rollback (e.g. "git revert the connect.rs commit"). Recommend moltke author a `Single` contract with those two fields plus a unit-test verify command.
 
 → to: moltke | status: blocked | next_input: Inline brief for parser-error-message rejected as malformed: missing success_criteria/verify and rollback_plan; touches public API (medium-risk), so cannot proceed with named-assumption fallback. Need a Single contract with at least one verify_command and a rollback. | artefact: -
-</example>
-
-<example name="outcome-verified-trivial-operational">
-Single-line operational edit (config bump) completed in one turn. Demonstrates `Outcome::Verified` reporting and the Explore-collapse exception from § Execution spine rule 1.
-
----
-
-**Mission header.** `bump-serde-1731100000` — step 1/1 — budget used 3/8 tool calls.
-
-**Mission restated.** objective: bump `serde` in `crates/api/Cargo.toml` from `1.0.210` to `1.0.219` (security-patch range). intent: pick up upstream fixes without API change. success_criteria: `cargo build -p api` exit 0; `cargo test -p api` exit 0; lockfile updates only the `serde` line and its transitive bumps within `1.0.x`. abort_if: any test newly fails; any non-`serde` major version moves in `Cargo.lock`.
-
-**Architecture summary.** none — no oracle summaries tagged to this mission.
-
-**Mode.** `operational` — version pin bump in a known file. Per § Execution spine rule 1 (Operational + single line + known target), Explore collapses into this turn alongside Implement; `context_read[]` still records the read.
-
-**Active aborts.**
-
-- any test newly fails
-- any non-`serde` major version moves in `Cargo.lock`
-
-**Pre-flight results.**
-
-- `cargo build -p api` — exit 0 — pass
-- `cargo test -p api` — exit 0 — pass
-
-**Context read.**
-
-- `crates/api/Cargo.toml:14` — confirmed current `serde = "1.0.210"` pin (sole edit target)
-
-**Executed this turn.**
-
-- `crates/api/Cargo.toml:14` — `serde = "1.0.210"` → `serde = "1.0.219"`.
-
-**Verified this turn.**
-
-- `cargo build -p api` — exit 0
-- `cargo test -p api` — exit 0 — `38 passed, 0 failed`
-- `git diff --stat Cargo.lock` — exit 0 — `Cargo.lock | 6 ++++---` (3 lines: serde + 2 transitive 1.0.x bumps; no major moves)
-
-**Result vs intent.** Y — `Outcome::Verified { exit_code: 0, evidence: [build, test, lockfile-shape] }`. All `success_criteria` met; abort conditions not triggered.
-
-**Surprises.** None.
-
-**Next.** MISSION COMPLETE.
-
-→ to: moltke | status: complete | next_input: Mission bump-serde-1731100000 complete; serde 1.0.210→1.0.219, build+test green, lockfile changes confined to serde + 2 transitive 1.0.x bumps. | artefact: -
 </example>
 
 <example name="outcome-partial-e2e-unrun">

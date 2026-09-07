@@ -76,14 +76,6 @@ enum BuildAction {
 
 ## Examples
 
-<example name="trivial-inline">
-User: "Fix the typo `recieve` → `receive` in README.md."
-
-> BuildAction::InlineEdit. Editing README.md directly.
-> *(applies edit)*
-> Done.
-</example>
-
 <example name="bug-fix-via-moltke">
 User: "The pagination is off-by-one in `list_orders`."
 

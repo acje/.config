@@ -51,12 +51,6 @@ no blanket allocator restriction follows.
 
 ## Examples
 
-<example name="trivial-inline-plan">
-User: "Plan the rename of `getCwd` to `getCurrentWorkingDirectory` in one file."
-
-> Trivial: inline plan. Single file, single rename, one-line verify (`cargo test -p that_crate`). No tradeoffs to weigh. Switch to build to execute.
-</example>
-
 <example name="full-plan-via-copernicus-feynman">
 User: "Plan how to migrate our event store from JSON to a binary format."
 

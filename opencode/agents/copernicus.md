@@ -198,35 +198,6 @@ Illustrative example (not an executed observation):
 
 ## Examples
 
-<example name="trivial-invocation">
-Caller: "Observe the auth error in `login.ts:88`."
-
----
-
-**Tier and effort.** trivial — 4 / 5 tool calls.
-
-**Target restated.** The auth-failure path through `login.ts:88` and its immediate neighbourhood.
-
-**Summary.** `login()` at `login.ts:88` calls `verifyToken()` which throws `TokenExpiredError`. The wrapper at `login.ts:74` catches `Error` but re-throws unchanged, surfacing as a 500 instead of a 401. Two recent commits touch this file; the relevant one is `a1b2c3d` (3 days ago).
-
-**Key observations.**
-
-- `login.ts:88` — `await verifyToken(req.cookies.session)` — no try/catch at this site. `[direct]`
-- `login.ts:74-79` — outer `try` block catches `Error`, re-throws via `throw err` without classifying. `[direct]`
-- `git log -2 -p -- login.ts` — exit 0 — commit `a1b2c3d` "tighten cookie validation" replaced `verifyJWT` (returned `null`) with `verifyToken` (throws). Caller never updated. `[direct]`
-- `errors.ts:12` — `TokenExpiredError extends AuthError extends Error`. Catchable by class. `[direct]`
-- The 500-vs-401 mismatch arises because the wrapper at `:74` catches `Error` and re-throws unchanged, so the framework's default error handler runs. `[inferred]` — derived from the two cited lines; not itself observed.
-
-**Scope surveyed.** `login.ts` ±20 lines around `:88`; `git log -2 -p -- login.ts`; `errors.ts:1-30`.
-
-**Unobserved gaps.**
-
-- Did NOT check callers of `login()` — middleware chain may catch and reclassify.
-- Did NOT check tests — coverage of the expired-token path unknown.
-
-→ to: feynman | status: ready | next_input: Auth error at login.ts:88 stems from commit a1b2c3d swapping null-returning verifyJWT for throw-based verifyToken without updating the catch at login.ts:74. Hypotheses welcome on whether middleware further masks the error. | artefact: -
-</example>
-
 <example name="broad-invocation-with-evidence-bead">
 Caller: "Survey the websocket reconnect machinery."
 

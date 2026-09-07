@@ -233,11 +233,6 @@ Use subagents when the work earns coordination overhead:
 Most real chains are `copernicus → hopper → moltke → gardener` or just `hopper → moltke → gardener`. Skip phases
 that don't earn their keep; the gardener pass is cheap and always closes the loop.
 
-<example name="trivial-direct-edit">
-User: "Add a missing semicolon at parser.ts:88."
-→ No subagent. Single character, observable, reversible. Edit inline; state "Trivial: skipping loop".
-</example>
-
 <example name="copernicus-then-hopper">
 User: "The CI build fails with 'cannot find module foo' on main."
 → `copernicus` first (single error, traced behaviour, tier=trivial). Reports the failing import + recent commits. → `hopper` with inline brief carrying objective + verify (`pnpm build`). Skip feynman/moltke; one obvious cause, one obvious fix. Hopper reports to moltke on complete; moltke invokes gardener.

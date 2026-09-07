@@ -228,29 +228,6 @@ not `pedantic`; a repo running `pedantic + -D warnings` does **not** catch
 them. `unwrap-outside-test` and the `dbg!` / `println!` quality check below
 remain live hand-review checks.
 
-<example name="unwrap-outside-test">
-**Trigger.** `.unwrap()` or `.expect("...")` in non-test, non-`main` code.
-**Check.** Is the `None`/`Err` branch genuinely unreachable, and is that
-invariant documented?
-**Fix.** Propagate with `?`, or `expect("<invariant that makes this
-unreachable>")` so the panic message names the broken assumption.
-
-Problem shape:
-
-```rust
-let cfg = std::fs::read_to_string(path).unwrap();
-```
-
-Preferred shapes:
-
-```rust
-let cfg = std::fs::read_to_string(path)?;
-
-let cfg = std::fs::read_to_string(path)
-    .expect("config validated at startup; absence here is a bug");
-```
-</example>
-
 #### `clone-as-first-reach`
 
 **Trigger.** `.clone()` on a hot path, on `String`/`Vec`/`Arc`-eligible
