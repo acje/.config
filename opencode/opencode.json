@@ -161,13 +161,13 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
@@ -176,8 +176,8 @@
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
@@ -188,8 +188,8 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "max"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
@@ -200,7 +200,7 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "high"
     },
     "gardener": {
@@ -212,14 +212,14 @@
     "automaton": {
       "prompt": "{file:./agents/automaton.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "turbo": {
       "prompt": "{file:./agents/turbo.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "dramallama": {
       "prompt": "{file:./prompts/build.md}",

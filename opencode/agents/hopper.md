@@ -10,15 +10,15 @@ description: |
   aligned with prior architectural decisions. Verify-before-claim; halts
   and re-loops on surprise.
 mode: subagent
-model: github-copilot/gpt-6-astra
+model: github-copilot/gemini-3.8-flash
 tools:
   webfetch: false
   searxng_web_search: false
   task: false
-reasoningEffort: xhigh
+reasoningEffort: high
 # Note: temperature / top_p intentionally absent — no sampler knobs are set
-# on any fleet agent. `reasoningEffort: xhigh` trades cost for depth on
-# long-running coding work; re-evaluate on model swap.
+# on any fleet agent. `reasoningEffort: high` is the configured effort;
+# pass-through remains unverified pending post-restart trace evidence.
 ---
 
 <!-- Frozen: changes require trace evidence per turbo recipe P12a -->

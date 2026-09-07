@@ -743,9 +743,9 @@ resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
 ### Per-model tendency table
 
 Bindings are configuration, not live-session or behavioral evidence. As of
-2026-09-06, `opencode.json` configures GPT-6 Astra for build, plan, hopper,
-moltke, feynman, automaton and turbo; Gemini 3.8 Flash for copernicus, oracle,
-gardener and linus. Historical observations below stay attached
+2026-09-07, `opencode.json` and agent frontmatter configure Gemini 3.8 Flash
+for build, plan, hopper, moltke, feynman, automaton, turbo, copernicus, oracle
+and gardener; GPT-6 Astra for linus. Historical observations below stay attached
 to the measured model, not reassigned agents. No new tendency is inferred.
 
 | Model | Configured agents / historical scope | Tendency (cited) | Prompt-design implication |
@@ -753,8 +753,8 @@ to the measured model, not reassigned agents. No new tendency is inferred.
 | Opus 5 | historical model evidence; top-level fallback | Self-verification, over-delegation and longer responses reported [config-qfd] | Model-scoped brevity/delegation guidance; not evidence about reassigned agents |
 | Sonnet 5 | historical only; no current binding | Literal conservative review and non-default sampling errors reported [prompting-claude-sonnet-5, config-92a §6] | Do not transfer to Gemini or GPT bindings |
 | GPT-5.6 (sol/terra) | historical only; no current binding | Concision, intent inference and repeated-guardrail friction reported [config-5b6] | Do not transfer by family resemblance to GPT-6 |
-| GPT-6 Astra | build, plan, hopper, moltke, feynman, automaton, turbo | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params; collect post-restart evidence first |
-| Gemini 3.8 Flash | copernicus, oracle, gardener, linus | No behavioral evidence supplied for these bindings | No model-specific tuning inferred |
+| GPT-6 Astra | linus | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params; collect post-restart evidence first |
+| Gemini 3.8 Flash | build, plan, hopper, moltke, feynman, automaton, turbo, copernicus, oracle, gardener | No behavioral evidence supplied for these bindings | No model-specific tuning inferred |
 
 ### github-copilot pass-through caveat
 

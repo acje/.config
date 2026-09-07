@@ -9,8 +9,8 @@ description: |
   NOT an OODA-phase agent — a tool-builder invoked
   on demand by any other agent.
 mode: subagent
-model: github-copilot/gpt-6-astra
-reasoningEffort: xhigh
+model: github-copilot/gemini-3.8-flash
+reasoningEffort: high
 tools:
   webfetch: false
   searxng_web_search: false
