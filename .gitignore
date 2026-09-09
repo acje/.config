@@ -1,3 +1,22 @@
+# Allowlist / Whitelist Policy for ~/.config dotfiles
+# ---------------------------------------------------
+# Because this repo's root is ~/.config, any CLI tool or application that drops
+# state or credentials into ~/.config must be ignored by default.
+# Only explicitly whitelisted dotfiles and directories are tracked.
+
+# 1. Ignore everything at root by default
+/*
+
+# 2. Whitelist tracked root files
+!/.gitignore
+!/AGENTS.md
+!/LICENSE
+
+# 3. Whitelist tracked root directories
+!/ghostty/
+!/opencode/
+!/openspec/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
@@ -11,7 +30,7 @@ Thumbs.db
 *.bak
 *.bak.*
 
-# Top-level local scratch (anchored to repo root)
+# Top-level local scratch (anchored to repo root; redundant with /* but retained for clarity)
 /gh/
 /containers/
 /searxng/
