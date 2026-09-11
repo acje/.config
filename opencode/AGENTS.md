@@ -1280,6 +1280,19 @@ pair programming:
    final report bead is left OPEN **by design** (findings handed to moltke
    unactioned); gardener's evidence sweep (`agents/gardener.md` rules 3–4)
    closes it on package conclusion.
+7. **Architectural misalignment circuit-breaker (anti-accidental-complexity).**
+   While repeat rejections on the *same* class halt at 2 rounds, discovering
+   *new* defect classes across **> 3 review rounds** on a single increment,
+   or accumulating internal defensive scaffolding that exceeds core domain
+   logic (> 2× lines of code in drop-guards, atomic tracking, manual byte budgets,
+   or truncation boundary handlers), is **NOT convergent discovery**. It is an
+   **Architectural Misalignment Signal**: the implementation is using defensive
+   scaffolding to compensate for a boundary placed in the wrong layer.
+   **Halting rule:** At round 3, if Hopper is writing layers of internal defensive
+   scaffolding to address reviewer edge cases, Linus and Moltke must **HALT**
+   and emit a `BackBrief` (`trigger: Surprise, scope: PackageLevel, requested_response: EscalateToUser`).
+   Punt to the human to evaluate whether the architectural seam is misaligned.
+   Standing priority hierarchy: **Correctness (Priority 1) → Response Time (Priority 2) → Efficiency (Priority 3)**.
 
 ### Pointer discipline with beads
 
