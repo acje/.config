@@ -161,7 +161,7 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "high"
     },
     "plan": {
@@ -188,8 +188,8 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
-      "reasoningEffort": "high"
+      "model": "github-copilot/gpt-6-astra",
+      "reasoningEffort": "xhigh"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",

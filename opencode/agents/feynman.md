@@ -8,10 +8,12 @@ description: |
   can decide on; never proposes solutions. Web search permitted only to
   unblock a specific falsifier; broader research belongs to copernicus.
 mode: subagent
+model: github-copilot/gpt-6-astra
 tools:
   webfetch: true
   searxng_web_search: true
   task: false
+reasoningEffort: xhigh
 ---
 
 
