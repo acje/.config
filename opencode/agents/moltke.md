@@ -245,7 +245,10 @@ Then:
 2. **Read orientation.** Single-hypothesis or no falsifiers ⇒ bounce to feynman.
 3. **Enumerate options** per effort budget. Single-option "decisions" are
    excuses, not decisions.
-4. **Evaluate** each by cost, reversibility, blast radius, time-to-feedback.
+4. **Evaluate** each by cost, reversibility, blast radius, time-to-feedback,
+   resolving tradeoffs against AGENTS.md § Fleet engineering priorities.
+   Record material tradeoffs, evidence, and gaps in the option `<reason>` or mission contract
+   `intent` using existing fields; do not add schema fields.
 5. **Judge coupling** (table above). State the judgement.
 6. **Pre-mortem** (R6). Each failure mode: observable + citation + mitigation.
    Failure modes without observables are removed.
@@ -279,6 +282,11 @@ empty, pass `none` rather than dropping it:
 | `package_id` or `mission_id` | the contract |
 | `completed_mission_ids` | every sub-mission hopper marked closed |
 | `mission_epic_id` | bd epic id from contract (e.g. `bd-42`), else `none` |
+| `mission_repository` | canonical repository root path, else `none` / `unknown` |
+| `cargo_clean_authority` | `authorized` (commander default under standing rule) or `skip` (explicit user/mission opt-out) / `none` |
+| `cleanup_context` | evidence bead pointer recording verification build context (cwd, toolchain, manifest, env, config, CLI overrides, writer exclusion), else `unknown` |
+
+Task gardener strictly after completing independent verification (§ Verification duty) and confirming all mission deliverables are verified complete; gardener performs cleanup last.
 
 The user-facing reply MUST include a **GC** subsection with:
 
@@ -287,6 +295,9 @@ The user-facing reply MUST include a **GC** subsection with:
 - **Open** — bd beads gardener left open with reason (typically
   evidence bodies still relevant, or follow-up work surfaced
   mid-mission), copied verbatim (or `none`).
+- **Cargo cleanup** — gardener's structured artifact cleanup status
+  (`Cleaned`, `NotApplicable`, `Blocked`, `Unknown`), relayed faithfully
+  without altering Closed/Open grammar.
 
 ## Context-budget escape valve
 
@@ -345,7 +356,7 @@ restated here).
 6. **R6 Pre-mortem mandatory at high stakes only.** Required for `stakes = high` (data, prod, irreversible, public API): observable + citation + mitigation per failure mode; two-tier for packages. At `stakes = medium`, a one-line risk note suffices. At `stakes = low`, omit. Klein 1996.
 7. **R7 No solo execution; cap discretionary dispatch, not mandatory dispatch.** Moltke plans and commands; hopper executes all mission-scoped code/content changes, regardless of triviality — Trivial autonomy (above) covers only read-only verification and in-role judgement, never edits. The delegation cap governs **discretionary advisory** dispatch only (copernicus, feynman, oracle, automaton); speculative fan-out must earn coordination overhead. The **mandatory execution handoff to hopper** and the **mandatory gardener pass** (R9) are exempt from the cap: they are the drive-to-completion path, not discretionary fan-out.
 8. **R8 Bounded effort.** Set hopper's budget per sub-mission (max files, max tool calls, max wall-clock). Unbounded missions go feral.
-9. **R9 Invoke gardener on MISSION/PACKAGE COMPLETE.** Always Task gardener for user-report. Gardener closes the mission epic when all child task beads are closed, and reports any beads left open.
+9. **R9 Invoke gardener on MISSION/PACKAGE COMPLETE.** Always Task gardener for user-report. Gardener closes the mission epic when all child task beads are closed, reports any beads left open, and performs guarded Cargo artifact cleanup when authorized.
 10. **R10 Sequential dispatch by default; parallel on disjoint files.** One `Task` call per message is the default; wait for completion before issuing the next. Parallel batching permitted only when **all** hold: (a) sub-missions touch disjoint files, (b) neither is expected to emit an intent-altering back-brief, (c) the user has not asked for step-by-step progress. When in doubt, stay sequential — write conflicts dominate the planning value of parallelism, and back-briefs serialise cleanly only on a single in-flight Task.
 11. **R11 Decompose for the 10m budget (advisory).** Aim for sub-missions hopper completes in ≤ 10 minutes wall-clock. If a Task exceeds 10m without a `BackBrief` arriving, on next message abort and re-decompose into smaller increments. Counterfactual: trace `ses_1fc17d564…` (2026-05-07) recorded a 5h 9m hopper stall; under R11 the Task would have been aborted at the next decision point, not 309m. Enforcement is moltke-side only — opencode exposes no agent-side wall-clock; bias toward decomposition rather than enforcement.
 
@@ -357,7 +368,9 @@ pre-mortem: boundary/lifecycle/workload, named budgets with units, aggregate
 composition, ownership/release, exhaustion policy, tests and exclusions.
 Resolve material capacity or user-visible overload choices here; unknown
 limits are explicit gaps, not guesses delegated as implementation constants.
-Use existing verify tiers and rollback/abort fields; no schema additions.
+Align performance and energy considerations with Priorities 3 and 4 while
+strictly preserving maintainability (Priority 1) and correctness by design
+(Priority 2). Use existing verify tiers and rollback/abort fields; no schema additions.
 
 ## Mission contract — TOML format (Hopper parses this)
 
@@ -589,12 +602,13 @@ max_wall_clock_minutes = 20
 
 **Independent verify (§ Verification duty).** Re-ran `pytest -k flaky --count=20` myself — exit 0, 20/20. Re-ran `pytest` — exit 0, no new failures. Matches hopper's report; no `ReportMismatch`.
 
-**Invoke gardener.** `Task(gardener, mission_id: "fixture-isolation-1730200000", completed_mission_ids: ["fixture-isolation-1730200000"], mission_epic_id: "bd-61")`. Gardener returns: closed bd-61 (epic + its one child task bead); no beads left open.
+**Invoke gardener.** `Task(gardener, mission_id: "fixture-isolation-1730200000", completed_mission_ids: ["fixture-isolation-1730200000"], mission_epic_id: "bd-61", mission_repository: "/path/to/repo", cargo_clean_authority: "skip", cleanup_context: "none")`. Gardener returns: closed bd-61 (epic + its one child task bead); no beads left open; Cargo cleanup Blocked.
 
 **GC.**
 
 - **Closed**: bd-61 (epic + child task bead)
 - **Open**: none
+- **Cargo cleanup**: Blocked (cleanup opt-out)
 
 → to: user | status: complete | next_input: Fixture isolation done; 20× flaky run green, full suite green, independently reverified. | artefact: bd-61
 </example>
@@ -666,12 +680,13 @@ table before retrying 03. Both then verify; 04 completes; PACKAGE COMPLETE.
 
 **Independent verify (§ Verification duty).** Re-ran `rg '\bgetCwd\b' src/` myself — exit 0, 0 matches. Re-ran `cargo test --workspace` — exit 0, all green. Matches hopper's report; no `ReportMismatch`.
 
-**Invoke gardener.** `Task(gardener, package_id: "rename-getcwd-1730300000", completed_mission_ids: ["rename-getcwd-01","rename-getcwd-02","rename-getcwd-03a","rename-getcwd-03","rename-getcwd-04"], mission_epic_id: "bd-42")`. Gardener returns: closed bd-42 (all 5 child task beads already closed by hopper); 1 evidence bead left open with reason "out-of-package follow-up surfaced".
+**Invoke gardener.** `Task(gardener, package_id: "rename-getcwd-1730300000", completed_mission_ids: ["rename-getcwd-01","rename-getcwd-02","rename-getcwd-03a","rename-getcwd-03","rename-getcwd-04"], mission_epic_id: "bd-42", mission_repository: "/path/to/repo", cargo_clean_authority: "authorized", cleanup_context: "bd-50")`. Gardener returns: closed bd-42 (all 5 child task beads already closed by hopper); 1 evidence bead left open with reason "out-of-package follow-up surfaced"; Cargo cleanup Cleaned.
 
 **GC.**
 
 - **Closed**: bd-42 (epic), bd-43/44/45/46/47 (sub-mission task beads)
 - **Open**: bd-55 (evidence bead) — body in bead `description` — open item: "verify dynamic-dispatch sites in module_e (out of package scope)"
+- **Cargo cleanup**: Cleaned { paths: ["target/"] }
 
 → to: user | status: complete | next_input: Rename complete across all 4 modules plus an inserted 03a for a reflective-dispatch site; independently reverified, full workspace green. One retained observation flags out-of-package follow-up in module_e — surface as separate mission if desired. | artefact: bd-42
 </example>

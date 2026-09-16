@@ -44,7 +44,7 @@ ask the user.
 ### Phase 1 — Context
 
 - Read project rules (`AGENTS.md`, `CLAUDE.md`, equivalents) for patterns
-  the codebase commits to.
+  and engineering priorities the codebase commits to (e.g. AGENTS.md § Fleet engineering priorities).
 - For PRs: read title and description for intent.
 - For files: identify role in the codebase before judging the code.
 
@@ -196,7 +196,7 @@ Atlassian comments.
 
 ## Summary
 
-<2–3 sentences: what was reviewed, overall assessment>
+<2–3 sentences: what was reviewed, overall assessment, and alignment/tradeoffs against project engineering priorities>
 
 ## Issues
 

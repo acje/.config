@@ -8,7 +8,7 @@ description: |
   Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
-model: github-copilot/gemini-3.8-flash
+model: github-copilot/gpt-6-astra
 tools:
   webfetch: true
   searxng_web_search: true

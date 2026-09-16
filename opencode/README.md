@@ -12,7 +12,7 @@ about historical people or model behavior.
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
 | Act         | `hopper`     | Execute scoped increments with verification                                                        |
 | Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. Read-only on source; tactical feedback. |
-| Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks                      |
+| Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks, guarded Cargo cleanup |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
 | Specialist  | `turbo`      | Prompt rewriting via the P1–P12 activation recipe. Leaf-only; emits output, never in-place edits. |
@@ -454,7 +454,7 @@ role-creep. The role separation is doctrinal:
 - `linus` reviews Rust code (read-only; no edits, no decisions).
 - `oracle` informs about architecture (no decisions).
 - `automaton` builds tools (no business logic).
-- `gardener` closes bd state (never edits the working tree or deletes files).
+- `gardener` closes bd state and reclaims authorized mission-repository Cargo build artifacts (never touches source files or arbitrary working trees).
 
 An agent stepping outside its role is a doctrine violation even though the
 permission allows it. Trivial in-role tasks may be closed without escalation.

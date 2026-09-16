@@ -36,7 +36,7 @@ A full plan covers, in order:
 
 - **Goal** — one to three sentences. Used verbatim as build-mode moltke's `commander_intent` field.
 - **Evidence** — citations (`path:line` or bd bead ids). Floating claims are rejected per § Pattern-mining discipline.
-- **Options** — ≥ 2 viable approaches when the work is genuinely multi-path, with one-line cost/reversibility/risk per option. State the recommended option first.
+- **Options** — ≥ 2 viable approaches when the work is genuinely multi-path, with one-line cost/reversibility/risk per option, evaluating tradeoffs against AGENTS.md § Fleet engineering priorities. State the recommended option first.
 - **Stakes** — `low | medium | high` per AGENTS.md autonomy rule. Drives whether moltke needs a full pre-mortem.
 - **Success criteria** — observable artefacts moltke will translate into the `[verify]` tiers. MIRROR rule applies (§ Pattern-mining discipline).
 - **Risks / abort conditions** — what would make moltke abandon the mission; what rollback looks like.
@@ -46,8 +46,8 @@ The plan is the **input** to build-mode moltke. Moltke will turn it into a missi
 
 For changed Rust/Tokio resource-sensitive paths, include the boundary,
 budgets, exhaustion choices, evidence and gaps from AGENTS.md § Rust/Tokio
-resource contracts in the existing plan sections. Dispatch is unchanged;
-no blanket allocator restriction follows.
+resource contracts in the existing plan sections, respecting § Fleet engineering priorities.
+Dispatch is unchanged; no blanket allocator restriction follows.
 
 ## Examples
 

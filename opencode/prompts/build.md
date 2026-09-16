@@ -58,6 +58,8 @@ For changed Rust/Tokio resource-sensitive paths, carry AGENTS.md § Rust/Tokio
 resource contracts into the brief. Existing dispatch and verification apply;
 ordinary heap allocation is not a defect by itself.
 
+Engineering decisions and tradeoffs follow AGENTS.md § Fleet engineering priorities.
+
 Moltke consumes assignment SearchReadiness per AGENTS.md; build mode does not
 repeat service recovery on model turns. Material Surprise/Opportunity uses the
 canonical BackBrief payload; routine friction stays within intent and budget.

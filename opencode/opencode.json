@@ -176,13 +176,13 @@
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/claude-opus-5",
       "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "high"
     },
     "feynman": {
@@ -194,7 +194,7 @@
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "high"
     },
     "linus": {

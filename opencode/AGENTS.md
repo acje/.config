@@ -13,7 +13,7 @@ uncertainty, scope, or risk warrants it. Scale effort to query complexity.
 | `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
 | `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
-| `gardener`    | GC         | Reclamation report; closes mission epic + spent scaffolding when children closed | moltke → user | none                       |
+| `gardener`    | GC         | Reclamation report; closes mission epic, spent scaffolding, and guarded Cargo cleanup | moltke → user | none                       |
 | `turbo`       | Specialist | Rewritten prompt text (leaf-only; never in-place edits) | user                | none                                |
 
 Conventions: rows are roster order, not invocation order. "Handoff target" is the agent that consumes the primary output; back-briefs route to moltke regardless (see § Back-brief protocol). Bead labels follow bd's `<dimension>:<value>` convention (see § Beads → Label conventions).
@@ -271,6 +271,30 @@ re-summarise large evidence through yourself (avoids the telephone game).
 
 On surprise or abort during Act, re-enter the loop at Copernicus or Feynman
 with the journal (or inline observations) as new evidence.
+
+## Fleet engineering priorities
+
+The fleet operates under an explicit, ordered five-tier hierarchy of engineering priorities. When technical decisions, architecture, implementation alternatives, or reviews involve tradeoffs, evaluate and resolve them strictly in this order:
+
+1. **Maintainability (Priority 1).**
+   Follow lean principles and pure trunk-based development: integrate work in small, reversible, deployable increments directly on trunk; no feature-branch workflow by default. Code must remain continuously deployable and testable. Simplicity, readability, and low cognitive overhead dominate speculative abstraction or clever optimizations. Preserves safety, permissions, branch protections, and rigorous verification; small increments are never an excuse to bypass gates or test coverage.
+2. **Correctness by design (Priority 2).**
+   Design systems and data structures so invalid states cannot exist. Use the type system to describe the domain with tagged enums and explicit state machines; make illegal states unrepresentable (see § Rustling → Construction-path review inventory and § House style — Rust control flow). Push validation to untrusted input boundaries, then trust types inward. Correctness is required by design, not retrofitted with defensive assertions or split runtime guards. Preserve type nuance: independent booleans, genuine optionality, and fallible input boundaries returning `None`/`Err` remain valid; do not invent stronger domain constraints than the domain requires.
+3. **Response times (Priority 3).**
+   Read response times are most important. Optimize read paths and latency-sensitive flows first. Propagate facts with Event-Driven Architecture (EDA) with minimal delay, making event and fact propagation prompt across boundaries. Preserve nuance: EDA means event-driven architecture and prompt fact propagation with explicit consistency and delivery semantics; it does not mandate unnecessary messaging brokers, CQRS infrastructure, or distributed queues when in-process or direct channels suffice. Do not invent universal latency constants; measure against concrete mission requirements.
+4. **Energy efficiency in code (Priority 4).**
+   Conserve computational and hardware resources: minimize redundant polling, unnecessary allocations, hot loops, unneeded serialization/deserialization cycles, and idle CPU/network burn. Energy efficiency must be evaluated honestly based on measured or scoped workload demand, not conflated with runtime cost alone or achieved by sacrificing maintainability or correctness.
+5. **Features (Priority 5).**
+   New functionality, feature additions, and speculative capabilities rank fifth. Features must never compromise maintainability, bypass type-designed correctness, degrade required read response times, or introduce unmetered energy waste. Build only what is justified by explicit requirements.
+
+### Consumer alignment and tradeoff records
+
+This ordered hierarchy is canonical fleet-wide policy and must not be duplicated into competing local lists. Active consumers align their decisions and tradeoff records with it:
+
+- **Decision consumer (`@moltke`)**: Evaluates option tradeoffs against this ordered hierarchy in option evaluation (`<reason>`), mission contract `intent`, and pre-mortem. Material deviations or tradeoffs must be recorded in existing mission/options artefacts with evidence and gaps; no schema additions.
+- **Planning consumer (`prompts/plan.md`)**: Plans evaluate options and approach tradeoffs against this ordered policy in existing plan sections (`Options`, `Risks`).
+- **Execution consumer (`@hopper`)**: Executes small, deployable increments (pure trunk / TDD). Evaluates refactors (R17) and structural changes (Tidy First) to preserve maintainability and correctness by construction (R16/R18) before optimizing for performance or features. Tradeoffs are recorded in existing report artefacts (`Result vs intent`, `Type/refactor notes`).
+- **Review consumers (`@linus`, `code-review` skill)**: Scrutinize code against these priorities. Confirm that maintainability and type correctness are not sacrificed for premature performance or feature creep. Findings use existing review artefacts (`illegal-state-representable`, `resource-contract-gap`, `resource-bound-violated`, review issues).
 
 ## Role discipline (doctrine, not permissions)
 
@@ -738,18 +762,18 @@ resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
 ### Per-model tendency table
 
 Bindings are configuration, not live-session or behavioral evidence. As of
-2026-09-15, `opencode.json` and agent frontmatter configure Gemini 3.8 Flash
-for plan, hopper, automaton, turbo, copernicus, oracle and gardener;
-GPT-6 Astra for build, feynman, linus and moltke. Historical observations below stay attached
+2026-09-16, `opencode.json` and agent frontmatter configure Opus 5 for hopper
+and top-level fallback; Gemini 3.8 Flash for plan, automaton, turbo and gardener;
+GPT-6 Astra for build, copernicus, feynman, linus, moltke and oracle. Historical observations below stay attached
 to the measured model, not reassigned agents. No new tendency is inferred.
 
 | Model | Configured agents / historical scope | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 5 | historical model evidence; top-level fallback | Self-verification, over-delegation and longer responses reported [config-qfd] | Model-scoped brevity/delegation guidance; not evidence about reassigned agents |
+| Opus 5 | hopper; top-level fallback | Self-verification, over-delegation and longer responses reported [config-qfd] | Model-scoped brevity/delegation guidance; not evidence about reassigned agents |
 | Sonnet 5 | historical only; no current binding | Literal conservative review and non-default sampling errors reported [prompting-claude-sonnet-5, config-92a §6] | Do not transfer to Gemini or GPT bindings |
 | GPT-5.6 (sol/terra) | historical only; no current binding | Concision, intent inference and repeated-guardrail friction reported [config-5b6] | Do not transfer by family resemblance to GPT-6 |
-| GPT-6 Astra | build, feynman, linus, moltke | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params; collect post-restart evidence first |
-| Gemini 3.8 Flash | plan, hopper, automaton, turbo, copernicus, oracle, gardener | No behavioral evidence supplied for these bindings | No model-specific tuning inferred |
+| GPT-6 Astra | build, copernicus, feynman, linus, moltke, oracle | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params; collect post-restart evidence first |
+| Gemini 3.8 Flash | plan, automaton, turbo, gardener | No behavioral evidence supplied for these bindings | No model-specific tuning inferred |
 
 ### github-copilot pass-through caveat
 
@@ -774,7 +798,7 @@ and a moltke `chat.params` trace showed `output.options.reasoningEffort:
 copernicus/`claude-sonnet-5` resolved `max`). These are model-level
 observations: verified-for-model, never verified-for-this-agent — the
 2026-08-10 opus-5 sweep ran on the `build` agent, so it says nothing
-about linus specifically. **Gap**: gpt-5.6-terra
+about linus or hopper specifically. **Gap**: gpt-5.6-terra
 and sol are no longer bound to fleet agents; their observations are historical.
 **Gap — UNVERIFIED here**: current GPT-6 Astra and Gemini agent-specific
 reasoningEffort pass-through needs post-restart `chat.params` evidence.
@@ -803,7 +827,8 @@ traces. Don't commit traces — `.ooda/` is gitignored for a reason.
 deletions under that tree produce no git diff and therefore no git commit is
 possible or expected. Pure `.ooda/` deletion sweeps are user-driven local
 cleanup, not gardener mission GC. Gardener's auditable work is bd-state
-mutation: epic closures, label changes, orphan-bead cleanup.
+mutation (epic closures, label changes, orphan-bead cleanup) plus guarded
+post-verification mission-repository Cargo artifact cleanup (Rule 3).
 
 ## Self-improvement
 
@@ -1292,7 +1317,7 @@ pair programming:
    scaffolding to address reviewer edge cases, Linus and Moltke must **HALT**
    and emit a `BackBrief` (`trigger: Surprise, scope: PackageLevel, requested_response: EscalateToUser`).
    Punt to the human to evaluate whether the architectural seam is misaligned.
-   Standing priority hierarchy: **Correctness (Priority 1) → Response Time (Priority 2) → Efficiency (Priority 3)**.
+   Standing priority hierarchy follows § Fleet engineering priorities.
 
 ### Pointer discipline with beads
 
