@@ -602,9 +602,10 @@ If project clippy config is stricter than `-D warnings`, defer to it.
 If the first command (`cargo check --all-targets`) fails on baseline,
 apply rule 3 (Surprise) — do not proceed.
 
-The quiet flags above are the canonical forms in AGENTS.md § Bash hygiene →
-Cargo command noise; selection, `-D warnings` and coverage are unchanged.
-Check the caveats there before applying `-- --quiet` to a non-libtest target.
+The `atest`/`aclippy` aliases above are the canonical forms in AGENTS.md
+§ Bash hygiene → Cargo command noise; selection, `-D warnings` and coverage are
+unchanged. Check the caveats there before passing harness arguments to a
+non-libtest target or an alternative runner.
 
 Follow AGENTS.md § Bash hygiene for command composition, availability checks,
 and evidence recovery. Active permissions and read-only review scope still
