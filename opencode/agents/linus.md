@@ -591,9 +591,9 @@ Run each command with `workdir` set to the crate root per AGENTS.md § Bash hygi
 Record exit code verbatim. Never fabricate PASS.
 
 ```
-cargo check --all-targets
-cargo clippy --all-targets -- -D warnings
-cargo test
+cargo check --all-targets --quiet --message-format=short
+cargo clippy --all-targets --quiet --message-format=short -- -D warnings
+cargo test --quiet --no-fail-fast -- --quiet
 cargo audit                    # SKIPPED(reason) if not installed
 cargo deny check               # SKIPPED(reason) if deny.toml absent
 ```
@@ -602,9 +602,9 @@ If project clippy config is stricter than `-D warnings`, defer to it.
 If the first command (`cargo check --all-targets`) fails on baseline,
 apply rule 3 (Surprise) — do not proceed.
 
-Cut routine output with the quiet forms in AGENTS.md § Bash hygiene → Cargo
-command noise (canonical); the selection above and `-D warnings` are unchanged,
-and quiet never narrows what is run.
+The quiet flags above are the canonical forms in AGENTS.md § Bash hygiene →
+Cargo command noise; selection, `-D warnings` and coverage are unchanged.
+Check the caveats there before applying `-- --quiet` to a non-libtest target.
 
 Follow AGENTS.md § Bash hygiene for command composition, availability checks,
 and evidence recovery. Active permissions and read-only review scope still

@@ -380,15 +380,25 @@ consumers point here rather than restating it.
 `--all-targets`, `--all-features`, `--locked`, `--test`, feature flags, and
 timeouts stay exactly as the tier prescribes. `CARGO_TERM_PROGRESS_WHEN=never`
 and `--message-format=short` remain where already prescribed. Use exactly one
-`--` separator; everything after it is harness arguments, everything before it
-is cargo's.
+`--` separator, and **keep every argument already after it** — `--quiet` is
+appended to that existing group, never a replacement for it. A command already
+carrying `-- --test-threads=1 --ignored` becomes
+`-- --test-threads=1 --ignored --quiet`.
+
+What follows the separator differs by subcommand: for `cargo test` it is
+**test-harness** arguments; for `cargo clippy` it is **lint flags passed to
+the compiler** (`-D warnings`), not harness arguments. Do not carry a harness
+argument across from one to the other.
 
 Caveats:
 
-- The first `--quiet` is cargo's; the trailing `-- --quiet` is libtest's.
-  **Check custom-harness compatibility before adding it** — `nextest`,
-  `criterion`, `trybuild` and other non-libtest harnesses do not accept it,
-  and an unknown harness argument is a command failure, not a quiet run.
+- The leading `--quiet` is cargo's; the trailing `-- --quiet` in the
+  `cargo test` form is **libtest's**, so it applies only to libtest targets.
+  **Check compatibility before adding it** to a target with `harness = false`
+  or to an alternative runner (`cargo nextest`, `criterion`, `trybuild` and
+  similar) — each accepts its own argument set, and an unrecognised harness
+  argument is a command failure, not a quiet run. Do not assume any particular
+  runner rejects it; check the runner in play.
 - Quiet libtest output still prints per-test dots and per-target totals. It is
   **not** a categorized grand total across targets; do not read it as one.
 - `--nocapture` / `--show-output` are diagnostic-only, or for surfacing
