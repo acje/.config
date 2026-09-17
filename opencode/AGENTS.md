@@ -364,6 +364,39 @@ through `echo`, or a filter mistaken for a producer verdict yields review
 reject (linus / `code-review`) and, for hopper, `Outcome::Surprise`.
 Recovered producer evidence is required before making the claim.
 
+### Cargo command noise (canonical)
+
+Cargo's own flags are the sanctioned way to cut routine output. This reduces
+noise **only**; it never changes the runner, filters the stream, or narrows
+verification coverage (§ Iteration speed #3). This section is canonical —
+consumers point here rather than restating it.
+
+| Purpose | Canonical form |
+|---|---|
+| Ordinary libtest run | `cargo test <existing selection/options> --quiet --no-fail-fast -- --quiet` |
+| Clippy | `cargo clippy <existing selection/options> --quiet --message-format=short -- -D warnings` |
+
+`<existing selection/options>` is carried through verbatim: `-p`, `--workspace`,
+`--all-targets`, `--all-features`, `--locked`, `--test`, feature flags, and
+timeouts stay exactly as the tier prescribes. `CARGO_TERM_PROGRESS_WHEN=never`
+and `--message-format=short` remain where already prescribed. Use exactly one
+`--` separator; everything after it is harness arguments, everything before it
+is cargo's.
+
+Caveats:
+
+- The first `--quiet` is cargo's; the trailing `-- --quiet` is libtest's.
+  **Check custom-harness compatibility before adding it** — `nextest`,
+  `criterion`, `trybuild` and other non-libtest harnesses do not accept it,
+  and an unknown harness argument is a command failure, not a quiet run.
+- Quiet libtest output still prints per-test dots and per-target totals. It is
+  **not** a categorized grand total across targets; do not read it as one.
+- `--nocapture` / `--show-output` are diagnostic-only, or for surfacing
+  successful SKIP output that quiet mode otherwise hides. They are not part of
+  the routine form.
+- `--no-fail-fast` is retained deliberately: blast radius in one pass
+  (§ Iteration speed #4).
+
 ## House style — Rust comments
 
 **Fleet-wide rule.** In Rust source (`*.rs`), agents do not write non-doc

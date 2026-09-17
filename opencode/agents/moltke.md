@@ -508,6 +508,8 @@ Before reporting MISSION/PACKAGE COMPLETE, independently re-run the
 exit codes are evidence hopper acted on, not proof the commander vouches for
 to the user. Cheap re-runs (the same commands, not a new suite) suffice;
 mismatch ⇒ `BackBriefResponse::ReportMismatch`, not a silent pass-through.
+For cargo re-runs use the quiet forms in AGENTS.md § Bash hygiene → Cargo
+command noise (canonical) — same commands, less output, identical coverage.
 
 ## What to include in your reply
 

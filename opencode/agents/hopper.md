@@ -80,7 +80,9 @@ Rules:
 
 Prefer standalone build commands with structured output. Cargo inner-loop
 commands use `CARGO_TERM_PROGRESS_WHEN=never` and `--message-format=short`;
-verification scope remains tiered by R1. If filtering is needed, follow
+routine output noise is cut with cargo's own flags per AGENTS.md § Bash
+hygiene → Cargo command noise (canonical), which is the single source for the
+quiet forms; verification scope remains tiered by R1. If filtering is needed, follow
 AGENTS.md § Bash hygiene: retain producer status, never treat a filter as a
 build verdict. Historical observations are preserved in config-jui.
 
@@ -302,6 +304,7 @@ fn run_package(p: Package) {
     - **MID** (`verify.mid`, once per sub-mission, before that sub-mission's done-claim): changed crate(s) PLUS their reverse-dependent closure, computed via the one-liner in the repo `AGENTS.md` (`cargo metadata --format-version 1 --no-deps | jq …`) — never `--workspace`. Backs the sub-mission's `Result vs intent: Y`.
     - **BOUNDARY** (`verify.boundary`, once per EPIC, before the epic done-claim — present only on `Single` or `[mission_package]`, absent from `[[missions]]` by schema): whole-workspace `cargo build --workspace --all-features --locked`, `cargo test --workspace --all-features --locked --no-fail-fast`, `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back the epic's done-claim; declared E2E `verify` entries from R12 also live here.
     - **CI gates:** run the repo's documented local entry point before handoff per AGENTS.md § Code-quality methods. If unavailable, name the unverified gap; do not invent a local suite or classify deny/audit/tripwires as universally CI-only.
+    - **Noise:** apply the quiet forms in AGENTS.md § Bash hygiene → Cargo command noise (canonical) to the commands above, keeping each tier's selection, features, `--locked` and harness arguments unchanged. Quiet is an output setting, never a coverage reduction.
 
 2. **R2 Default to executing reversible steps when intent is clear and budget remains.** AGENTS.md § Autonomy governs the risk branch. Stay within `effort_budget` (per sub-mission in a package). Rationale: paused-for-clarification missions stall the execution loop; questions belong to moltke.
 3. **R3 One axis of advance (Tidy First).** Behavioural and structural changes land in separate commits. Tidy first as its own commit when it eases the behavioural change; refactor after when the cycle reveals structure. Rationale: bisect and review become opaque when both axes move at once.

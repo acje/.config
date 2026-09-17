@@ -602,6 +602,10 @@ If project clippy config is stricter than `-D warnings`, defer to it.
 If the first command (`cargo check --all-targets`) fails on baseline,
 apply rule 3 (Surprise) — do not proceed.
 
+Cut routine output with the quiet forms in AGENTS.md § Bash hygiene → Cargo
+command noise (canonical); the selection above and `-D warnings` are unchanged,
+and quiet never narrows what is run.
+
 Follow AGENTS.md § Bash hygiene for command composition, availability checks,
 and evidence recovery. Active permissions and read-only review scope still
 apply. Record actual command exits and distinguish unavailable checks from
