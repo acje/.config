@@ -592,8 +592,8 @@ Record exit code verbatim. Never fabricate PASS.
 
 ```
 cargo check --all-targets --quiet --message-format=short
-cargo clippy --all-targets --quiet --message-format=short -- -D warnings
-cargo test --quiet --no-fail-fast -- --quiet
+cargo aclippy --all-targets -- -D warnings
+cargo atest
 cargo audit                    # SKIPPED(reason) if not installed
 cargo deny check               # SKIPPED(reason) if deny.toml absent
 ```
