@@ -40,30 +40,22 @@ ADR ids or bd bead ids when the change is constrained by one.
 
 ## Communication style — terse structured text
 
-All agent replies use terse structured text with idiomatic Rust datatypes
-where they fit. The aim is signal density, not eloquence.
+Write for signal density. Every reply states its result in the most
+machine-parseable shape available:
 
-Prefer:
+- Tagged unions (Rust enum variants) carry outcomes:
+    `Outcome::Verified { exit_code: 0 }`.
+- Struct-shaped sections carry state: fixed labelled fields (mission_id,
+  scope, exit_codes) the orchestrator parses without reading prose.
+- `Result<T, E>` framing carries success and failure: name the variant and
+  its payload.
+- Tables carry comparable data (options × cost × reversibility).
+- Tab-separated tagged records carry tool output (`MATCH\t<path>\t<line>`).
 
-- Tagged unions (Rust enum variants) over adjectives:
-    `Outcome::Verified { exit_code: 0 }` over "the test passed cleanly"
-- Struct-shaped sections over paragraphs:
-    fixed labelled fields (mission_id, scope, exit_codes) the orchestrator can
-    parse without reading prose.
-- `Result<T, E>` framing over "it worked / it didn't":
-    state the variant and the payload.
-- Tables for comparable data (options × cost × reversibility).
-- Tab-separated tagged records for tool output (`MATCH\t<path>\t<line>`).
-
-Avoid:
-
-- Banners, "Done!", "Hope this helps", emoji decoration.
-- Adjective-heavy prose where a variant or exit code says it.
-- Restating the question; restate the *target* once if needed, then deliver.
-
-The handoff line and the back-brief format are themselves examples of the
-style: fixed grammar, parseable, no decoration. Each agent's reply scaffold
-extends this principle to its full body.
+Deliver the answer directly; restate the *target* once only when the reply
+would otherwise be ambiguous. The handoff line and the back-brief format are
+themselves examples of the style: fixed grammar, parseable, no decoration.
+Each agent's reply scaffold extends this principle to its full body.
 
 ## Autonomy — when to ask the user
 
@@ -158,10 +150,9 @@ Never stage evidence bodies on disk as the durable home. The bead
 contract promises a dereferenceable body; a bead labelled `evidence`,
 `oracle-summary`, `review-report`, or `mission-brief` whose `description` is
 empty or whitespace-only breaks it, and the reader discovers this only after
-paying for the `bd show`. Measured: survey finding **S4** counted 248 such
-beads. The write can fail silently — `--stdin` REPLACES, and a failed pipe
-leaves the description empty — so the **producing agent must confirm the body
-landed before handing off**:
+paying for the `bd show`. The write can fail silently — `--stdin` REPLACES, and
+a failed pipe leaves the description empty — so the **producing agent must
+confirm the body landed before handing off**:
 
 ```
 set -o pipefail; bd show <id> --json | jq -er '.[0].description | select(test("\\S")) | .[:200]'
@@ -330,10 +321,8 @@ or hand back the missing affordance rather than waiting. An external path or
 joined command is not itself proof that a prompt occurs. Historical reports
 and superseded causal claims are preserved in config-jui.
 
-1. **Directory and arguments.** Use the tool's `workdir` parameter. Quote
-   paths and arguments containing spaces or shell metacharacters; use `--`
-   where supported for path operands. Treat external text as data, not shell
-   code: no `eval` or interpolation into executable command syntax.
+1. **Untrusted text is data, never shell code.** No `eval`, no interpolation
+   of external text into executable command syntax.
 2. **Composition and exits.** Run independent operations in parallel tool
    calls; use `&&` for dependent steps. Prefix evidence/state pipelines with
    literal `set -o pipefail;`; do not substitute shell-specific status arrays.
@@ -345,11 +334,10 @@ and superseded causal claims are preserved in config-jui.
 3. **File tools.** Use `glob`, `grep`, `read`, and `apply_patch`/edit tools for
    search, inspection and edits, not bash wrappers. Bash runs git, consumers,
    verification and other operational commands.
-4. **Targets.** Confirm directory context and mutation targets before acting,
-   including parent existence before creation and exact scope before deletion
-   or staging. Reuse observed paths; probe unknown paths when the next step
-   depends on them. Do not add redundant availability probes when the actual
-   command can safely report absence.
+4. **Targets.** Confirm the exact mutation scope before deleting or staging.
+   Reuse observed paths; probe unknown paths when the next step depends on
+   them. Do not add redundant availability probes when the actual command can
+   safely report absence.
 5. **Reuse observations.** Read wide enough once. Refresh after mutation,
    compaction or credible external change; do not re-read unchanged live
    context merely to satisfy ceremony.
@@ -360,6 +348,13 @@ and superseded causal claims are preserved in config-jui.
    a fixed format; never replay JSON through `echo`. Prefer direct stdout;
    scratch and coordination bodies follow § Beads → Canonical storage
    hierarchy, including safe accumulation for existing bead descriptions.
+8. **No background daemons.** Run commands in the foreground and wait for
+   their exit status. Do not background a command (`&`, `nohup`, `disown`,
+   `setsid`), start a long-lived server, watcher or daemon, or leave a
+   process running past the tool call. A process whose exit code you never
+   observe produces no evidence (R1) and leaks state into later turns. When
+   work genuinely needs a running service, say so and hand the decision back
+   rather than starting one silently.
 
 **Enforcement:** an unguarded evidence/state pipeline, machine-data replay
 through `echo`, or a filter mistaken for a producer verdict yields review
@@ -807,82 +802,35 @@ than answering from training data.
 
 ## Model capability gotchas
 
-Agent-level sampler/thinking config is not always honoured: providers may
-ignore `temperature:`, model variants may pre-set thinking/effort overriding
-agent `options:` blocks. A binary string in a tool or config is evidence the
-code *exists*, not evidence it is *reached* under the current provider/model
-combination. When tuning behaviour, confirm via a session trace that the
-option made it into the request — not just into the file on disk. Check
-`~/.cache/opencode/models.json` for the variant matrix before authoring
-options.
+Configuration is evidence a setting *exists*, not that it is *reached*.
+Providers may ignore `temperature:`, and model variants may preset
+thinking/effort over an agent's `options:` block. `github-copilot/<model>`
+routing may drop or preset `reasoningEffort` / `thinking` regardless of
+vendor. Two rules follow, plus the restart caveat below:
+
+1. **Check the matrix first.** `~/.cache/opencode/models.json` lists the
+   variant's reasoning options. A listed effort value means the option
+   exists, not that it is honoured.
+2. **Confirm in a trace, not in a file.** When tuning behaviour, inspect a
+   `chat.params` trace event's `output.options` (e.g. `reasoningEffort`) to
+   see what actually reached the request. Pass-through is verified
+   per-model, never per-agent by inference.
+
+Current bindings live in `opencode.json` and agent frontmatter; read them
+there rather than from this file. No behavioural-tendency evidence has been
+established for the currently bound models. Historical per-model
+observations (config-qfd, prompting-claude-sonnet-5, config-92a, config-5b6,
+config-cg7) stay attached to the model that was measured — do not transfer
+them to a different model or to an agent by family resemblance.
 
 ### Restart-staleness
 
-Agent `model:` and prompt bindings are resolved at opencode startup. A
-session started before a config edit keeps the OLD binding — a committed
-config change is not a live change until the process restarts. Verify a
-binding took effect by inspecting a post-restart `chat.params` trace
-(`.input.agent` + `.input.model.id`), not by reading the config file. This
-extends the "a value in config is evidence the code exists, not that it is
-reached" principle above to startup caching. Incident: commit `a105604`
-(Opus-5 migration) landed `2026-08-10T08:26:58Z`; moltke `chat.params` still
-resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
-
-### Per-model tendency table
-
-Bindings are configuration, not live-session or behavioral evidence. As of
-2026-09-26, `opencode.json` and agent frontmatter configure
-`github-copilot/gemini-3.8-flash` for the top-level fallback and for every
-listed agent — build, plan, moltke, hopper, copernicus, feynman, oracle, linus,
-hamilton, gardener, automaton and turbo. The sole exception is `dramallama`,
-a primary agent bound to `dramallama/code`. Moltke carries no JSON `model`
-property; its binding comes from `agents/moltke.md` frontmatter. No Opus or
-GPT model is bound to a fleet agent at this revision. Historical observations
-below stay attached to the measured model, not reassigned agents. No new
-tendency is inferred, and no behavioral evidence has been collected for the
-Gemini fleet.
-
-| Model | Configured agents / historical scope | Tendency (cited) | Prompt-design implication |
-|---|---|---|---|
-| Gemini 3.8 Flash | fallback; build, plan, moltke, hopper, copernicus, feynman, oracle, linus, hamilton, gardener, automaton, turbo | No behavioral evidence supplied for these bindings | No model-specific tuning inferred; collect post-restart evidence before tuning |
-| dramallama/code | dramallama (primary) | No behavioral evidence supplied | No model-specific tuning inferred |
-| Opus 5 | historical only; no current binding | Self-verification, over-delegation and longer responses reported [config-qfd] | Do not transfer to the Gemini bindings |
-| Sonnet 5 | historical only; no current binding | Literal conservative review and non-default sampling errors reported [prompting-claude-sonnet-5, config-92a §6] | Do not transfer to Gemini or GPT bindings |
-| GPT-5.6 (sol/terra) | historical only; no current binding | Concision, intent inference and repeated-guardrail friction reported [config-5b6] | Do not transfer by family resemblance to GPT-6 |
-| GPT-6 Astra | historical only; no current binding | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params |
-
-### github-copilot pass-through caveat
-
-The fleet bindings above use `github-copilot/<model>`.
-`reasoningEffort` / `thinking` route through github-copilot, which may drop or
-preset them regardless of vendor.
-Confirm via a session trace that the knob reached the request — inspect the
-`chat.params` trace event's `output.options` for `reasoningEffort` — and
-check the `~/.cache/opencode/models.json` variant matrix before trusting an
-effort/thinking setting. A value in config is evidence the code exists, not
-that it is reached. **Verified 2026-07-28**: `github-copilot/claude-opus-4.8`
-honours `reasoningEffort` — its models.json entry carries
-`reasoning_options: [{type: effort, values: [low,medium,high,xhigh,max]}]`,
-and a moltke `chat.params` trace showed `output.options.reasoningEffort:
-"xhigh"` resolved into the request. **Verified 2026-08-10**:
-`github-copilot/claude-opus-5` also honours `reasoningEffort` — 45
-`build` agent `chat.params` observations on 2026-08-10 all resolved
-`output.options.reasoningEffort: "xhigh"` into the request. **Verified
-2026-08-10**: `github-copilot/gpt-5.6-sol` also honours `reasoningEffort`
-— 8 feynman `chat.params` observations on 2026-08-10 all resolved
-`output.options.reasoningEffort: "xhigh"` into the request (same sweep:
-copernicus/`claude-sonnet-5` resolved `max`). These are model-level
-observations: verified-for-model, never verified-for-this-agent — the
-2026-08-10 opus-5 sweep ran on the `build` agent, so it says nothing
-about linus or hopper specifically. **Gap**: gpt-5.6-terra
-and sol are no longer bound to fleet agents; their observations are historical.
-**Gap — UNVERIFIED here**: current GPT-6 Astra and Gemini agent-specific
-reasoningEffort pass-through needs post-restart `chat.params` evidence.
-For GPT-6, models.json lists effort values
-[low, medium, high, xhigh, max], which is evidence the option exists,
-not that it is reached. Do not treat a configured effort value as confirmed
-until a post-restart trace shows that agent/model and the corresponding
-`output.options.reasoningEffort` resolved into the request.
+Agent `model:` and prompt bindings resolve at opencode startup. A session
+started before a config edit keeps the OLD binding, so a committed change is
+not a live change until the process restarts. Verify with a *post-restart*
+`chat.params` trace (`.input.agent` + `.input.model.id`), not by reading
+`opencode.json` or agent frontmatter. A file on disk is evidence the code
+exists, not evidence it is reached.
 
 ## Tracing
 
@@ -1049,15 +997,9 @@ evidence indexing, and audit trails. Beads are the **primary** cross-agent
 memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
 (see § Tracing).
 
-**Version baseline.** Installed CLI is **bd 1.3.0** (Homebrew, observed
-2026-09-26 via `bd --version`). Every measured invariant recorded in this
-section — `--stdin` replacement semantics, the `bd show --json` array shape,
-parentage direction, non-blocking `parent-child`, same-tier `blocks`, and the
-silent inversion/no-op failures — was measured against **bd 1.2.2** and has
-**not** been re-measured on 1.3.0. They stay labelled 1.2.2 deliberately: a
-version bump is not a revalidation, and relabelling them as 1.3.0 facts would
-manufacture evidence. Re-measure before relying on any of them (§ Iteration
-speed #2).
+**Version baseline.** Installed CLI is **bd 1.3.0**; every measured invariant
+in this section was measured against **bd 1.2.2** and not re-measured since.
+Re-measure before relying on one (§ Iteration speed #2).
 
 ### Canonical storage hierarchy
 
@@ -1164,28 +1106,20 @@ not a thing to fix in place.
 **The invariant is "no bd STORE at `$HOME/.beads`", not "that path does not
 exist".** The literal form is unachievable: bd writes an anonymous-metrics
 spool to that home-fixed path on every invocation, independent of which
-workspace resolves. Measured 2026-09-05 — deleting `~/.beads` saw it
-reappear within seconds holding only `eventsData/eventkit.lock` plus
-`*.evtq` files (library: storj `eventkit`), payload shape
-`{"distinct_id":…,"app_name":"beads","app_version":"1.2.2","platform":"darwin","events":[…]}`;
-no other bd store on the machine has an `eventsData/`. Opt out with
-`bd metrics off`, which persists globally to `~/.config/bd/config.yaml`
-(`metrics.disabled: true`) and needs no workspace, so it cannot pollute a
-repo database. `HOME_STORE_PRESENT` is already specified for this: it keys
-on store markers (`config.yaml` + `embeddeddolt`), so a bare telemetry
-directory reads 0 by design. Do not read a lone `eventsData/` as a store.
+workspace resolves. Opt out with `bd metrics off`, which persists globally to
+`~/.config/bd/config.yaml` and needs no workspace, so it cannot pollute a repo
+database. `HOME_STORE_PRESENT` keys on store markers (`config.yaml` +
+`embeddeddolt`), so a bare telemetry directory reads 0 by design — do not read
+a lone `eventsData/` as a store.
 
 **Pin discovery; do not trust the ambient walk.** bd treats "this repo has
 a `.beads/` directory" and "that directory contains a database" as
 *separate* conditions, so a repo carrying a git-tracked `.beads/` skeleton
 with no database inside does **not** stop bd's upward walk — it silently
 resolves to whatever ancestor store exists. Pass `bd -C <repo-root>` or set
-`BEADS_DIR` when the target workspace matters. Measured mitigation, so the
-claim is not overstated: a repo with **no** `.beads` directory at all
-already fails cleanly today (`bd where` in `Mattilsynet/comment-free`
-returns `Error: No active beads workspace found`). The leak reaches an
-ancestor store only via non-repo parent directories or via hollow-`.beads`
-repos — those two shapes, not every repo.
+`BEADS_DIR` when the target workspace matters. A repo with **no** `.beads`
+directory at all fails cleanly (`bd where` errors); the leak reaches an
+ancestor store only via non-repo parent directories or hollow-`.beads` repos.
 
 **`bd --db <path>` fails open.** Pointed at a directory that is not a bd
 store, it does **not** error: it silently falls back to auto-discovery and
@@ -1261,16 +1195,15 @@ children close — bd 1.2.2 cannot do that for task children.
 
 `blocks` (the default edge) is **same-tier only** — epic↔epic and task↔task.
 `bd dep add <epic> --blocked-by <task>` always exits 1 and creates nothing.
-Sequence sibling sub-missions with task→task `blocks`; that works (ghr-usan6
-sits `[BLOCKED]` behind 23 task→task edges).
+Sequence sibling sub-missions with task→task `blocks`; that works.
 
 Two parent-child failures are **silent, exit 0**:
 
 - **Inversion** — `bd dep add <EPIC> --depends-on <CHILD> -t parent-child`
   succeeds and makes the EPIC a child of the TASK.
 - **Silent no-op** — the correct form succeeds but creates no visible child
-  when an inverted edge already exists in reverse. Measured: ghr-qkt0q under
-  ghr-f18a619b appeared only after `bd dep remove` of the inverted edge.
+  when an inverted edge already exists in reverse; the child appears only
+  after `bd dep remove` of the inverted edge.
 
 Enforcement surface (trigger + named artefact). **Trigger:** any `bd dep add
 … -t parent-child`. (a) Its exit code must be checked — an ignored non-zero
@@ -1291,25 +1224,15 @@ cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor -- --all
 (`scripts/src/bin/bd-doctor.rs` in `Mattilsynet/scripts`; read-only.)
 
 Version-observed against bd 1.2.2; a future bd may differ — re-measure before
-relying on it. Evidence that the two-step form fails in practice at scale:
-survey finding **S2** counted 59 inverted parent edges, and **S3** counted 355
-childless epics, across the audited workspaces — both artefacts of doctrine
-that previously prescribed `bd dep add` as the *only* idiom. Earlier incident
-(epic anders_jensen-ri5): 29 gh-report epics audited, 116 open non-epic beads
-attached to no epic, 46 unambiguous orphans reattached, 1 epic (ghr-f18a619b)
-found inverted as a child of 4 tasks, 70 ambiguous cases left alone.
+relying on it. Prefer `--parent`; the two-step form is the fallback only.
+Historical rationale: config-jui.
 
 ### Mission membership — label by default, edges where the graph is read
 
-A prior version of this file mandated that every bead be wired into a mission
-epic by a parent-child edge. **That mandate is retired on evidence** (survey
-findings **S1** and **S6**): 4618 beads — about 75% of the store — carry no
-parent edge, yet closure demonstrably works (only 3 stale epics out of 506),
-because `gardener` resolves a mission's children by `mission:<id>` **label**,
-not by traversing the graph. "% of beads parented" measures graph
-*completeness*, which nothing consumes; what matters is graph *integrity*
-where a workflow actually reads it. This is a deliberate supersession, not
-drift — do not reintroduce the mandate.
+Resolve mission membership by `mission:<id>` label. Require a parent-child
+edge only where a workflow reads the graph; universal parent wiring is not
+required, and an unparented but labelled bead is not a defect. Do not
+reintroduce a blanket parentage mandate. Historical rationale: config-jui.
 
 | Mechanism | Status |
 |---|---|
@@ -1322,9 +1245,7 @@ no parent-child edge. **Artefact:** `bd-doctor` `MISSING_MISSION_LABEL`
 (Error, exit 1). A bead that is merely unparented but correctly labelled is
 `bd-doctor` `ORPHAN`, which is **Info by default** and becomes an Error
 **only** under `--strict-parentage` — the flag graph-consuming workflows opt
-into (§ wayfinder). Do not read a default-run `ORPHAN` line as a defect; on
-the audited store it is 418-count background noise against 4 real
-`INVERTED_PARENT` and 2 real `EMPTY_EVIDENCE` findings.
+into (§ wayfinder). Do not read a default-run `ORPHAN` line as a defect.
 
 Evidence producers create tasks with `--labels evidence,mission:<id>` and put the body
 in `--description` (or `bd update --stdin` on the freshly-created bead for
@@ -1334,11 +1255,9 @@ bodies > 4KB to avoid trace truncation; `--stdin` replaces, so see § Beads
 
 ### Review tiers (Bucket C) — tier the rigour, never the standard
 
-`§ Iteration speed #3` tiers *verification*. The review loop was never tiered,
-so it applied maximum adversarial rigour uniformly. Measured 2026-09-05 on one
-package: linus issued **1379 tool calls against hopper's 1159** — the reviewer
-did more I/O than the implementer — and **6 of 24 commits were `tidy:`**
-(deleting private doc blocks) yet received full execution-proof review.
+`§ Iteration speed #3` tiers *verification*; this section tiers **review**.
+The tier caps the evidence a reviewer may spend, never the standard of
+correctness. Historical rationale: config-jui.
 
 The tier is a **label on the review-request bead**, not prose:
 

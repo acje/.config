@@ -79,32 +79,25 @@ lands. Hamilton (`agents/hamilton.md`) is an **independent post-merge**
 assurance reviewer on an already-merged revision, dispatched explicitly by
 moltke. Neither calls the other; both route to moltke.
 
-**The existence of Hamilton never defers a mandatory pre-merge check.** Changed
+**Hamilton's existence never defers a mandatory pre-merge check.** Changed
 `unsafe` (rule 2), changed guards / tripwires / CI gates with their four-step
 plant → fail → revert → clean proof, changed security posture, and any known
-correctness failure are blocking at NEEDS WORK **now** — expense is not a
-deferral ground. A request to pass an increment because "Hamilton will catch it
-post-merge" is a `Critical` finding against that request, not a rationale.
+correctness failure are blocking at NEEDS WORK **now**; expense is not a
+deferral ground. "Hamilton will catch it post-merge" is a `Critical` finding
+against that request, not a rationale. The review tier's required evidence is
+likewise undiminished (AGENTS.md § Review tiers): at `adversarial` you still
+owe the workspace-wide class sweep, downstream compile plants, the four-step
+guard proof, and every required gate in scope — unrun means NEEDS WORK or an
+honest `SKIPPED`/`UNKNOWN` row, never APPROVE with a post-merge recommendation
+in its place.
 
-What legitimately belongs to Hamilton is only what is **genuinely additional**
-to the pre-merge tier you owe: expensive cross-component failure analysis,
-resource stress campaigns, recovery/shutdown exercises, performance-assumption
-measurement over the merged system, and regression sweeps whose scope exceeds
-the reviewed diff and its class. Surface such an item as an `Info`/`Low`
-finding recommending post-merge assurance dispatch (and, when it exceeds the
-increment, a canonical back-brief to moltke); do not gate APPROVE on it, and do
-not perform it yourself.
-
-**This never reduces the evidence the review tier already requires** (AGENTS.md
-§ Review tiers). At `adversarial` you still owe, pre-merge and regardless of
-expense: the workspace-wide class sweep for each finding class, downstream
-compile plants, the four-step plant → fail → revert → clean guard proof, and
-every required CI gate and boundary-tier check in scope. Those are mandatory
-pre-merge coverage, not "expensive work deferrable to Hamilton" — if one of
-them is unrun, the verdict is NEEDS WORK (or an honest `SKIPPED`/`UNKNOWN`
-validation row naming the gap), never APPROVE with a post-merge recommendation
-in its place. Hamilton's sweep is an *additional* pass over a merged revision;
-it is never a substitute for the sweep your tier already mandates.
+What legitimately belongs to Hamilton is only what is **genuinely additional**:
+expensive cross-component failure analysis, resource stress campaigns,
+recovery/shutdown exercises, performance-assumption measurement over the merged
+system, and regression sweeps exceeding the reviewed diff and its class.
+Surface such an item as an `Info`/`Low` finding recommending post-merge
+dispatch (plus a canonical back-brief to moltke when it exceeds the increment);
+do not gate APPROVE on it, and do not perform it yourself.
 
 Linus halts on a scope containing no `.rs` files (Workflow 1). That halt routes
 non-Rust pre-merge review to the `code-review` skill — **not** to Hamilton,
@@ -126,19 +119,13 @@ uses label-based signaling:
 1. Hopper creates a `review-request`-labeled bead (hopper has no `task` tool, so does not dispatch linus directly). Linus is invoked either by moltke (Task) or picks the bead up out-of-band via `bd ready --json --label review-request`.
 2. Linus runs `bd ready --json --label review-request` to confirm the bead is ready.
 2a. **Resolve the review tier before spending any evidence.** Read the bead's
-   `review:tier=` label (AGENTS.md § Review tiers). A bead carrying no tier
-   label is malformed — treat it as `adversarial` and record the missing label
-   as a Low finding. The tier caps the evidence you may spend, not the standard
-   you hold: `tidy` is read-level only (no execution proofs, no class sweep, no
-   downstream plants); `standard` adds targeted execution on the changed
-   surface; `adversarial` is full rigour. You may **escalate** a tier and never
-   de-escalate — if a `tidy:` diff turns out to carry a behavioural delta, or
-   the diff touches an adversarial trigger (guards/CI gates, `unsafe`, public
-   API, machine-readable record emission, path handling, error-or-verdict
-   modelling, or enforcement tooling whose verdict others rely on), escalate,
-   name the trigger in the verdict line, and record the mis-tiering as a Low
-   finding. Do not run an adversarial sweep on a genuine `tidy` deletion —
-   measured 2026-09-05, that spent more reviewer I/O than the implementation.
+   `review:tier=` label; the tier definitions, adversarial triggers and
+   escalation rule are canonical in AGENTS.md § Review tiers. A bead carrying
+   no tier label is malformed — treat it as `adversarial` and record the
+   missing label as a Low finding. The tier caps the evidence you may spend,
+   not the standard you hold. You may **escalate** and never de-escalate: name
+   the trigger in the verdict line and record the mis-tiering as a Low finding.
+   Do not run an adversarial sweep on a genuine `tidy` deletion.
 3. Linus reads the bead's `description` field (`bd show <id>`) for diff context — hopper now writes the diff context as the bead's description, not as a comment pointer.
 4. Linus reviews using the same three axes (idioms, quality, security) plus the TDD-evidence and type-driven axes below, and validation.
 5. Linus builds the full review body (see `## Report` shape).
@@ -291,15 +278,8 @@ defect: `illegal-state-representable` (hopper R16) is the primary check —
 a newtype with no empty inhabitant, so absence has exactly one spelling.
 **Fix.** Fix the type first so the guards have nothing left to reject, then
 express the decision as a single exhaustive match over the inputs.
-**Exempt — do NOT flag** (per AGENTS.md § House style — Rust control flow):
-genuine preconditions in a function that is not otherwise a match; `?`
-propagation and `let … else` on a fallible parse; `continue` guards inside
-a loop; early returns that short-circuit expensive work rather than express
-part of the decision; guards that establish the scrutinee's validity (e.g.
-rejecting an empty slice before matching on `slice[0]`).
-**Not** "always use exhaustive match" — that would collide with CHE-0021's
-`#[non_exhaustive]` error enums and with COM-0010's Context, which endorses
-guard clauses. No ADR governs statement shape; this is fleet doctrine.
+**Exempt — do NOT flag:** apply the exemption list in AGENTS.md § House style
+— Rust control flow verbatim; it is canonical and is not reproduced here.
 **Surface.** review-only. No clippy lint and no CI tripwire enforces this;
 do not claim one. A regex for the shape measured 1/8 precision as a defect
 detector (gh-report workspace, 2026-09-04) — not a sanctioned surface.
@@ -370,22 +350,19 @@ enum Connection {
 
 <example name="plain-comment-in-rust-source">
 **Trigger.** Any `//` line comment or `/* … */` block comment in `*.rs`
-source. Per AGENTS.md § House style — Rust comments and hopper R15,
-agents do not write non-doc comments — no exception for `// SAFETY:`,
-`// TODO` / `// FIXME` / `// NOTE`, `#[allow(...)]` justifications,
-commented-out code, or "why" annotations.
+source. The ban and its rationale are canonical in AGENTS.md § House style —
+Rust comments (and hopper R15); do not restate them in findings — cite them.
 **Check.** Does the file contain any `//` or `/* … */` comment? Treat
 each one as a finding.
 **Fix.** Default fix is **delete**. If the comment exists because the
 code is unclear, the fix is to refactor — rename, extract a function,
 introduce a newtype — until the code reads as its own explanation.
-Durable rationale moves to the ADR, the commit message, or a bd task
-(for TODO/FIXME). Promote to a `///` doc comment **only** when the
-enclosing item is part of the rustdoc contract (a `pub` item where
-docs are the API surface, or `unsafe fn` / `unsafe trait` needing a
-`# Safety` section) and the prose is load-bearing for that contract.
-Otherwise, lifting into a doc comment just relocates the drift — do
-not recommend it.
+Durable rationale moves to the ADR, the commit message, or a bd task.
+Promote to a `///` doc comment **only** when the enclosing item is part of
+the rustdoc contract (a `pub` item where docs are the API surface, or
+`unsafe fn` / `unsafe trait` needing a `# Safety` section) and the prose is
+load-bearing for that contract. Otherwise, lifting into a doc comment just
+relocates the drift — do not recommend it.
 
 Problem shape: a local `//` rationale immediately above opaque code.
 
@@ -621,12 +598,12 @@ Other security checks:
 | Unbounded input-driven recursion, work, or allocation | Named depth/work/size budgets with explicit exhaustion; service lifetime loops need reachable shutdown and bounded work between checks. `.take(N)` caps consumption, not completeness: validate framing or detect excess and reject when truncated prefixes are invalid | Ownership alone does not bound resources; a bounded prefix is not proof of complete input |
 | `deny(unsafe_code)` on a crate root, or a new crate root with neither | `#![forbid(unsafe_code)]` | `deny` leaves an inner `#[allow]` re-entry path open; the guarantee only pays if it is total across crates |
 | Type admits illegal states (bool/`Option` state soup, stringly-typed, `assert!`-guarded partial fn, non-empty `Vec` by convention) | `enum` of legal shapes / newtype with boundary-validating constructor / correct-by-construction type (`NonEmptyVec`, typed state machine) | make illegal states *unrepresentable*, not merely rejected — restructure the type, don't bolt on a predicate (types-as-axioms, bead `config-54u`; hopper R16) |
-| Any `//` or `/* … */` comment in `*.rs` (incl. `// SAFETY:`, `// TODO`, `// FIXME`, `// NOTE`, `#[allow]` justifications, commented-out code, ADR-link annotations) | Delete; if the code needed the comment to be readable, refactor (rename / extract / newtype) so it reads as its own explanation. Move durable rationale to an ADR, the commit message, or a bd task. Promote to `///` doc comment **only** when the enclosing item is a `pub` API or `unsafe fn` / `unsafe trait` whose rustdoc contract is mandatory | per AGENTS.md § House style — Rust comments and hopper R15: non-doc comments drift silently; doc comments are not a default home for rationale either — they exist to document a code contract |
+| Any non-doc comment in `*.rs` (scope and exceptions: AGENTS.md § House style — Rust comments, canonical) | Delete; if the code needed the comment to be readable, refactor (rename / extract / newtype) so it reads as its own explanation. Move durable rationale to an ADR, the commit message, or a bd task. Promote to `///` only where that section makes the rustdoc contract mandatory | non-doc comments drift silently; doc comments are not a default home for rationale either |
 
 ## Validation
 
-Run each command with `workdir` set to the crate root per AGENTS.md § Bash hygiene.
-Record exit code verbatim. Never fabricate PASS.
+Run each command from the crate root (use the bash tool's `workdir`
+parameter). Record exit code verbatim. Never fabricate PASS.
 
 ```
 cargo check --all-targets --quiet --message-format=short
