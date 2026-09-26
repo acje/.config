@@ -10,7 +10,8 @@ uncertainty, scope, or risk warrants it. Scale effort to query complexity.
 | `feynman`     | Orient     | Ranked hypotheses + falsifiers          | moltke                   | `evidence` (orientation subtype)    |
 | `moltke`      | Decide     | Mission contract / package + pre-mortem | hopper (exec), feynman (re-orient), oracle (arch input) | mission epic + `mission:<id>` |
 | `hopper`      | Act        | Verified commits per TDD increment      | moltke (back-brief), linus (review-request) | `review-request`         |
-| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
+| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review (**pre-merge, mandatory**) | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
+| `hamilton`    | Assurance  | Post-merge assurance verdict on a merged revision (**independent, non-blocking for merge**) | moltke (explicit dispatch only) | `assurance-report` / `assurance-finding` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
 | `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
 | `gardener`    | GC         | Reclamation report; closes mission epic, spent scaffolding, and guarded Cargo cleanup | moltke → user | none                       |
@@ -225,7 +226,8 @@ Use subagents when the work earns coordination overhead:
 - need external/library/spec knowledge → `copernicus` (don't synthesise from training data)
 - two or more plausible causal models → `feynman`
 - decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd list --label oracle-summary,mission:<id>`; body lives in the bead's `description` field)
-- Rust code review (idioms, unsafe soundness, cargo-audit, cargo-deny, MSRV/edition) → `linus`. Generic / non-Rust / cross-language review → `code-review` skill. Linus and the skill are orthogonal; neither calls the other.
+- Rust code review (idioms, unsafe soundness, cargo-audit, cargo-deny, MSRV/edition) → `linus`. Generic / non-Rust / cross-language review → `code-review` skill. Linus and the skill are orthogonal; neither calls the other. Both are **pre-merge** and mandatory for their scope.
+- assurance pass on an **already-merged** revision — cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns → `hamilton`, by explicit moltke dispatch naming the merged SHA and a bounded scope. Hamilton never substitutes for a pre-merge gate and never self-fixes; findings route to moltke.
 - two or more viable approaches, or multi-file / irreversible / cross-module → `moltke`, then `hopper`
 - executing a non-trivial change with a clear plan → `hopper` directly
 - copernicus's report came back thin or off-target → re-task copernicus *through* `feynman`, who issues a tightened observation brief
@@ -686,6 +688,16 @@ The hopper ↔ linus review iteration is tactical feedback, not a third OODA
 loop. Existing review-request labels, APPROVE/NEEDS WORK, review tiers and
 two repeat rejections on the same defect class remain unchanged (§ Beads).
 References below to a "review loop" mean only this nested feedback mechanism.
+
+**Hamilton is a post-merge assurance stage, not a third loop and not a gate
+relocation.** It runs only on moltke's explicit dispatch against an
+already-merged revision, and adds no loop: its findings re-enter the tactical
+loop as new moltke-owned work. Every mandatory pre-merge gate stays where it
+is — changed `unsafe`, changed guards/tripwires/CI gates with four-step
+guard-bite proof, changed security posture and known correctness failures are
+blocking pre-merge, and "Hamilton will catch it" is never a valid deferral
+(`agents/hamilton.md` Rule 1). Non-Rust diffs still route pre-merge to the
+`code-review` skill, since linus halts without `.rs` files.
 Internal role workflows are not additional fleet OODA loops. Automaton and
 turbo support scoped work; gardener closes mission state. Plan mode may consult
 oracle without starting tactical execution.
@@ -819,18 +831,25 @@ resolved `claude-opus-4.8` at `2026-08-10T09:54:21Z` — 88 minutes later.
 ### Per-model tendency table
 
 Bindings are configuration, not live-session or behavioral evidence. As of
-2026-09-16, `opencode.json` and agent frontmatter configure Opus 5 for hopper
-and top-level fallback; Gemini 3.8 Flash for plan, automaton, turbo and gardener;
-GPT-6 Astra for build, copernicus, feynman, linus, moltke and oracle. Historical observations below stay attached
-to the measured model, not reassigned agents. No new tendency is inferred.
+2026-09-26, `opencode.json` and agent frontmatter configure
+`github-copilot/gemini-3.8-flash` for the top-level fallback and for every
+listed agent — build, plan, moltke, hopper, copernicus, feynman, oracle, linus,
+hamilton, gardener, automaton and turbo. The sole exception is `dramallama`,
+a primary agent bound to `dramallama/code`. Moltke carries no JSON `model`
+property; its binding comes from `agents/moltke.md` frontmatter. No Opus or
+GPT model is bound to a fleet agent at this revision. Historical observations
+below stay attached to the measured model, not reassigned agents. No new
+tendency is inferred, and no behavioral evidence has been collected for the
+Gemini fleet.
 
 | Model | Configured agents / historical scope | Tendency (cited) | Prompt-design implication |
 |---|---|---|---|
-| Opus 5 | hopper; top-level fallback | Self-verification, over-delegation and longer responses reported [config-qfd] | Model-scoped brevity/delegation guidance; not evidence about reassigned agents |
+| Gemini 3.8 Flash | fallback; build, plan, moltke, hopper, copernicus, feynman, oracle, linus, hamilton, gardener, automaton, turbo | No behavioral evidence supplied for these bindings | No model-specific tuning inferred; collect post-restart evidence before tuning |
+| dramallama/code | dramallama (primary) | No behavioral evidence supplied | No model-specific tuning inferred |
+| Opus 5 | historical only; no current binding | Self-verification, over-delegation and longer responses reported [config-qfd] | Do not transfer to the Gemini bindings |
 | Sonnet 5 | historical only; no current binding | Literal conservative review and non-default sampling errors reported [prompting-claude-sonnet-5, config-92a §6] | Do not transfer to Gemini or GPT bindings |
 | GPT-5.6 (sol/terra) | historical only; no current binding | Concision, intent inference and repeated-guardrail friction reported [config-5b6] | Do not transfer by family resemblance to GPT-6 |
-| GPT-6 Astra | build, copernicus, feynman, linus, moltke, oracle | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params; collect post-restart evidence first |
-| Gemini 3.8 Flash | plan, automaton, turbo, gardener | No behavioral evidence supplied for these bindings | No model-specific tuning inferred |
+| GPT-6 Astra | historical only; no current binding | No behavioral-tendency evidence established here. Catalog facts only: reasoning, effort [low, medium, high, xhigh, max], temperature false, context 1050000 [config-cg7] | No behavioral tuning inferred; no sampling params |
 
 ### github-copilot pass-through caveat
 
@@ -873,6 +892,32 @@ append-only, redacted, gitignored). Override location via `OPENCODE_TRACE_DIR`;
 field cap via `OPENCODE_TRACE_MAX_FIELD` (default 4096). For exact hook list,
 redaction patterns, and crash-safety details, read the plugin source — it is
 the authoritative shape.
+
+### Two distinct stores — repo-local traces vs global database
+
+These are separate stores with separate guarantees. Do not transfer a property
+of one to the other.
+
+| | `.ooda/traces/` (tracer plugin) | `opencode.db` (opencode itself) |
+|---|---|---|
+| Scope | Repo-local: `<project>/.ooda/traces/`, per project | Global, user-level — one store across all projects |
+| Path | `OPENCODE_TRACE_DIR` override, else `<project>/.ooda/traces` (`plugins/tracer.mjs:256-268`) | `/Users/anders.jensen/.local/share/opencode/opencode.db`, reported by `opencode db path --pure` |
+| Format | Dated session JSONL, append-only (`tracer.mjs:142-175`) | SQLite, per `opencode db --help` |
+| Written by | `plugins/tracer.mjs` — the plugin contains no database writer | opencode runtime; not this repo's code |
+| Content | **Filtered** hook events only (`tracer.mjs:239-251`) — not a complete session archive | Not established here |
+| Redaction | **Partial**: selected headers/keys plus Bearer/GitHub/AWS patterns, with length/depth caps (`tracer.mjs:8-10,37-113`). Partial redaction is not proof of secret-free output | **Unverified** — no redaction claim is established |
+| Retention | User-curated; gardener does not curate or delete traces (see below) | **Unverified** — no retention, encryption or purge policy established |
+| Git | `.gitignore:43` ignores `.ooda/`; never committed | Outside the repo entirely; not git-managed |
+
+Two consequences follow. First, the tracer's redaction, truncation, gitignore
+and curation properties are claims about `.ooda/traces/` **only**; asserting
+them of `opencode.db` would exceed the evidence. Second, `opencode db` was
+inspected at `--help` and `path` level only — schema, content categories,
+redaction, retention and override rules remain **gaps**, and an agent needing
+them must observe them rather than infer them from the tracer.
+
+The comment at `tracer.mjs:15` saying gardener cleans traces contradicts the
+curation doctrine below and is **not** retention-policy authority.
 
 ### Curation workflow
 
@@ -1003,6 +1048,16 @@ bd (`bd` CLI) provides per-repo `.beads/` databases for durable coordination,
 evidence indexing, and audit trails. Beads are the **primary** cross-agent
 memory layer; `.ooda/` is the narrow escape hatch below, plus runtime tracing
 (see § Tracing).
+
+**Version baseline.** Installed CLI is **bd 1.3.0** (Homebrew, observed
+2026-09-26 via `bd --version`). Every measured invariant recorded in this
+section — `--stdin` replacement semantics, the `bd show --json` array shape,
+parentage direction, non-blocking `parent-child`, same-tier `blocks`, and the
+silent inversion/no-op failures — was measured against **bd 1.2.2** and has
+**not** been re-measured on 1.3.0. They stay labelled 1.2.2 deliberately: a
+version bump is not a revalidation, and relabelling them as 1.3.0 facts would
+manufacture evidence. Re-measure before relying on any of them (§ Iteration
+speed #2).
 
 ### Canonical storage hierarchy
 
@@ -1163,6 +1218,8 @@ the runnable half of this rule; the table above is the readable half.
 | `evidence` | Bucket A — cross-agent evidence artefact (body in description) |
 | `oracle-summary` | Oracle-produced ADR summary (subset of evidence) |
 | `review-report` | Linus full review report registered as evidence |
+| `assurance-report` | Hamilton post-merge assurance report (subset of evidence) |
+| `assurance-finding` | Live Hamilton finding; owned by moltke, HELD by gardener until actioned or dismissed |
 
 Labels follow bd's `<dimension>:<value>` convention for state dimensions.
 

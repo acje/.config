@@ -1,9 +1,9 @@
 # OODA Loop Agents for opencode
 
-**Nine subagents**: five OODA-phase agents (`copernicus`, `feynman`,
-`moltke`, `hopper`, `linus`) plus four specialists (`gardener`,
-`automaton`, `oracle`, `turbo`). Names are role mnemonics, not claims
-about historical people or model behavior.
+**Ten subagents**: five OODA-phase agents (`copernicus`, `feynman`,
+`moltke`, `hopper`, `linus`), one post-merge assurance agent (`hamilton`)
+plus four specialists (`gardener`, `automaton`, `oracle`, `turbo`). Names
+are role mnemonics, not claims about historical people or model behavior.
 
 | Role        | Agent        | Responsibility                                                                            |
 |-------------|--------------|--------------------------------------------------------------------------------------------|
@@ -11,7 +11,8 @@ about historical people or model behavior.
 | Orient      | `feynman`    | Rank hypotheses, name falsifiers, stress-test against examples             |
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
 | Act         | `hopper`     | Execute scoped increments with verification                                                        |
-| Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. Read-only on source; tactical feedback. |
+| Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. **Pre-merge, blocking.** Read-only on source; tactical feedback. |
+| Assurance   | `hamilton`   | Independent **post-merge** assurance on a merged revision — cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns. Explicit moltke dispatch only; read-only, never self-fixes. |
 | Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks, guarded Cargo cleanup |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
@@ -164,6 +165,12 @@ under uncertainty, multi-file/irreversible work, cross-role gaps.
   security). Runs cargo check/clippy/test/audit/deny, registers a
   `review-report` evidence bead. Read-only; halts on pre-existing build
   break (Surprise).
+- `hamilton` — see **Invoking hamilton** below for the dispatch shape.
+  Independent post-merge assurance on an already-merged
+  revision (SHA required). Registers an `assurance-report` evidence bead
+  and one OPEN `assurance-finding` bead per live finding, routed to
+  moltke. Read-only; never self-fixes; never defers a mandatory pre-merge
+  gate. Explicit dispatch only — no merge watcher, no CI integration.
 - `automaton` — write tool, build, smoke-test, hand back tool path + run
   command + tool description.
 - `gardener` — query bd mission/evidence beads, close completed epics,
@@ -294,8 +301,39 @@ Actual post-restart Task/direct/API assignment and synthetic-message delivery
 remain **unverified**. Quit and restart opencode after prompt/plugin edits;
 running sessions retain startup bindings. Confirm the received status and trace
 before claiming a specific invocation path is integrated. Local checks are
-`node --test opencode/search-readiness.test.mjs` from repo root and
+`node --test opencode/` from repo root and
 `opencode debug config`; neither proves post-restart delivery by itself.
+
+## Invoking hamilton (post-merge assurance)
+
+Hamilton is dispatched by `moltke`, never directly and never automatically —
+there is no merge watcher and no CI integration. Ask moltke for an assurance
+pass and supply the merged revision:
+
+```
+> @moltke dispatch hamilton for post-merge assurance on ~/code/gh-report:
+>   merged_revision 4f9c1ab, integration_branch main,
+>   scope crates/ingest + crates/store, focus resource stress and shutdown.
+```
+
+Moltke then issues the bounded dispatch and returns Hamilton's report bead plus
+any live `assurance-finding` beads. Requirements and limits:
+
+- **A merged SHA is mandatory.** Without a resolvable `merged_revision`,
+  Hamilton halts — it does not review unmerged work. That is the pre-merge
+  stage's job (`linus` for Rust, the `code-review` skill otherwise).
+- **The working tree must correspond to that SHA.** Hamilton records `HEAD` and
+  `git status`; a dirty tree or a different `HEAD` is a halt, not a
+  best-effort review. It will not check out, reset or stash to fix this.
+- **Findings are not fixes.** Hamilton is read-only and never self-fixes; every
+  actionable finding becomes an OPEN bead owned by moltke that survives the
+  originating mission's closure.
+- **Restart required; activation unverified.** Agent bindings resolve at
+  opencode startup, so hamilton is not invocable in a session that began before
+  it was registered — quit and restart. Until a post-restart `chat.params`
+  trace shows `.input.agent == "hamilton"`, its invocability is
+  configured-but-unverified: config on disk is evidence the agent exists, not
+  evidence it is reached.
 
 ## Conditional tools
 
@@ -325,6 +363,13 @@ orientation, mission contracts, journals, and oracle summaries live in bd bead
 `.ooda/`, it still needs a bead pointer; handoffs pass `bd-NNN`, never the file
 path. Gardener does not delete `.ooda/` files; users curate traces and local
 artefacts.
+
+`.ooda/traces/` is repo-local, partially redacted and gitignored. It is a
+different store from opencode's own global SQLite database at
+`~/.local/share/opencode/opencode.db` (path from `opencode db path --pure`),
+whose schema, redaction and retention are unverified here. Do not transfer the
+tracer's guarantees to that database — see AGENTS.md § Tracing → Two distinct
+stores.
 
 ```
 .ooda/
@@ -451,7 +496,9 @@ role-creep. The role separation is doctrinal:
 - `feynman` orients (no decisions, no execution).
 - `moltke` decides and commands.
 - `hopper` executes (verify-before-claim).
-- `linus` reviews Rust code (read-only; no edits, no decisions).
+- `linus` reviews Rust code pre-merge (read-only; no edits, no decisions).
+- `hamilton` assures a merged revision post-merge (read-only; no edits, no
+  fixes, no decisions; findings go to moltke).
 - `oracle` informs about architecture (no decisions).
 - `automaton` builds tools (no business logic).
 - `gardener` closes bd state and reclaims authorized mission-repository Cargo build artifacts (never touches source files or arbitrary working trees).
@@ -486,12 +533,12 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 │   ├── gardener.md              Garbage collect — close completed bd epics
 │   ├── automaton.md             Specialist — Rust CLI tool-builder for scripts/
 │   ├── oracle.md                Specialist — ADR-driven architectural guidance
-│   ├── linus.md                 Act — Rust-specialist code reviewer (read-only)
+│   ├── linus.md                 Act — Rust-specialist code reviewer, pre-merge (read-only)
+│   ├── hamilton.md              Assurance — post-merge reviewer of merged revisions (read-only)
 │   └── turbo.md                 Specialist — prompt rewriter (P1–P12 recipe)
 ├── turbo/
 │   └── prompt-activation-recipe.md   P1–P12 recipe; single source of truth for turbo
 ├── plugins/
-│   ├── graphify.js              Injects a knowledge-graph reminder before bash calls when graphify-out/ exists
 │   ├── searxng.mjs              Web search tool + Moltke chat.message readiness hook
 │   └── tracer.mjs               Session trace writer → .ooda/traces/
 ├── skills/
@@ -504,7 +551,8 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 │   └── wayfinder/SKILL.md       Plan oversized work as bd decision tickets
 ├── search-readiness.mjs          Bounded assignment probe + existing-resource recovery
 ├── search-readiness.test.mjs     Targeted helper tests; recovery simulated
-├── package.json                 Pins @opencode-ai/plugin SDK (currently 1.17.15)
+├── plugins-command-preservation.test.mjs  Guards: no configured plugin mutates bash args
+├── package.json                 Pins @opencode-ai/plugin SDK (currently 1.18.32)
 ├── package-lock.json            Lockfile; tracked
 ├── commands/                    Custom slash commands (invoke with /command-name)
 │   ├── prime.md                 /prime — session context priming via copernicus

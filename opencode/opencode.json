@@ -146,22 +146,21 @@
       "~/.config/opencode/skills/**": "allow",
       "~/.agents/skills/**": "allow",
       "~/.claude/skills/**": "allow",
-      "/Users/anders.jensen/Documents/github/Mattilsynet/gh-report/**": "allow"
+      "/Users/anders.jensen/code/gh-report/**": "allow"
     }
   },
-  "model": "github-copilot/claude-opus-5",
+  "model": "github-copilot/gemini-3.8-flash",
   "experimental": {
     "continue_loop_on_deny": true
   },
   "plugin": [
     "./plugins/searxng.mjs",
-    "./plugins/tracer.mjs",
-    "./plugins/graphify.js"
+    "./plugins/tracer.mjs"
   ],
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gpt-6-astra",
+      "model": "github-copilot/gemini-3.8-flash",
       "reasoningEffort": "high"
     },
     "plan": {
@@ -176,31 +175,37 @@
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-5",
+      "model": "github-copilot/gemini-3.8-flash",
       "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
+      "model": "github-copilot/gemini-3.8-flash",
       "reasoningEffort": "high"
     },
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
-      "reasoningEffort": "xhigh"
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
+      "model": "github-copilot/gemini-3.8-flash",
       "reasoningEffort": "high"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
+      "model": "github-copilot/gemini-3.8-flash",
+      "reasoningEffort": "high"
+    },
+    "hamilton": {
+      "prompt": "{file:./agents/hamilton.md}",
+      "mode": "subagent",
+      "model": "github-copilot/gemini-3.8-flash",
       "reasoningEffort": "high"
     },
     "gardener": {
