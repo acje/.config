@@ -331,9 +331,9 @@ and superseded causal claims are preserved in config-jui.
    A filter's match/no-match is not the producer's verdict; pipefail alone
    does not identify which stage failed. If evidence is masked, unexpectedly
    empty, or corrupt, rerun the producer independently with status and stderr.
-3. **File tools.** Use `glob`, `grep`, `read`, and `apply_patch`/edit tools for
-   search, inspection and edits, not bash wrappers. Bash runs git, consumers,
-   verification and other operational commands.
+3. **File tools and search.** Use `glob`, `grep`, `read`, and `apply_patch`/edit
+   tools for inspection and edits. When shell search or stream filtering is
+   required, use `rg` (ripgrep), never `grep`.
 4. **Targets.** Confirm the exact mutation scope before deleting or staging.
    Reuse observed paths; probe unknown paths when the next step depends on
    them. Do not add redundant availability probes when the actual command can
@@ -1490,7 +1490,7 @@ Use graphify for structural questions:
 - `graphify affected "<symbol>" --depth 3` — blast-radius before refactor.
 - `graphify path "<A>" "<B>"` — shortest path; intra-module only.
 
-Use `rg`/`grep` for textual searches, the `oracle` agent for ADR
+Use `rg` for textual searches, the `oracle` agent for ADR
 questions, and read files directly for definitions at specific locations.
 After code changes, `graphify update .` (or commit so the post-commit hook
 fires).
