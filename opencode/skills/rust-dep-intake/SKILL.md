@@ -239,9 +239,15 @@ discriminate, escalate to T3 by default (`references/triage-signals.md` §N).
 
 **Hard stops — `Halt` without judgement call:**
 
-- A build script or proc-macro in the delta performs network access, spawns a
-  process, writes outside `OUT_DIR`, or decodes an obfuscated blob
-  (`references/build-script-review.md` red-flag catalogue).
+- A build script or proc-macro in the delta performs network access, writes
+  outside `OUT_DIR`, or decodes an obfuscated blob.
+- A build script or proc-macro in the delta spawns a process, except a build
+  script's exact `--version` compiler probe satisfying **every** criterion in
+  `references/build-script-review.md` §Bounded compiler-version probe. Missing
+  probe evidence is `Indeterminate` → `Investigate`, never permission to run;
+  a known non-probe or disallowed invocation is `Halt`. This exception disposes
+  only the identified spawn signal, not the crate or closure intake. All other
+  hard stops and the newly acquired dependent scope still apply.
 - Multiple historical versions of a crate were yanked in one burst with no
   stated reason.
 - An added crate's name is within one edit of a crate already in your lock file.

@@ -74,7 +74,7 @@ defeat keyword skimming — but the greps below tell you where to look first.
 | # | Red flag | Grep / rg pattern | Why |
 |---|---|---|---|
 | 1 | Network access | `rg -n 'TcpStream\|UdpSocket\|to_socket_addrs\|reqwest\|ureq\|hyper\|curl\|http://\|https://' build.rs` | A build script has no legitimate reason to open a socket |
-| 2 | Process spawn | `rg -n 'Command::new\|process::\|exec\|spawn\|Stdio' build.rs` | Persistence and payload launch |
+| 2 | Process spawn | `rg -n 'Command::new\|process::\|exec\|spawn\|Stdio' build.rs` | Persistence and payload launch; only §Bounded compiler-version probe can dispose this signal |
 | 3 | FS write outside `OUT_DIR` | `rg -n 'File::create\|fs::write\|OpenOptions\|/tmp\|TEMP\|tempdir' build.rs` | Legitimate scripts write only under `OUT_DIR` |
 | 4 | Environment exfiltration | `rg -n 'env::vars\|env::var\("(?!CARGO\|OUT_DIR\|TARGET\|HOST\|PROFILE)' build.rs` | Reading secrets/tokens from the build env |
 | 5 | Encoded blobs | `rg -n 'base64\|from_hex\|hex::decode\|\^\s*=\|xor\|rot13\|decode' build.rs` | Payload or endpoint hidden from a reader |
@@ -97,10 +97,69 @@ rg -n --glob 'build.rs' \
 A hit is not a verdict; it is a place to read. A *clean* grep is also not a
 verdict — item 8 exists precisely to defeat it. Read the file.
 
-### What a BENIGN build script looks like
+### Bounded compiler-version probe
 
-Signal is only visible against a baseline. Ordinary, non-suspicious build scripts
-do one of these and little else:
+This is the sole process-spawn exception to the skill's hard stops. It is a
+read-level disposition of one build-script call site, not a package allowlist,
+tool permission, intake clearance, or sandbox proof. Do not execute a candidate
+to establish its trust. Every criterion must be evidenced before accepting it:
+
+1. Read the complete actual build script and reachable helpers/branches. Bind
+   the review to package/version/source, lock checksum or immutable revision,
+   archive/source integrity comparison, and reviewed file hashes. A familiar
+   name or unchanged bytes does not remove an acquired-dependent review.
+2. The call directly invokes the identified Rust compiler with exactly one
+   argument: the literal `--version`. No shell, command string, extra/dynamic
+   arguments, response file, compilation, code generation, or delegation beyond
+   the transparent dispatcher in criterion 3 is covered. Read how stdout is
+   consumed: version parsing/feature selection
+   only, never execution or evaluation of output.
+3. Establish the executable's resolved absolute path, identity and trusted
+   installation provenance for the intended build context. Record the actual
+   `RUSTC` selection, any PATH/symlink resolution, Cargo config/overrides, cwd,
+   toolchain version and host. A basename, path spelling, or version string is
+   not provenance. A launcher/proxy is covered only if independently reviewed
+   as a transparent dispatcher to that exact installed compiler, preserving
+   the sole argument and performing no installation, update or other work.
+   Other wrappers are not covered; unknown wrapper behavior blocks acceptance.
+4. Account for inherited environment and loader/compiler injection, including
+   `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, rustup selection and loader hooks.
+   Determine which settings reach this direct call; do not assume Cargo's
+   wrappers are invoked or bypassed safely. Establish no untrusted redirection,
+   injected code, secret reads/exfiltration, network access or writes outside
+   `OUT_DIR` by this invocation or dispatcher. Missing context is unknown, not
+   evidence of absence. Record relevant settings without exposing secrets.
+5. The reviewed path performs a finite version query, collects/reaps its child,
+   and neither detaches nor retries without a bound. Review the rest of the
+   script independently: network access, outside-`OUT_DIR` writes, obfuscated
+   payloads and every other hard stop still force `Halt`, including in
+   platform/feature-conditional branches.
+
+Record `ProbeDisposition::Accepted`, `Rejected`, or `Unknown` with call site,
+exact argv, evidence for each criterion, unresolved gaps, reviewer and date.
+`Accepted` removes only this spawn hard stop; finish T2/T3/T4 and record a
+separate intake disposition before any dependency execution. `Rejected` for a
+known disallowed invocation/non-probe means `Halt`; `Unknown` means
+`Indeterminate` → `Investigate`, with execution blocked. A separate hard stop
+dominates either result. Reassess if source, executable, arguments, environment,
+wrappers, toolchain or build context changes.
+
+#### Worked judgement cases (not executed tests)
+
+| Evidence | Probe decision / intake consequence |
+|---|---|
+| Full script reviewed; direct trusted, provenance-verified compiler; sole `--version`; version-only consumption; resolved context satisfies all criteria | `Accepted`; spawn signal disposed, remaining intake still required |
+| Same call and unchanged crate bytes, but `RUSTC`/toolchain identity or inherited loader environment is unresolved | `Unknown`; `Indeterminate` → `Investigate`, no execution |
+| Executable merely named `rustc`, or unreviewed PATH shim/rustup proxy/wrapper | `Unknown`; investigate executable/dispatcher before any execution |
+| Known substituted executable, shell `-c`, arbitrary wrapper, extra `-v`, `--emit`, source path, response file or dynamic argv | `Rejected`; `Halt`, even if it prints a plausible version |
+| Compiler/codegen invocation declared in build-dependencies, but doing compilation/generation rather than this exact query | `Rejected`; `Halt`; declaration is not an exception |
+| Exact trusted probe plus a conditional network call, secret exfiltration, outside write or decoded payload elsewhere in script | Other hard stop/finding retained; no probe-based clearance |
+| Probe stdout subsequently evaluated as a command, detached child, or unbounded retry loop | `Rejected`; `Halt` |
+
+### Benign patterns are not clearance
+
+These patterns guide reading, but do not override hard stops. Compiler/codegen
+spawns below remain `Halt` unless they meet the exact exception above:
 
 - emit `cargo:rustc-cfg=...` / `cargo:rustc-check-cfg=...` after probing the
   compiler version or a `cfg` (feature detection),
@@ -114,9 +173,9 @@ do one of these and little else:
 
 Properties of a benign script: it is short; every path it writes is under
 `OUT_DIR`; every input it reads is inside its own package or the documented cargo
-env; it opens no sockets; it spawns only compilers/codegen tools that are
-themselves declared build-dependencies. Deviation from that profile is the
-finding, whatever its shape.
+env; it opens no sockets. Declaring a compiler/codegen tool as a build-dependency
+does not authorize spawning it. Apply §Bounded compiler-version probe to each
+candidate query; all other spawns retain the skill's hard stop.
 
 ## 4. Read the proc-macro crates too
 
@@ -129,7 +188,8 @@ its own build script.
 
 ## 5. Recording the outcome
 
-For each crate reviewed, record: crate + version, which of the five surfaces it
-had, which catalogue items fired, and the verdict. That record is what a `Halt`
-back-brief cites and what lets a later reviewer skip re-reading an unchanged
-crate.
+For each crate reviewed, record: crate + version/source and reviewed hashes,
+which of the five surfaces it had, which catalogue items fired, any bounded
+probe disposition with its context/evidence, and the separate intake verdict.
+That record is what a `Halt` back-brief cites. Reuse requires matching scope and
+context; unchanged bytes alone do not waive the acquired-dependent rule.
