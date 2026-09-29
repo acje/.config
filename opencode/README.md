@@ -11,8 +11,8 @@ are role mnemonics, not claims about historical people or model behavior.
 | Orient      | `feynman`    | Rank hypotheses, name falsifiers, stress-test against examples             |
 | Decide      | `moltke`     | Auftragstaktik / mission command — operations expert; sets intent, tasks subordinates      |
 | Act         | `hopper`     | Execute scoped increments with verification                                                        |
-| Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. **Pre-merge, blocking.** Read-only on source; tactical feedback. |
-| Assurance   | `hamilton`   | Independent **post-merge** assurance on a merged revision — cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns. Explicit moltke dispatch only; read-only, never self-fixes. |
+| Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. **Pre-merge, blocking.** Read-only on source; tactical feedback in Hopper TDD increments. |
+| Assurance   | `hamilton`   | Architectural alignment & assurance (runs while waiting on GitHub Actions) — cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns. Dispatched by Moltke / repo-closeout during CI/deploy wait windows; read-only, never self-fixes. |
 | Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks, guarded Cargo cleanup |
 | Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
@@ -304,24 +304,27 @@ before claiming a specific invocation path is integrated. Local checks are
 `node --test opencode/` from repo root and
 `opencode debug config`; neither proves post-restart delivery by itself.
 
-## Invoking hamilton (post-merge assurance)
+## Invoking hamilton (architectural alignment & assurance while waiting for GitHub Actions)
 
-Hamilton is dispatched by `moltke`, never directly and never automatically —
-there is no merge watcher and no CI integration. Ask moltke for an assurance
-pass and supply the merged revision:
+Hamilton is dispatched by `moltke` (or `repo-closeout`), running during GitHub
+Actions wait windows — while waiting for PR CI checks to complete, or while
+waiting for post-merge deploy workflows on `main`:
 
 ```
-> @moltke dispatch hamilton for post-merge assurance on ~/code/gh-report:
->   merged_revision 4f9c1ab, integration_branch main,
->   scope crates/ingest + crates/store, focus resource stress and shutdown.
+> Task(hamilton, next_input:
+>   "Assurance review. target_revision: <sha>. pr_number: <num or none>.
+>    base_branch: <name>. scope: <bounded component/path list>.
+>    focus: <architectural alignment, failure classes, resource contracts>.
+>    mission: <mission id or none>.")
 ```
 
-Moltke then issues the bounded dispatch and returns Hamilton's report bead plus
-any live `assurance-finding` beads. Requirements and limits:
+Moltke (or repo-closeout) issues the bounded dispatch and reviews Hamilton's report
+bead plus any live `assurance-finding` beads before final closeout. Requirements and limits:
 
-- **A merged SHA is mandatory.** Without a resolvable `merged_revision`,
-  Hamilton halts — it does not review unmerged work. That is the pre-merge
-  stage's job (`linus` for Rust, the `code-review` skill otherwise).
+- **A resolvable commit SHA is mandatory.** Without a resolvable PR head commit or
+  merged revision, Hamilton halts. Hamilton verifies architectural invariants
+  while GitHub Actions runs automated tests; it does not replace the pre-merge
+  unit/clippy review stage (`linus` for Rust, the `code-review` skill otherwise).
 - **The working tree must correspond to that SHA.** Hamilton records `HEAD` and
   `git status`; a dirty tree or a different `HEAD` is a halt, not a
   best-effort review. It will not check out, reset or stash to fix this.

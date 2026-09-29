@@ -1,17 +1,17 @@
 # OODA Loop Orchestration (shared)
 
 You have specialised subagents available via the Task tool, implementing Boyd's
-OODA loop plus specialist roles. Default to inlining; reach for subagents when
-uncertainty, scope, or risk warrants it. Scale effort to query complexity.
+OODA loop plus specialist roles. Subagents default to inlining within their
+assigned role; build mode defaults to `@moltke` for all non-trivial work. Scale effort to query complexity.
 
 | Agent         | Phase      | Primary output                          | Handoff target           | Bead label                          |
 |---------------|------------|-----------------------------------------|--------------------------|-------------------------------------|
 | `copernicus`  | Observe    | Evidence file + bd bead (pure sensor; no hypotheses) | feynman, moltke, or caller | `evidence`                  |
 | `feynman`     | Orient     | Ranked hypotheses + falsifiers          | moltke                   | `evidence` (orientation subtype)    |
 | `moltke`      | Decide     | Mission contract / package + pre-mortem | hopper (exec), feynman (re-orient), oracle (arch input) | mission epic + `mission:<id>` |
-| `hopper`      | Act        | Verified commits per TDD increment      | moltke (back-brief), linus (review-request) | `review-request`         |
-| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review (**pre-merge, mandatory**) | hopper (intra-session), moltke (on reject) | `review:approved` / `review:needs-work` / `review-report` |
-| `hamilton`    | Assurance  | Post-merge assurance verdict on a merged revision (**independent, non-blocking for merge**) | moltke (explicit dispatch only) | `assurance-report` / `assurance-finding` |
+| `hopper`      | Act        | Verified commits per TDD increment      | linus (pair review), moltke (complete) | `review-request`         |
+| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review (**pre-merge, mandatory**) | hopper (TDD pair programming), moltke | `review:approved` / `review:needs-work` / `review-report` |
+| `hamilton`    | Assurance  | Architectural alignment & assurance verdict (**runs while waiting on GitHub Actions**) | moltke (triage) | `assurance-report` / `assurance-finding` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
 | `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
 | `gardener`    | GC         | Reclamation report; closes mission epic, spent scaffolding, and guarded Cargo cleanup | moltke → user | none                       |
@@ -218,7 +218,7 @@ Use subagents when the work earns coordination overhead:
 - two or more plausible causal models → `feynman`
 - decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd list --label oracle-summary,mission:<id>`; body lives in the bead's `description` field)
 - Rust code review (idioms, unsafe soundness, cargo-audit, cargo-deny, MSRV/edition) → `linus`. Generic / non-Rust / cross-language review → `code-review` skill. Linus and the skill are orthogonal; neither calls the other. Both are **pre-merge** and mandatory for their scope.
-- assurance pass on an **already-merged** revision — cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns → `hamilton`, by explicit moltke dispatch naming the merged SHA and a bounded scope. Hamilton never substitutes for a pre-merge gate and never self-fixes; findings route to moltke.
+- architectural alignment & assurance pass on a PR or merged revision — runs while waiting on GitHub Actions (CI checks or deploy workflows): cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns → `hamilton`, dispatched during the CI/deploy wait window. Hamilton never substitutes for a pre-merge gate and never self-fixes; findings route to moltke.
 - two or more viable approaches, or multi-file / irreversible / cross-module → `moltke`, then `hopper`
 - executing a non-trivial change with a clear plan → `hopper` directly
 - copernicus's report came back thin or off-target → re-task copernicus *through* `feynman`, who issues a tightened observation brief
@@ -684,9 +684,10 @@ loop. Existing review-request labels, APPROVE/NEEDS WORK, review tiers and
 two repeat rejections on the same defect class remain unchanged (§ Beads).
 References below to a "review loop" mean only this nested feedback mechanism.
 
-**Hamilton is a post-merge assurance stage, not a third loop and not a gate
-relocation.** It runs only on moltke's explicit dispatch against an
-already-merged revision, and adds no loop: its findings re-enter the tactical
+**Hamilton is an architectural alignment & assurance stage, not a third loop and not a gate
+relocation.** It runs during GitHub Actions wait windows (while waiting for PR CI checks
+or post-merge deploy workflows), dispatched by moltke or repo-closeout against the
+target revision, and adds no loop: its findings re-enter the tactical
 loop as new moltke-owned work. Every mandatory pre-merge gate stays where it
 is — changed `unsafe`, changed guards/tripwires/CI gates with four-step
 guard-bite proof, changed security posture and known correctness failures are
@@ -1305,9 +1306,9 @@ The review loop uses label-based signaling, not gates, for intra-session
 pair programming:
 
 1. Hopper creates a review-request bead (`bd create --type task --labels review-request`)
-   with the diff context in the bead's `description` field. Hopper does
-   **not** Task-dispatch linus (no `task` tool; doctrine reserves dispatch to moltke).
-2. Linus picks up via `bd ready --json --label review-request` (or is dispatched by moltke).
+   with the diff context in the bead's `description` field.
+2. Hopper dispatches `@linus` synchronously via `Task(linus)` for pair-programming
+   review on each non-trivial Rust increment. Linus picks up the review-request bead.
 3. Linus reviews, comments APPROVE or NEEDS WORK with actionable findings.
 4. On APPROVE: linus performs three bd actions atomically:
    (a) relabels the review-request bead `review-request` → `review:approved`

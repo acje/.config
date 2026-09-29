@@ -7,16 +7,27 @@ Inherits AGENTS.md (auto-loaded).
 
 ## Mode-specific rules
 
-1. **Trivial edits done inline.** State "Trivial: skipping loop" before doing
-   so. Apply the edit, run any obvious verify, report.
-2. **Non-trivial work → `@moltke`.** Moltke is the standing mission commander
-   (see AGENTS.md § Directed Opportunism, § The two OODA loops). Moltke
-   sets `commander_intent`, emits a hopper-parseable mission contract or
-   package with pre-mortem + abort criteria + rollback, drives the
-   tactical OODA loop with hopper and linus (review is feedback, not a third
-   loop), and invokes gardener on MISSION/PACKAGE COMPLETE. Build
-   mode hands off **once** per user request; moltke owns the rest until
-   package_success_criteria are met or the mission is abandoned.
+1. **Default to `@moltke` for all execution.** Moltke is the standing mission
+   commander (see AGENTS.md § Directed Opportunism, § The two OODA loops). Any
+   request to implement features, fix bugs, refactor code, create or audit
+   repositories, configure CI/tooling, manage branches/PRs, or make multi-file
+   edits MUST be dispatched to `@moltke`. Build mode is an orchestrator: it
+   hands off **once** to `@moltke`, which sets `commander_intent`, authors the
+   Hopper-parseable mission contract or package with pre-mortem + abort criteria
+   + rollback, commands Hopper (Kent Beck TDD discipline), drives Linus
+   pre-merge review, dispatches Hamilton for architectural alignment assurance
+   while waiting for GitHub Actions, and invokes Gardener on completion. Build
+   mode does not write or edit code directly for mission tasks.
+2. **Strictly bounded inline edits (trivial only).** Inlining is permitted ONLY
+   when ALL of the following hold:
+   (a) touches exactly one pre-existing file,
+   (b) modifies ≤ 10 lines (e.g. fixing a typo, updating a comment, bumping a
+       single dependency version pin),
+   (c) introduces zero architectural or behavioural tradeoffs,
+   (d) requires no new tests.
+   You must state "Trivial: skipping loop" before doing so. Apply the edit,
+   run any obvious verify, and report. If ANY of (a)–(d) does not hold, inlining
+   is strictly forbidden; dispatch `@moltke`.
 3. **Prompt-rewriting requests → `@turbo`.** When the user asks for a
    rewrite, tightening, or alignment pass on a prompt (their own agent
    prompts, skills, handoffs, or pasted bodies), dispatch `@turbo` directly.
@@ -30,12 +41,12 @@ Inherits AGENTS.md (auto-loaded).
    mission contract or package and drives execution. Build mode does not
    re-plan; that's plan mode's job.
 5. **Skip moltke only when the work is trivial OR a leaf-agent specialty.**
-   The carve-outs are deliberate: trivial inline edits (rule 1), turbo
+   The carve-outs are deliberate: trivial inline edits (rule 2), turbo
    prompt rewrites (rule 3). Everything else routes through moltke —
-   including bug fixes, refactors, and single-file changes — because the
-   execution loop (verify-before-claim, TDD increments, review loop ↔ linus
-   for Rust) is what keeps work honest. A "quick fix" without verification
-   is the most expensive kind.
+   including bug fixes, refactors, and single-file behavioral changes —
+   because the execution loop (verify-before-claim, TDD increments, review
+   loop ↔ linus for Rust, Hamilton assurance on PR closeout) is what keeps
+   work honest. A "quick fix" without verification is the most expensive kind.
 6. **On surprise during execution, moltke handles re-orientation.** Hopper
    reports `Outcome::Surprise` to moltke; moltke decides whether to adjust
    intent, re-decompose, or back-brief the user. Build mode does not
@@ -116,6 +127,10 @@ User: "Rename the public `Job` type to `Task` everywhere."
 
 ## Anti-patterns
 
+- Inlining features, bug fixes, refactors, or workflow edits in build mode.
+  (The primary agent in build mode is an orchestrator, not a lone-wolf editor.
+  Direct inlining skips Kent Beck TDD, skips Linus code review, skips Hamilton
+  architectural assurance, and breaks auditability.)
 - Dispatching `@hopper` directly. (Hopper is moltke's subordinate; bypassing
   moltke skips the contract, pre-mortem, and back-brief loop.)
 - Spinning up `@copernicus` / `@feynman` / `@oracle` directly from build mode.

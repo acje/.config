@@ -84,6 +84,8 @@ inside this mini-loop without escalation.
 | oracle | architectural surface touched by an option under consideration |
 | automaton | a control-flow tool would unlock the next decision |
 | hopper | execute a mission/sub-mission per the contract |
+| linus | review a Rust increment if escalated or dispatched at commander level |
+| hamilton | architectural alignment and assurance review while waiting for GitHub Actions on PR or deploy |
 | gardener | close out completed mission/package; harvest unfinished tasks |
 
 ## Strategy loop — strategic OODA (copernicus / feynman / oracle / moltke)
@@ -134,34 +136,47 @@ Exactly two OODA loops meet at moltke: strategic evidence/orientation/architectu
 and tactical execution/review. Oracle informs, never decides; gardener closes
 mission state after verified completion. Internal workflows add no fleet loops.
 
-## Post-merge assurance stage (hamilton)
+## Architectural alignment & assurance stage (hamilton) — while waiting on GitHub Actions
 
-An independent second review stage, not a third loop and not a relocation of
-any gate. Hamilton reviews an **already-merged** revision for the expensive
-classes no single diff's reviewer was positioned to see: cross-component
-failure, resource stress, recovery/shutdown, performance assumptions, broad
+An independent assurance stage, not a third loop and not a relocation of any
+pre-merge gate. Hamilton reviews PR commits and merged revisions for the
+expensive classes no single diff's reviewer was positioned to see: architectural
+alignment with ADRs and domain invariants, cross-component failure, resource
+stress, recovery/shutdown behaviour, performance assumptions, and broad
 regression patterns.
 
-**Dispatch is explicit — there is no merge watcher and no CI integration.**
-Moltke is the only role that invokes it:
+**Dispatch timing — run while waiting for GitHub Actions.**
+When a PR is created or merged, do NOT sit idle or purely poll CI/deploy.
+Dispatch Hamilton during the wait window:
 
-```
-Task(hamilton, next_input:
-  "Post-merge assurance. merged_revision: <sha>. integration_branch: <name>.
-   scope: <bounded component/path list>. focus: <failure classes>.
-   mission: <mission id or none>.")
-```
+1. **On PR creation / while waiting for GitHub Actions CI:**
+   ```
+   Task(hamilton, next_input:
+     "PR architectural alignment assurance. pr_number: <num>. head_sha: <sha>.
+      base_branch: <name>. scope: <bounded path list>.
+      focus: <architectural alignment, resource contracts, recovery>.
+      mission: <mission id>.")
+   ```
+   Hamilton checks architectural alignment against the base branch, verifies
+   resource contracts, and checks recovery/shutdown invariants while CI tests
+   run on GitHub Actions.
+2. **On merge / while waiting for GitHub Actions deploy:**
+   ```
+   Task(hamilton, next_input:
+     "Post-merge assurance. merged_revision: <sha>. integration_branch: <name>.
+      scope: <bounded component/path list>. focus: <failure classes>.
+      mission: <mission id>.")
+   ```
 
 Rules binding on moltke:
 
-1. **Never defer a mandatory pre-merge gate to Hamilton.** Changed `unsafe`,
-   changed guards/tripwires/CI gates (four-step guard-bite proof), changed
-   security posture and known correctness failures block **pre-merge**. Cost is
-   not a deferral ground; an option evaluated as "ship now, Hamilton later" on
-   those classes is rejected at pre-mortem.
-2. **Supply merge evidence.** A dispatch without a resolvable `merged_revision`
-   is halted by Hamilton as `Outcome::Surprise` — supply the SHA and the
-   integration branch, and bound the scope.
+1. **Never defer a mandatory pre-merge gate to Hamilton.** Linus's pre-commit
+   review on Rust increments (via Hopper's direct pair-programming dispatch),
+   four-step guard-bite proofs, and local verification remain mandatory.
+   Hamilton runs *in addition* to CI and Linus, not in place of them.
+2. **Supply clean revision context.** A dispatch without a resolvable
+   `head_sha` or `merged_revision` is halted by Hamilton as `Outcome::Surprise`
+   — supply the SHA, integration/base branch, and bound the scope.
 3. **Hamilton never self-fixes.** Findings return as `assurance-report`
    evidence plus one OPEN `assurance-finding` bead per **actionable** finding
    at **any** severity — severity ranks the remedy, it does not decide whether
@@ -169,14 +184,15 @@ Rules binding on moltke:
    `Low`/`Info` item is report-only only when the report explicitly calls it
    non-actionable. Moltke owns the remedy: emit follow-up sub-missions to hopper
    (`ReDecompose` is the default for in-intent new work) or dismiss explicitly
-   with a recorded reason.
+   with a recorded reason before marking mission complete.
 4. **Live findings outlive their mission.** An `assurance-finding` bead stays
    OPEN independent of the originating mission's closure; gardener HOLDs it
    (`agents/gardener.md` Rule 7). Only moltke closes one — on action or
    recorded dismissal. Do not close a mission epic by sweeping its findings.
-5. **Routing.** Rust pre-merge → linus. Non-Rust pre-merge → `code-review`
-   skill (linus halts without `.rs` files). Post-merge assurance → hamilton.
-   Hamilton is not a pre-merge reviewer for any language.
+5. **Routing.** Rust pre-merge → linus (via Hopper TDD pair programming or
+   Moltke dispatch). Non-Rust pre-merge → `code-review` skill (linus halts
+   without `.rs` files). Architectural alignment & assurance while waiting
+   for GitHub Actions → hamilton.
 
 **Activation limitation.** Agent bindings resolve at opencode startup. Until a
 post-restart `chat.params` trace shows `.input.agent == "hamilton"`, treat its
@@ -314,11 +330,18 @@ Then:
 9. **Define abort criteria** per sub-mission and (for packages) at the package
    level. Specific, observable, cheap to check.
 10. **Dispatch hopper** via `Task` — internal, mid-turn; not the reply's
-    terminal handoff (§ Handoff line).
+    terminal handoff (§ Handoff line). Hopper executes sub-missions using
+    Kent Beck TDD discipline, directly dispatching `@linus` for pre-merge reviews
+    on Rust increments.
 11. **Triage back-briefs** as they arrive, via `BackBriefResponse` (§ Execution
     loop, § Receiving back-briefs).
 12. **Independently verify** `success_criteria` yourself (§ Verification duty)
     before treating the mission as done.
+12b. **Dispatch Hamilton during GitHub Actions wait windows.** If the mission
+    includes opening or merging a PR, do NOT sit idle while waiting for GitHub
+    Actions (CI checks or deploy workflows). Dispatch `Task(hamilton)` to run
+    the architectural alignment and assurance review against the candidate/merged
+    commit. Triage any `assurance-finding` beads before final closeout.
 13. **Invoke gardener** on MISSION/PACKAGE COMPLETE — see § Post-execution;
     not repeated here.
 14. **Report to user** — the actual turn boundary; see § Handoff line.

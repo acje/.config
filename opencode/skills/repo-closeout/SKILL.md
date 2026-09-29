@@ -80,6 +80,20 @@ unexpected base/head changes block normal merge readiness. Process the stack
 in dependency order; re-read/re-verify affected PRs after any base/head change.
 Do not silently retarget or rebase the stack as a closeout shortcut.
 
+**Run Hamilton while waiting for GitHub Actions.** While waiting for GitHub
+Actions CI checks to pass (`gh pr checks <PR> --watch` or polling) or while
+monitoring post-merge deployment workflows, dispatch `@hamilton` to conduct an
+architectural alignment review on the candidate PR commit or merged revision:
+```
+Task(hamilton, next_input:
+  "Assurance review. target_revision: <headRefOid>. pr_number: <PR>.
+   base_branch: <baseRefName>. scope: <bounded path list>.
+   focus: <architectural alignment, ADR compliance, resource contracts>.
+   mission: <mission id or none>.")
+```
+Hamilton's report bead and any actionable `assurance-finding` beads must be
+triaged before proceeding with merge or final closeout.
+
 When normal merge is authorized, choose the repository-approved strategy from
 installed help (or its merge-queue workflow) and bind it to the verified head:
 
@@ -217,7 +231,8 @@ domain evidence.
 
 Report repository/remote/main and scope; verification commands and exits;
 bead completion/evidence and persistence limitations; each PR's actual state,
-`mergedAt` and merge SHA; main/upstream, compared SHAs, `0 0` divergence and
+`mergedAt` and merge SHA; Hamilton assurance verdict and report/finding beads;
+main/upstream, compared SHAs, `0 0` divergence and
 empty status; preserved unrelated state; UTC observation time and polling
 deadline. Final success requires all genuinely completed scoped task beads
 actually closed, verified responsible-owner epic GC and scoped epic closure

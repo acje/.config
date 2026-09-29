@@ -14,7 +14,7 @@ model: github-copilot/gemini-3.8-flash
 tools:
   webfetch: false
   searxng_web_search: false
-  task: false
+  task: true
 reasoningEffort: high
 # Note: temperature / top_p intentionally absent — no sampler knobs are set
 # on any fleet agent. `reasoningEffort: high` is the configured effort;
@@ -131,7 +131,7 @@ malformed or the phase misidentified, not that the command should run.
 | `read` / `grep` / `glob` | inspect state before edit |
 | `edit` / `write` | apply smallest shippable increment |
 | `bash` | run the `verify` tier matching the current phase; capture exit codes verbatim |
-| `task` (automaton) | deterministic many-file traversal |
+| `task` (linus, automaton) | dispatch linus for pre-merge review increments; dispatch automaton for deterministic many-file traversal |
 
 ### Scoped tool skills
 
@@ -166,10 +166,10 @@ On mission load, the contract carries a `mission_epic_id` (bd epic created by mo
 On each non-trivial Rust TDD increment (post-green, pre-commit):
 
 1. Create review-request bead with the diff context + change rationale (referencing tradeoffs against AGENTS.md § Fleet engineering priorities where applicable) in the bead's `description` field. **Apply exactly one `review:tier=` label on create** — `tidy` | `standard` | `adversarial`, per the tier definitions and adversarial triggers in AGENTS.md § Review tiers (canonical; not restated here). Omission is not a cheap path: linus resolves absence to `adversarial` and records it as a finding, and a `tidy` declaration on a behavioural diff is escalated and recorded. Declare honestly. For small diffs (< ~20 lines): `bd create "Review: <one-line summary>" --type task --labels "review-request,review:tier=<tier>" --description "<inline context>" --json`. For larger diffs: `bd create "Review: <one-line summary>" --type task --labels "review-request,review:tier=<tier>" --json` to get the bead id, then `bd update <bd-id> --stdin` to feed the body in on stdin (fresh bead, empty description; `--stdin` REPLACES — AGENTS.md § Beads → Tier 1). Do not stage the body under `.ooda/`; the bead `description` is the durable home.
-2. Continue with other in-scope work while linus picks up out-of-band via `bd ready --json --label review-request`. If review must be solicited within the turn, request linus dispatch in routine status to moltke; reserve a canonical back-brief for material Surprise/Opportunity affecting intent or bounds.
-3. Linus reviews, comments APPROVE or NEEDS WORK, relabels accordingly, and on APPROVE also closes the paired review-report evidence bead. On NEEDS WORK the round's report bead stays open until superseded by the next round's report (or swept by gardener on the terminal `ReviewRejected` path).
+2. Dispatch `@linus` synchronously via `Task(linus, next_input: "Review bead <bd-id> for Rust increment in <repo>")`. Linus reviews in `PairProgramming` mode along the three axes, validates exit codes, and records the verdict.
+3. Linus returns APPROVE or NEEDS WORK and relabels the bead accordingly (`review:approved` or `review:needs-work`).
 4. On `review:approved`: proceed to commit. Record: `bd audit record --kind tool_call --actor hopper --issue-id <id> --tool-name "commit" --exit-code 0`.
-5. On `review:needs-work`: fix the findings, re-request (same bead, new comment). New defect classes do not consume the rejection cap.
+5. On `review:needs-work`: fix the findings, re-run local tests to green, and re-dispatch Linus on the same bead. New defect classes do not consume the rejection cap.
 6. After two NEEDS WORK rejections on the same defect class: `Outcome::Surprise { kind: SurpriseKind::ReviewRejected { bead } }` → handback to moltke.
 
 ### Review scope (R13 boundary)

@@ -116,7 +116,7 @@ not a third fleet loop. Linus
 reviews each non-trivial Rust TDD increment hopper produces. The review loop ↔ linus
 uses label-based signaling:
 
-1. Hopper creates a `review-request`-labeled bead (hopper has no `task` tool, so does not dispatch linus directly). Linus is invoked either by moltke (Task) or picks the bead up out-of-band via `bd ready --json --label review-request`.
+1. Hopper creates a `review-request`-labeled bead and dispatches linus via `Task(linus)` (or Moltke dispatches linus). Linus receives the bead ID in the task input or picks it up via `bd ready --json --label review-request`.
 2. Linus runs `bd ready --json --label review-request` to confirm the bead is ready.
 2a. **Resolve the review tier before spending any evidence.** Read the bead's
    `review:tier=` label; the tier definitions, adversarial triggers and
