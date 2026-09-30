@@ -10,7 +10,7 @@ description: |
   proofs). Read-only on source; writes only bd beads. Never self-fixes:
   findings route to moltke for implementation and follow-up.
 mode: subagent
-model: github-copilot/gemini-3.8-flash
+model: github-copilot/gpt-6-astra
 tools:
   webfetch: false
   searxng_web_search: false

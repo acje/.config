@@ -205,7 +205,7 @@
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6-astra",
       "reasoningEffort": "high"
     },
     "gardener": {
