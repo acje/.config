@@ -470,9 +470,9 @@ primitive.
 **Check.** Trace the recursive function back to its outermost caller. Does
 any untrusted input reach it? If so, is there an explicit depth parameter
 with a cap, or a serde/parser-level nesting limit?
-**Fix.** Thread an explicit `depth: u32` parameter checked against a named
-cap constant, returning a typed error on exhaustion; or convert to an
-explicit work-stack loop with a bounded queue.
+**Fix.** Use a domain-appropriate depth type with checked accounting against a
+named cap, returning a typed error on exhaustion; or use an explicit work-stack
+loop with checked work/queue limits and explicit exhaustion.
 **Surface.** review-only — not mechanizable. Reachability from a trust
 boundary is a whole-program property no lint computes.
 
@@ -582,8 +582,11 @@ Other security checks:
 - Dependencies: `cargo audit` (RustSec) + `cargo deny check` (license,
   bans, advisories).
 - Concurrency: `Arc<Mutex<T>>` lock-order patterns suggesting deadlock;
-  `tokio::spawn` orphan tasks (no `JoinHandle` retained); missing
-  `Send` / `Sync` bounds on public APIs.
+  spawned tasks without supervised termination: stop admission, drain or cancel
+  admitted work, observe termination and apply the declared error/panic outcome
+  policy; retaining handles or requesting cancellation alone is insufficient;
+  require `Send` / `Sync` only for actual cross-thread transfer/sharing contracts,
+  allow local `!Send` execution, and assess `unsafe impl` obligations separately.
 - FFI: `extern "C"` boundaries — null, lifetime, and aliasing assumptions
   must be documented.
 
