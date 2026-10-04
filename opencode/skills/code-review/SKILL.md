@@ -77,6 +77,10 @@ pnpm test  |  cargo test  |  pytest
 ```
 
 Record exit codes. Don't fabricate PASS results.
+Keep the raw command result/exit separate from the finding's disposition
+(Phase 5). Interpret diagnostics using the command's documented contract and
+the actual output, not an unconditional `exit > 1` ⇒ domain defect rule.
+Execution errors or missing required evidence are Unknown, never a clean pass.
 
 ### Phase 4 — Severity
 
@@ -86,6 +90,51 @@ Record exit codes. Don't fabricate PASS results.
 | High     | Type violations, missing error handling, logic errors |
 | Medium   | Pattern inconsistencies, missing edge cases |
 | Low      | Style suggestions, minor improvements |
+
+### Phase 5 — Standard disposition (canonical)
+
+Severity ranks impact; it does **not** decide whether publication must halt.
+Assign each finding a disposition independently of severity:
+
+| Disposition | Evidence required | Consequence |
+|-------------|-------------------|-------------|
+| Blocking | Concrete defect/risk witness, or a named mandatory invariant with an actual applicability/trigger witness and demonstrated violation | NEEDS WORK; fix before publication |
+| Advisory | Improvement suggestion without either blocking witness; state why no mandatory invariant is violated | May APPROVE with notes; do not halt solely because a fix is suggested |
+| Unknown | Unresolved execution/error result, applicability, or missing evidence needed to decide | Obtain required evidence; unresolved required evidence prevents approval, never counts as PASS |
+
+For each finding record `file:line`, severity, disposition, witness, applicable
+authority/trigger (or none), and remedy. Read cited rules; do not invent a
+mandatory gate from a preference. A Low finding can block when a mandatory
+invariant really applies. Known correctness, security, unsafe soundness, and
+enforcement failures remain blocking; mandatory hooks, CI, whitespace gates,
+and changed-guard four-step proof requirements remain mandatory. Tracking or
+acknowledging a failure does not discharge them. Do not import security mode's
+`PASS WITH NOTES` / High-finding semantics into standard mode.
+
+**Scope and semantics adjudication:**
+
+- Portable generic documentation/examples are not executed fleet operations.
+  Apply fleet-specific constraints when the content is explicitly intended as
+  runnable fleet instructions; a malformed actual fleet operation, or an
+  instruction that would violate the applicable invariant, can block. Do not
+  execute examples merely to manufacture a violation.
+- An agreeing restatement of canonical policy is advisory absent competing
+  authority. A reordered/conflicting list purporting to govern the same scope
+  blocks when it conflicts with the canonical authority.
+- Intentional TSV terminal tabs encode an empty final field: splitting a
+  ten-field row on tabs yields ten fields; trimming the terminal tab yields
+  nine. A generic whitespace diagnostic is not itself a content defect.
+  Accidental whitespace with an actual defect witness, or whitespace violating
+  an applicable mandatory whitespace gate, blocks. Never blindly trim semantic
+  bytes or waive a required gate.
+
+**Recommendation:** APPROVE only when no Blocking findings and no unresolved
+required Unknown evidence remain, and all applicable mandatory gates are
+satisfied. Report advisory notes and any optional evidence gaps explicitly;
+otherwise NEEDS WORK, distinguishing demonstrated failures from Unknowns.
+Preserve raw nonzero diagnostic results; approval is not “all checks green”.
+An explicit hard exit-0 mission obligation is not overridden by adjudication:
+hand back for contract correction if a diagnostic result conflicts with it.
 
 ---
 
@@ -193,6 +242,7 @@ Atlassian comments.
 **Mode**: standard
 **Scope**: <PR #N | file path | folder path | unstaged>
 **Recommendation**: <APPROVE | NEEDS WORK>
+**Disposition counts**: Blocking=<n> Advisory=<n> Unknown=<n>
 
 ## Summary
 
@@ -201,7 +251,7 @@ Atlassian comments.
 ## Issues
 
 ### Critical
-<list with file:line and one-line recommendation, or "None">
+<each issue: file:line; severity; disposition; witness; authority/trigger or none; remedy, or "None">
 
 ### High
 <...>
@@ -214,11 +264,11 @@ Atlassian comments.
 
 ## Validation
 
-| Check      | Result      | Exit code |
-|------------|-------------|-----------|
-| Type check | PASS / FAIL | <n>       |
-| Lint       | PASS / FAIL | <n>       |
-| Tests      | PASS / FAIL | <n>       |
+| Check | Raw result | Exit code | Role / expectation | Disposition / evidence |
+|-------|------------|-----------|--------------------|------------------------|
+| Type check | <output/error/unrun> | <n or unrun> | <hard gate or diagnostic; expected outcome> | <Blocking/Advisory/Unknown or satisfied; witness> |
+| Lint | <...> | <...> | <...> | <...> |
+| Tests | <...> | <...> | <...> | <...> |
 
 ## What's good
 
@@ -226,7 +276,7 @@ Atlassian comments.
 
 ## Recommendation
 
-<specific next actions>
+<specific next actions; separate blockers, advisory improvements and required Unknown evidence>
 ```
 
 ### Security mode template
@@ -290,7 +340,8 @@ Mode: <standard|security>
 Scope: <resolved scope>
 Verdict / Recommendation: <...>
 Issues: Critical=<n>  High=<n>  Medium=<n>  Low=<n>
-Validation: TypeCheck=<PASS|FAIL>  Lint=<PASS|FAIL>  Tests=<PASS|FAIL>   (standard mode only)
+Dispositions: Blocking=<n> Advisory=<n> Unknown=<n>   (standard mode only)
+Validation: <raw results/exits; gate satisfaction and diagnostic disposition separately>   (standard mode only)
 Report: .ooda/review-<timestamp>.md
 ```
 

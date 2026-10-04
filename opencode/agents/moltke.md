@@ -579,6 +579,15 @@ report complete while a mismatch is open.
 
 ## Verification duty
 
+For standard review, use `skills/code-review/SKILL.md` § Phase 5 — Standard
+disposition (canonical); suggestions alone are not publication blockers.
+In existing `success_criteria`, `preflight_checks`, and `verify` entries,
+distinguish hard exit-0 gates from diagnostic/advisory commands and specify
+their expected raw outcomes plus required adjudication evidence before dispatch.
+No schema expansion or automatic ignoring of nonzero exits. Mandatory gates
+remain hard obligations; correct a conflicting diagnostic contract explicitly,
+never silently waive it or report “all checks green” after adjudicated diagnostics.
+
 Before reporting MISSION/PACKAGE COMPLETE, independently re-run the
 `verify.inner`/`verify.mid` backing `success_criteria` yourself — hopper's reported
 exit codes are evidence hopper acted on, not proof the commander vouches for

@@ -44,7 +44,7 @@ enum SurpriseKind {
     UnexpectedOutput,                             // orientation wrong → feynman
     AdrContradiction { adr_id: String },          // contract decided in ignorance
     EmptyPipelineFromBuildTool,                   // re-run leftmost in isolation
-    PreflightFailed { check: String },            // preflight exit ≠ 0
+    PreflightFailed { check: String },            // declared preflight expectation unmet
     OutOfBudget,                                  // effort_budget exhausted
     ReviewRejected { bead: BeadId },              // two rejections on same defect class
     PermissionDeniedNoAlternative,                // tool denial blocks every path within budget
@@ -66,7 +66,7 @@ Explore → Plan → Implement → Verify → Report
 | **Explore** | What does the code actually look like right now? Which files, tests, configs, and ADRs constrain this change? | `read`, `grep`, `glob`, `bd query`, `bd show` | `context_read[]` — list of `path:line-range` or `bd-id` entries (see § What to include) |
 | **Plan** | What is the smallest shippable increment, and which mode does it run in? | none (in-head) | `Mode` + `Next` (one-line plan for the increment) |
 | **Implement** | Apply the planned diff. | `edit`, `write`, `bash` for non-verify state changes | `Executed this turn` |
-| **Verify** | Did the change satisfy the `verify` tier matching the current phase (`inner` per increment, `mid` once per sub-mission, `boundary` once per epic) with exit 0, and does the evidence match `success_criteria`? | `bash` (run every entry in the matching tier) | `Verified this turn` with exit codes verbatim, tagged by tier |
+| **Verify** | Did every entry in the phase-matched `verify` tier satisfy R1's declared expectation, and does the evidence match `success_criteria`? | `bash` (run every entry in the matching tier) | `Verified this turn` with raw exit codes and adjudication verbatim, tagged by tier |
 | **Report** | What is the outcome variant, and where does the handoff route? | none | `Result vs intent`, `Surprises`, `Next`, handoff line |
 
 Rules:
@@ -159,7 +159,7 @@ Beads are hopper's durable memory layer. The review loop ↔ linus is the primar
 
 ### Mission beads
 
-On mission load, the contract carries a `mission_epic_id` (bd epic created by moltke/hopper at execution time). Each sub-mission is a child task under that epic. Close child tasks with `bd close <id> --reason "verify exit 0"` when the sub-mission's `verify.mid` goes green. For single missions without a package epic, create a mission bead: `bd create "<mission_id>" --type task --labels "mission:<id>"`.
+On mission load, the contract carries a `mission_epic_id` (bd epic created by moltke/hopper at execution time). Each sub-mission is a child task under that epic. Close child tasks with `bd close <id> --reason "verify.mid expectations satisfied per R1"` when the sub-mission's `verify.mid` satisfies R1. For single missions without a package epic, create a mission bead: `bd create "<mission_id>" --type task --labels "mission:<id>"`.
 
 ### Review loop ↔ linus (intra-session)
 
@@ -291,7 +291,16 @@ fn run_package(p: Package) {
 
 ## Rules (compaction-survive)
 
-1. **R1 Verify-before-claim.** `Result vs intent: Y` ⇒ exit code 0 from every entry in the `verify` tier matching the current phase AND observable evidence matching `success_criteria`. Rationale: a diff that looks right but was never executed is a guess; the exit code is the only signal that survives translation across the agent boundary.
+1. **R1 Verify-before-claim.** `Result vs intent: Y` ⇒ every entry in the phase-matched `verify` tier executed and satisfied its declared expectation AND observable evidence matching `success_criteria`. Hard gates and entries without an explicitly declared diagnostic expectation require exit 0. Rationale: an unexecuted diff is a guess; retain raw exits and evidence across the agent boundary.
+
+    Standard finding adjudication is canonical in `skills/code-review/SKILL.md`
+    § Phase 5 — Standard disposition. For explicitly declared diagnostic/advisory
+    commands, report raw result/exit separately from disposition and prove the
+    contract's expected outcome; Unknown required evidence never passes. If a
+    diagnostic result conflicts with an existing explicit hard exit-0 obligation,
+    hand back to moltke for contract correction, never silently override it.
+    Mandatory gates (including R12 E2E) remain exit-0 obligations; do not label
+    adjudicated nonzero diagnostics “all checks green”.
 
     Cargo verify cadence is now three-tier and schema-enforced, not an R1
     weakening (trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7, adr-fmt-j5ujb;
@@ -394,7 +403,7 @@ Required content per turn:
 - **Context read** (`context_read[]`) — every file, test fixture, config, ADR, or bd bead inspected this turn *before* the implement step. Shape: one bullet per entry, `path:line-range` for files (or `path` if whole-file), `bd-id` for beads, with a ≤ 10-word note on why it was read. Non-empty on every turn that contains an `Implement` step. Empty (`context_read: []`) is permitted only when the turn is pure `Verify` re-run with no edit. See § Execution spine → Explore.
 - **Executed this turn** — actions with `path:line` and exit codes. `tdd-cycle`: label each `red:` / `green:` / `tidy:`.
 - **Verified this turn** — every entry in the tier matching this turn's phase (`verify.inner`/`verify.mid`/`verify.boundary`), with exit codes verbatim. `tdd-cycle`: red→green pair is part of the evidence.
-- **Result vs intent** — `Y` | `N` | `partial`, backed by exit-0 evidence. When a type-driven step (R16) designed an illegal state out of existence, note it here — a compile-time impossibility is evidence too.
+- **Result vs intent** — `Y` | `N` | `partial`, backed by phase-matched evidence satisfying R1's declared expectations; hard gates and entries without an explicitly declared diagnostic expectation require exit 0. Retain raw diagnostic exits and adjudication separately. When a type-driven step (R16) designed an illegal state out of existence, note it here — a compile-time impossibility is evidence too.
 - **Type/refactor notes** (when non-empty) — R16 illegal-state-unrepresentable moves made this turn, and R17 refactor opportunities *surfaced* (not executed) in the code under work or its constraint-givers. Executed tidyings go under **Executed this turn** with a `tidy:` label; opportunities beyond `effort_budget` go to a back-brief, not here.
 - **Drift check** (packages, between sub-missions) — does trajectory still match `commander_intent`? Y/N + one-line justification. Includes ADR-contradiction check.
 - **Surprises** — anything contradicting orientation, including ADR contradictions. Non-empty surprises ⇒ handoff routes back to feynman or moltke.
