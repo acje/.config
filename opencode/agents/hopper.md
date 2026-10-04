@@ -10,7 +10,7 @@ description: |
   aligned with prior architectural decisions. Verify-before-claim; halts
   and re-loops on surprise.
 mode: subagent
-model: github-copilot/gemini-3.8-flash
+model: github-copilot/gpt-6.1-sol
 tools:
   webfetch: false
   searxng_web_search: false

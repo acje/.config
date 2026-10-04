@@ -8,7 +8,7 @@
   `pnpm audit` / `yarn audit` matching the lockfile present); deny
   `license-checker-rseidelsohn` (the actively maintained fork of the
   original, unmaintained `license-checker`).
-- Depth contract and composition rule: see `adapters/stacks/README.md`. Only
+- Depth contract and composition rule: see `adapters/stacks/index.md`. Only
   dimensions with a material TypeScript-specific probe delta appear below;
   every other dimension INHERITS GENERIC from `references/phase-<n>-*.md`
   as-is.

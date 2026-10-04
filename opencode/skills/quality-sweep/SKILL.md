@@ -25,7 +25,7 @@ it:
 - **Stack-profile adapter** (`adapters/stacks/`) — per-stack probes, anti-
   patterns, and exemplars that ADD to (and, where marked, replace) each phase
   reference's generic probe floor for a service's bound ecosystem; see
-  `adapters/stacks/README.md`.
+  `adapters/stacks/index.md`.
 - **Per-phase check references** (`references/phase-<n>-*.md`) — one file per
   SDLC phase holding concrete, generalized checks and named anti-patterns for
   that phase's dimensions. The engine defines *what* each dimension is; the
@@ -221,12 +221,12 @@ hunt for*. Read the phase reference before that phase's evidence pass.
    profile.** Detect that service's ecosystem (lockfile/manifest presence),
    pick the matching row from `adapters/toolchains.md`, and bind the matching
    profile from `adapters/stacks/` per the per-service binding contract in
-   `adapters/stacks/README.md`. A service whose ecosystem has no seeded
+   `adapters/stacks/index.md`. A service whose ecosystem has no seeded
    profile records the bound profile as `none (unseeded)` — visible in the
    report, never silently implied generic (python/ruby/php take this path
    today; the python toolchains.md row stays regardless). A polyglot service
    (one root, two stacks) binds one PRIMARY profile plus SECONDARY profiles
-   per the polyglot rule in `adapters/stacks/README.md` — still one service,
+   per the polyglot rule in `adapters/stacks/index.md` — still one service,
    one report. State each service's bound toolchain row and profile(s) before
    the evidence pass runs; no repo-wide single-ecosystem assumption carries
    past this step.
@@ -261,7 +261,7 @@ in parallel. Each shard is a self-contained evidence job: it loads **exactly its
 own** `references/phase-<n>-*.md`, PLUS the current service's bound stack
 profile(s) from `adapters/stacks/` (composition rule: ADD-BY-DEFAULT,
 REPLACE-ONLY-WHEN-MARKED — the generic probe floor always still runs; see
-`adapters/stacks/README.md`), scores **only that phase's dimension
+`adapters/stacks/index.md`), scores **only that phase's dimension
 cluster** for the current service, and returns a phase scorecard. A single agent
 scoring all 29 dimensions in one context window is what makes the sweep
 nondeterministic (later dimensions starve as context saturates and default to
@@ -506,7 +506,7 @@ per service:
    name, `none (unseeded)` when the ecosystem has no seeded profile — never
    blank, never implying stack-awareness that didn't happen — or
    `<primary> + <secondary>` for a polyglot service per the polyglot rule in
-   `adapters/stacks/README.md`), `{{DIMS_SCORED}}`, `{{SERVICE}}` (service
+   `adapters/stacks/index.md`), `{{DIMS_SCORED}}`, `{{SERVICE}}` (service
    name — manifest-declared name, or directory basename), `{{SERVICE_ROOT}}`
    (service root path relative to the target), `{{SERVICE_N_OF}}` (this
    service's position in the run, e.g. `2 of 4`, so a single report is

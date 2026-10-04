@@ -10,7 +10,7 @@
   dependencycheck`); deny `./gradlew checkLicense` (plugin `com.github.jk1.
   dependency-license-report`, `generateLicenseReport` for the report,
   `checkLicense` for policy enforcement against an `allowedLicensesFile`).
-- Depth contract and composition rule: see `adapters/stacks/README.md`. Only
+- Depth contract and composition rule: see `adapters/stacks/index.md`. Only
   dimensions with a material Kotlin-specific probe delta appear below; every
   other dimension INHERITS GENERIC from `references/phase-<n>-*.md` as-is.
 

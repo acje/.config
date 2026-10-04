@@ -355,6 +355,8 @@ and superseded causal claims are preserved in config-jui.
    observe produces no evidence (R1) and leaks state into later turns. When
    work genuinely needs a running service, say so and hand the decision back
    rather than starting one silently.
+   Graphify lex specialis: see the sole policy authority at
+   `/Users/anders.jensen/code/sf-sdlc/docs/graphify-evidence.md#native-lifecycle-policy`.
 
 **Enforcement:** an unguarded evidence/state pipeline, machine-data replay
 through `echo`, or a filter mistaken for a producer verdict yields review
@@ -771,6 +773,43 @@ Worked examples (illustrative, not executed evidence):
 Enforcement: when a material Surprise/Opportunity is reported, its named
 artefact is this complete `BackBrief` payload in the report/evidence bead.
 Missing fields are a commander review gap, not an invitation to invent facts.
+
+### Fleet Opportunity Protocol (`fleet-opportunity`)
+
+When Linus (during pre-merge review), Hamilton (during post-merge / CI-wait assurance),
+or any fleet agent discovers an architectural smell, tooling gap, overconstrained
+assumption, or improvement opportunity that applies **across the repository fleet** (or to
+`sf-sdlc` itself), they record it as an actionable fleet improvement opportunity:
+
+1. **Bead Registration**:
+   Set `mission_id` to the actual active contract's mission identity. For a
+   standalone assignment, establish its actual mission identity through the
+   canonical mission-bead workflow before filing; do not invent a fixed id.
+   Create a bead with mission membership; parentage remains optional:
+   ```bash
+   bd create "fleet: [<domain>] <concise opportunity>" --type task --labels "fleet-opportunity,opportunity:fleet,mission:${mission_id}"
+   ```
+2. **Standard Payload Schema** (in the bead's `description`):
+   - **Observation**: Concrete pattern or defect witness (`<repo>:<path>:<line>`).
+   - **Fleet Scope**: Which repositories or components are affected.
+   - **Proposed Remedy**: Concrete, minimal improvement (e.g. new opt-in `sf-sdlc` audit, clippy catalogue addition, doc simplification).
+   - **Priority Alignment**: Evaluation against § Fleet engineering priorities (Maintainability > Correctness > Response times > Energy > Features).
+3. **Mission Back-Brief Integration**:
+   When discovered during an active mission, the reviewer also appends a `BackBrief` to Moltke:
+   ```text
+   ↑ back-brief to moltke
+     trigger: Opportunity
+     scope: SystemLevel
+     observation: <concise witness citing the fleet pattern>
+     intent_relevance: fleet-wide improvement filed as bd-<id>
+     local_action: registered fleet-opportunity bead bd-<id>
+     requested_response: Acknowledge
+     confidence: high
+   ```
+4. **Lifecycle & Triage**:
+   Moltke acknowledges the finding. Fleet opportunities survive mission closure and are
+   triage-swept by `sf-sdlc` or fleet maintenance missions using `bd list --label fleet-opportunity`.
+   New fleet requirements follow the **Ratchet Doctrine** (opt-in first, mandatory once compliant).
 
 ## Assignment search readiness
 
@@ -1346,11 +1385,25 @@ pair programming:
    logic (> 2× lines of code in drop-guards, atomic tracking, manual byte budgets,
    or truncation boundary handlers), is **NOT convergent discovery**. It is an
    **Architectural Misalignment Signal**: the implementation is using defensive
-   scaffolding to compensate for a boundary placed in the wrong layer.
-   **Halting rule:** At round 3, if Hopper is writing layers of internal defensive
-   scaffolding to address reviewer edge cases, Linus and Moltke must **HALT**
-   and emit a `BackBrief` (`trigger: Surprise, scope: PackageLevel, requested_response: EscalateToUser`).
-   Punt to the human to evaluate whether the architectural seam is misaligned.
+   scaffolding to compensate for a boundary placed in the wrong layer or built
+   on overconstrained assumptions.
+
+   **Halting and Orientation Protocol:**
+   - **Step 1: Halt Execution.** At round 3, if Hopper is writing layers of internal defensive
+     scaffolding to address reviewer edge cases, Linus and Moltke must **HALT**.
+   - **Step 2: Automatic Feynman Investigation (Overconstrained Assumptions Route).**
+     Before escalating to the human operator, Moltke automatically dispatches `@feynman`
+     with the friction ledger to investigate the overconstrained assumptions driving the spiral:
+     identify the brittle requirement (e.g. custom in-process parsing vs delegating to
+     authoritative external tooling like `git check-ignore`, rigid negative constraints vs
+     positive invariant proofs, or inappropriate layer ownership) and formulate $\ge 2$
+     ranked clean architectural seams with concrete trade-offs.
+   - **Step 3: Structured Operator Escalation.** Moltke packages Feynman's orientation into
+     a structured prompt delivered to the operator via the `question` tool (never inline prose).
+     Moltke provides 2–4 concise, mutually exclusive choices with a recommended default.
+   - **Step 4: Clean Execution.** Upon operator selection, Moltke re-decomposes and commands
+     Hopper to implement the chosen clean seam, replacing hundreds of lines of fragile
+     scaffolding with an authoritative, minimal solution.
    Standing priority hierarchy follows § Fleet engineering priorities.
 
 ### Pointer discipline with beads
@@ -1480,18 +1533,5 @@ requiring a recorded rationale, not a default.
 
 ## graphify
 
-Structural knowledge graph at `graphify-out/graph.json`.
-
-When the user types `/graphify`, invoke the `skill` tool with
-`skill: "graphify"` first.
-
-Use graphify for structural questions:
-- `graphify query "<q>"` — symbols + neighbours matching the question.
-- `graphify explain "<symbol>"` — one node and its edges.
-- `graphify affected "<symbol>" --depth 3` — blast-radius before refactor.
-- `graphify path "<A>" "<B>"` — shortest path; intra-module only.
-
-Use `rg` for textual searches, the `oracle` agent for ADR
-questions, and read files directly for definitions at specific locations.
-After code changes, `graphify update .` (or commit so the post-commit hook
-fires).
+Graphify policy, navigation and the native-lifecycle lex specialis are solely in
+[`sf-sdlc/docs/graphify-evidence.md`](/Users/anders.jensen/code/sf-sdlc/docs/graphify-evidence.md).

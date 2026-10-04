@@ -1,6 +1,6 @@
 ---
 name: repo-eval
-description: Evaluates a repository against non-mechanical SDLC quality criteria, including accidental complexity from overconstrained assumptions, stale documentation, epistemic cruft, strategic priority alignment, and API cognitive overhead. Designed for autonomous agent execution, producing structured summaries guided by a template.
+description: Evaluates a repository against non-mechanical SDLC quality criteria, including accidental complexity from overconstrained assumptions, stale documentation, epistemic cruft, strategic priority alignment, and API cognitive overhead. Use when asked to run a repo-eval or evaluate a repository against these qualitative criteria. Designed for autonomous agent execution, producing structured summaries guided by a template.
 ---
 
 # Skill: repo-eval

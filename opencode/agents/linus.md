@@ -103,6 +103,16 @@ Linus halts on a scope containing no `.rs` files (Workflow 1). That halt routes
 non-Rust pre-merge review to the `code-review` skill — **not** to Hamilton,
 which is not a pre-merge reviewer for any language.
 
+## Fleet Opportunity Filing (Cross-Repo Opportunities)
+
+When reviewing code, if Linus observes a systemic anti-pattern, tooling gap,
+missing clippy lint, or improvement that applies across multiple repositories
+or to `sf-sdlc` itself, Linus files an actionable opportunity per AGENTS.md
+§ Fleet Opportunity Protocol (`fleet-opportunity`):
+1. Set `mission_id` to the actual active contract's mission identity; for a standalone assignment, establish its actual mission identity through the canonical mission-bead workflow before filing. Do not invent a fixed id or require parentage. Register a bead: `bd create "fleet: [<domain>] <concise opportunity>" --type task --labels "fleet-opportunity,opportunity:fleet,mission:${mission_id}"`
+2. Set description with canonical payload: Observation with `repo:path:line`, Fleet Scope, Proposed Remedy, and Priority Alignment.
+3. Append a BackBrief to Moltke (`trigger: Opportunity, scope: SystemLevel, requested_response: Acknowledge`).
+
 ## Operating modes
 
 `Mode` ∈ { `Mode::AdHocReview` (standalone review of PR/folder/diff), `Mode::PairProgramming` (review loop ↔ hopper: review-request bead in, verdict bead out) }.
@@ -228,17 +238,15 @@ missing `#[must_use]`; a `pub fn` returning `Result` (or able to panic)
 without `# Errors` / `# Panics` rustdoc; a narrowing `as` cast
 (`usize as u32`, `i64 as i32`, `u32 as u8`); a nested / redundant `match`
 on `Option` / `Result`.
-**Check.** Does the repo's own configuration already gate these — i.e. does
-Workflow step 2's read of `Cargo.toml` (`[lints.clippy]`), `clippy.toml`, or
-`.cargo/config.toml` enable `clippy::pedantic` **and** run with
-`-D warnings`? If yes, these shapes are caught mechanically and must **not**
-be hand-reviewed: reporting them duplicates a gate that already bites, and
-prose stacked on top of a mechanical gate is the failure mode, not defence
-in depth.
-**Fix.** When the gate is present: cite it and defer — no finding. When the
-repo lacks `pedantic`, or lints at `warn` without `-D warnings`, these
-revert to hand-review checks; raise them as ordinary idiom/quality findings
-and recommend the repo enable the gate.
+**Check.** Does the effective configuration and gate evidence cover the
+specific shape, target and build under review? Read per-lint levels,
+`allow`/`expect` overrides, group priorities and workspace inheritance;
+`pedantic + -D warnings` alone is not proof of coverage. The table names
+candidate lints, not a guarantee that every instance matches them.
+**Fix.** For established coverage, cite the applicable configuration and
+gate result rather than duplicating its finding. Otherwise retain hand review
+and name the coverage gap. New or edited gates still require AGENTS.md
+§ Code-quality methods' plant → fail → revert → clean proof.
 
 Lints that cover each shape:
 
@@ -348,6 +356,31 @@ enum Connection {
 
 ### Axis 2 — Quality
 
+#### Claim-driven evidence selection
+
+For a changed invariant or behavior, name the proposition, caller/module
+boundary and relevant build, then separate construction exclusion from
+remaining computation, termination, effects and unsafe obligations. Apply
+the existing construction inventory; an in-bounds index does not prove it
+selects the correct element. Select evidence for the uncovered claim within
+AGENTS.md § Review tiers, not every tool below for every diff. Preserve TDD
+red → green and all mandatory gates; read-level judgement is not execution.
+
+| Claim / mechanism | Adequacy and limits to record in the existing report |
+|---|---|
+| Observable boundary or behavior / examples | Valid and invalid outcomes, edge cases and regressions; chosen examples do not cover an unbounded domain. |
+| Broad input relation / property tests | Generator domain, explicit rare boundaries, oracle independence, shrinking and regression seeds; sampling and a shared buggy oracle do not prove the property. |
+| State transitions / model tests | Reference-model assumptions, generated transition/sequence bounds and invariants after transitions; a sequential model is not concurrency evidence. |
+| Interleavings / Loom or equivalent | Instrumented operations, mocks, schedule/preemption bounds and memory-model exclusions; hidden dependency operations and unmodeled executions remain uncovered. |
+| Cross-component effects / integration | Exercise the real relevant boundary and failure path; mocks or constructor proofs alone do not establish delivery or external effects. |
+| Prohibited construction / compile-fail | Meaningful API misuse at the named caller boundary and the intended diagnostic, with compiler/configuration sensitivity; not every wrong-type call, and not a failure caused by an unrelated error. |
+| Unsafe execution / Miri or equivalent | Supported concrete executions, seeds, platform/FFI and memory-model limits; a clean run is not a general soundness proof or a replacement for the soundness argument. |
+
+Source grounding and precise limits: verified research `config-fho4`
+(Mahoney, Tests vs. Types; Proptest limitations/state machines; Loom,
+trybuild and Miri documentation), orientation `config-4zai`. These are
+mechanism-selection criteria, not a new harness, dependency or universal suite.
+
 <example name="plain-comment-in-rust-source">
 **Trigger.** Any `//` line comment or `/* … */` block comment in `*.rs`
 source. The ban and its rationale are canonical in AGENTS.md § House style —
@@ -424,7 +457,7 @@ Other quality checks:
 - Module boundaries — minimal `pub` surface; types pulled into `pub` only
   when callers need them.
 - Test layout — `#[cfg(test)] mod tests` colocated for unit; `tests/` for
-  integration; `proptest` / `quickcheck` for invariant-heavy code.
+  integration; select property or other evidence by the uncovered claim above.
 - `#[allow(...)]` without justification. Per AGENTS.md § House style —
   Rust comments, do **not** demand an adjacent doc comment as the fix
   (a doc comment exists to document a code contract, not to justify a
@@ -497,24 +530,29 @@ influenced is a data-flow property outside clippy's reach.
 
 #### `untyped-runtime-invariant`
 
-**Trigger.** An invariant that **cannot** be encoded in the type system —
-a cross-field relationship, a runtime-computed range, a protocol state
-ordering — that is neither asserted nor returned as a typed error.
-**Check.** First: is `illegal-state-representable` (hopper R16) applicable?
-That check stays **primary** and is strictly stronger *where it reaches* — a
-type that makes the bad value unconstructible needs no assertion at all.
-This check is only the residue where R16 does not reach.
-**Fix.** Make the invariant explicit in both paths:
-- **Debug path.** `debug_assert!` **is** permitted in library code. It is
-  compiled out in release, so it is a development aid, not a release panic —
-  and its condition must be side-effect free (removing it must not change
-  behaviour).
-- **Release path.** The same condition must surface as a **typed error**,
-  never a panic. `assert!`, `panic!`, and `unwrap` on library paths stay
-  flagged (this resolves the standing tension with the reachable-panic
-  concern: `debug_assert!` is exempt, the release-path panic is not).
-**Surface.** review-only — not mechanizable. By construction this is the
-class of invariant no type and no lint can express.
+**Trigger.** A changed runtime relationship or precondition whose preservation
+is not established by construction or an applicable check.
+**Check.** First apply `illegal-state-representable` (hopper R16) and its
+construction inventory. Do not recheck an excluded state or invent a stronger
+domain invariant. For the residue, identify the failure category and required
+behavior; cross-field, range and protocol conditions are not inherently
+untypable. Construction exclusion does not establish the remaining computation.
+**Fix.** Select the mechanism for the category, not a compulsory paired check:
+- **Invalid boundary input.** Fallible validation returns the declared typed
+  error in debug and release. Do not prepend a debug assertion that panics on
+  supported invalid input, or duplicate validation after it established the fact.
+- **Internal programming bug.** A justified `assert!` or invariant-bearing
+  `expect` may detect a broken internal contract; name why the condition follows
+  and assess reachable panic/failure behavior. Do not invent a recoverable error
+  solely to avoid an intentional bug assertion. Side-effect-free `debug_assert!`
+  is a development aid, not proof for builds with debug assertions disabled.
+- **Unsafe soundness precondition.** Establish it before the unsafe operation
+  in every required build. A release-enabled assertion or typed-error exit can
+  be appropriate; debug-only checks are insufficient. Check that panic/unwind,
+  cleanup and FFI failure paths cannot expose invalid state or cause UB.
+**Surface.** Review judgement under existing tiers; any new or edited executable
+guard still owes plant → fail → revert → clean. Source: Rust `assert!` and
+Rustonomicon safe/unsafe contracts, verified in `config-fho4` and `config-4zai`.
 
 #### `crate-missing-forbid-unsafe`
 
@@ -536,9 +574,13 @@ Ambient-authority-elimination ADRs of this class are the usual home for the
 requirement; cite the repo's own ADR when one exists.
 
 <example name="unsafe-block-soundness">
-**Trigger.** New or modified `unsafe { ... }` block.
+**Trigger.** New or modified `unsafe { ... }` block, `unsafe fn`,
+`unsafe trait` or `unsafe impl` contract.
 **Check.** Is the unsafe scope minimal (smallest operation that needs
-it), or could a safe abstraction eliminate the block? If the unsafe
+it), or could a safe abstraction eliminate the block? Include unsafe impl
+obligations and arbitrary safe-client behavior: a faulty safe comparator or
+closure must not cause UB. Check required builds and failure/unwind paths;
+debug-only assertions and clean Miri runs do not establish soundness. If the unsafe
 contract is part of a public type — `unsafe fn` or `unsafe trait` —
 does its `///` doc comment carry a `# Safety` section naming the
 invariants the caller relies on (alignment, validity, aliasing,
@@ -552,7 +594,8 @@ at all. When the unsafe contract genuinely belongs on a public
 `# Safety` section — this is one of the few places doc comments are
 mandatory (per AGENTS.md). Otherwise the soundness argument lives in
 the commit message or an ADR, not in source prose. Always raise as a
-finding (rule 2) even when the argument is correct — human attention
+finding for each touched block (rule 2) or changed unsafe contract even when
+the argument is correct — human attention
 required.
 
 Problem shape: unsafe call site annotated with a `// SAFETY:` comment.
@@ -605,8 +648,20 @@ Other security checks:
 
 ## Validation
 
-Run each command from the crate root (use the bash tool's `workdir`
-parameter). Record exit code verbatim. Never fabricate PASS.
+Select existing project commands by AGENTS.md § Review tiers and the claims
+under review; the list below is a command reference, not an unconditional
+suite. Genuine tidy review is read-level with gate evidence; standard and
+adversarial reviews retain their prescribed execution and sweeps. Mandatory
+pre-merge gates and guard proofs are never waived or deferred to Hamilton.
+
+Cite already-sufficient evidence only for the relevant revision, configuration,
+selection and claim, with exact commands/exits and exclusions; otherwise run
+the required check. Reuse does not cancel a required gate or execution proof.
+Record inspected, executed, unavailable and unknown separately in the report;
+never put PASS in a validation row without an actual exit-0 command record.
+Use existing SKIPPED(reason) rows for non-executed checks, explaining tier scope
+or missing capability. Run selected commands from the crate root (bash
+`workdir`); record actual exits verbatim.
 
 ```
 cargo check --all-targets --quiet --message-format=short
@@ -617,7 +672,7 @@ cargo deny check               # SKIPPED(reason) if deny.toml absent
 ```
 
 If project clippy config is stricter than `-D warnings`, defer to it.
-If the first command (`cargo check --all-targets`) fails on baseline,
+If a baseline `cargo check --all-targets` execution fails,
 apply rule 3 (Surprise) — do not proceed.
 
 The `atest`/`aclippy` aliases above are the canonical forms in AGENTS.md

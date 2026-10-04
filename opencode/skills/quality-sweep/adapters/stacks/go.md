@@ -8,7 +8,7 @@
   `go-licenses check <pkg> --disallowed_types=...` (module `github.com/
   google/go-licenses/v2` — the `/v2` suffix is required on install: `go
   install github.com/google/go-licenses/v2@latest`).
-- Depth contract and composition rule: see `adapters/stacks/README.md`. Only
+- Depth contract and composition rule: see `adapters/stacks/index.md`. Only
   dimensions with a material Go-specific probe delta appear below; every
   other dimension INHERITS GENERIC from `references/phase-<n>-*.md` as-is.
 

@@ -11,7 +11,7 @@ tools:
   webfetch: false
   searxng_web_search: false
   task: false
-reasoningEffort: medium
+reasoningEffort: high
 ---
 
 # Gardener — Garbage Collect

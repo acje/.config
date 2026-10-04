@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Structured code review with two modes — `standard` (correctness, types, patterns, tests) and `security` (six OWASP categories with PASS/FAIL verdict). Scope auto-detects PR / file / folder / unstaged changes. Writes report to `.ooda/review-<timestamp>.md`. Use when the user asks for a code review, security review, or "review this PR/file/folder".
+description: Structured code review with two modes — `standard` (correctness, types, patterns, tests) and `security` (six OWASP categories with PASS/FAIL verdict). Scope auto-detects PR / file / folder / unstaged changes. Writes a timestamped report under `.ooda/`. Use when the user asks for a code review, security review, or "review this PR/file/folder".
 ---
 
 # Code Review

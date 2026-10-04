@@ -4,7 +4,7 @@
 - **Toolchain slots** (`adapters/toolchains.md` rust row): test `cargo test`;
   lint `cargo clippy -- -D warnings`; audit `cargo audit`; deny `cargo deny
   check`.
-- Depth contract and composition rule: see `adapters/stacks/README.md`. Only
+- Depth contract and composition rule: see `adapters/stacks/index.md`. Only
   dimensions with a material Rust-specific probe delta appear below; every
   other dimension INHERITS GENERIC from `references/phase-<n>-*.md` as-is.
 

@@ -13,7 +13,7 @@
   deny SKIPPED (no standard tool) — Clojure has no verified license-policy
   tool equivalent to `cargo-deny`; this is a real ecosystem gap, not an
   omission to fill.
-- Depth contract and composition rule: see `adapters/stacks/README.md`. Only
+- Depth contract and composition rule: see `adapters/stacks/index.md`. Only
   dimensions with a material Clojure-specific probe delta appear below;
   every other dimension INHERITS GENERIC from `references/phase-<n>-*.md`
   as-is.

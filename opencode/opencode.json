@@ -149,7 +149,7 @@
       "/Users/anders.jensen/code/gh-report/**": "allow"
     }
   },
-  "model": "github-copilot/gemini-3.8-flash",
+  "model": "github-copilot/gpt-6.1-sol",
   "experimental": {
     "continue_loop_on_deny": true
   },
@@ -158,14 +158,22 @@
     "./plugins/tracer.mjs"
   ],
   "agent": {
+    "build-sota": {
+      "description": "Standalone build for user-selected SOTA models",
+      "mode": "primary",
+      "prompt": "{file:./prompts/build-sota.md}",
+      "permission": {
+        "task": "deny"
+      }
+    },
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "moltke": {
@@ -175,25 +183,25 @@
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "linus": {
@@ -211,19 +219,7 @@
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
-      "reasoningEffort": "medium"
-    },
-    "automaton": {
-      "prompt": "{file:./agents/automaton.md}",
-      "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
-      "reasoningEffort": "high"
-    },
-    "turbo": {
-      "prompt": "{file:./agents/turbo.md}",
-      "mode": "subagent",
-      "model": "github-copilot/gemini-3.8-flash",
+      "model": "github-copilot/gpt-6.1-sol",
       "reasoningEffort": "high"
     },
     "dramallama": {

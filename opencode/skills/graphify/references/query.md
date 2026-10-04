@@ -22,7 +22,7 @@ If it fails, stop and tell the user to run `/graphify <path>` first.
 
 ### Step 0 — Constrained query expansion (REQUIRED before traversal)
 
-graphify matches nodes via case-folded substring + IDF — there is **no stemming, no synonyms, no cross-language match** in either the `query` CLI or the NetworkX fallback below. If the user's question uses different language or different domain vocabulary than the graph's labels (user says "обработчик" / graph says "handler"; user says "authentication" / graph says "Guardian"), the literal matcher returns 0 hits and the answer collapses to noise.
+graphify's `query` CLI matches nodes via case-folded substring + IDF — there is **no stemming, no synonyms, no cross-language match** inside the binary, and the inline fallback below matches the same way. If the user's question uses different language or different domain vocabulary than the graph's labels (user says "обработчик" / graph says "handler"; user says "authentication" / graph says "Guardian"), the literal matcher returns 0 hits and the answer collapses to noise.
 
 Fix this **without inventing tokens** by expanding the query against the actual graph vocabulary first:
 
@@ -31,7 +31,7 @@ Fix this **without inventing tokens** by expanding the query against the actual 
 $(cat graphify-out/.graphify_python) -c "
 import json, re
 from pathlib import Path
-data = json.loads(Path('graphify-out/graph.json').read_text())
+data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 vocab = set()
 for n in data['nodes']:
     for c in re.findall(r'[^\W\d_]+', n.get('label','') or '', re.UNICODE):
@@ -40,7 +40,7 @@ for n in data['nodes']:
             t = p.lower()
             if 3 <= len(t) <= 30:
                 vocab.add(t)
-Path('graphify-out/.vocab.txt').write_text('\n'.join(sorted(vocab)))
+Path('graphify-out/.vocab.txt').write_text('\n'.join(sorted(vocab)), encoding='utf-8')
 print(f'vocab: {len(vocab)} tokens')
 "
 ```
@@ -70,7 +70,7 @@ graphify query "QUESTION"
 
 If the CLI is unavailable, load `graphify-out/graph.json` and run the traversal inline:
 
-1. Find the 1-3 nodes whose label best matches key terms in the question.
+1. Find the 1-3 nodes whose label best matches the expanded tokens.
 2. Run the appropriate traversal from each starting node.
 3. Read the subgraph - node labels, edge relations, confidence tags, source locations.
 4. Answer using **only** what the graph contains. Quote `source_location` when citing a specific fact.
@@ -83,12 +83,12 @@ from networkx.readwrite import json_graph
 import networkx as nx
 from pathlib import Path
 
-data = json.loads(Path('graphify-out/graph.json').read_text())
+data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 G = json_graph.node_link_graph(data, edges='links')
 
 question = 'QUESTION'
 mode = 'MODE'  # 'bfs' or 'dfs'
-terms = [t.lower() for t in question.split() if len(t) > 3]
+terms = [t.lower() for t in question.split() if len(t) >= 3]  # match the vocab threshold; keeps api/jwt/ios (#1392)
 
 # Find best-matching start nodes
 scored = []
@@ -163,7 +163,7 @@ print(output)
 "
 ```
 
-Replace `QUESTION` with the **expanded query string** from Step 0 (the joined vocab tokens, not the raw user question — the inline matcher has the same zero-hit weakness as the CLI), `MODE` with `bfs` or `dfs`, and `BUDGET` with the token budget (default `2000`, or whatever `--budget N` specifies). Then answer based on the subgraph output above.
+Replace `QUESTION` with the **expanded** query string, `MODE` with `bfs` or `dfs`, and `BUDGET` with the token budget (default `2000`, or whatever `--budget N` specifies). Then answer based on the subgraph output above, using only what the graph contains.
 
 After writing the answer, save it back into the graph so it improves future queries. Include the expanded tokens inside the `--answer` text (e.g. `"Expanded from original query via vocab: [tokens]. Then traversed..."`) so the next `--update` extracts the expansion history as a graph node:
 
@@ -171,13 +171,27 @@ After writing the answer, save it back into the graph so it improves future quer
 $(cat graphify-out/.graphify_python) -m graphify save-result --question "ORIGINAL_QUESTION" --answer "ANSWER" --type query --nodes NODE1 NODE2
 ```
 
-Replace `ORIGINAL_QUESTION` with the user's verbatim question, `ANSWER` with your full answer text (containing the expanded-token trace), and the node list with the labels you cited. This closes the feedback loop: the next `--update` will extract this Q&A as a node in the graph.
+Replace `ORIGINAL_QUESTION` with the user's verbatim question, `ANSWER` with your full answer text (containing the expanded-token trace), `NODE1 NODE2` with the list of node labels you cited. This closes the feedback loop: the next `--update` will extract this Q&A as a node in the graph.
+
+**Work memory (self-improving loop).** Add an `--outcome` so future sessions learn from this one — append `--outcome useful|dead_end|corrected` to the `save-result` command (and `--correction "the right answer"` when correcting):
+
+- `useful` — the cited nodes answered the question well (they become *preferred sources*).
+- `dead_end` — the question/path led nowhere; don't re-derive it next time.
+- `corrected` — the saved answer was wrong; `--correction` records what was right.
+
+At the **start** of graph work, refresh and read the lessons: run `graphify reflect --if-stale` (cheap, deterministic, no LLM; `--if-stale` makes it a no-op when `LESSONS.md` is already newer than every input, e.g. when the git hook just refreshed it), then read `graphify-out/reflections/LESSONS.md`. It lists **preferred sources** (start there), **known dead ends** (skip them), and prior **corrections**. Running `reflect` yourself keeps the lessons current even without the git hook installed; if the post-commit hook *is* installed, `--if-stale` means your session-start run costs almost nothing.
 
 ---
 
 ## For /graphify path
 
-Find the shortest path between two named concepts in the graph.
+Find the shortest path between two named concepts in the graph. Prefer the CLI when installed:
+
+```bash
+graphify path "NODE_A" "NODE_B"
+```
+
+If the CLI is unavailable, run it inline:
 
 ```bash
 $(cat graphify-out/.graphify_python) -c "
@@ -186,7 +200,7 @@ import networkx as nx
 from networkx.readwrite import json_graph
 from pathlib import Path
 
-data = json.loads(Path('graphify-out/graph.json').read_text())
+data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 G = json_graph.node_link_graph(data, edges='links')
 
 a_term = 'NODE_A'
@@ -239,7 +253,13 @@ $(cat graphify-out/.graphify_python) -m graphify save-result --question "Path fr
 
 ## For /graphify explain
 
-Give a plain-language explanation of a single node - everything connected to it.
+Give a plain-language explanation of a single node - everything connected to it. Prefer the CLI when installed:
+
+```bash
+graphify explain "NODE_NAME"
+```
+
+If the CLI is unavailable, run it inline:
 
 ```bash
 $(cat graphify-out/.graphify_python) -c "
@@ -248,7 +268,7 @@ import networkx as nx
 from networkx.readwrite import json_graph
 from pathlib import Path
 
-data = json.loads(Path('graphify-out/graph.json').read_text())
+data = json.loads(Path('graphify-out/graph.json').read_text(encoding='utf-8'))
 G = json_graph.node_link_graph(data, edges='links')
 
 term = 'NODE_NAME'

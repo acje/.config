@@ -7,7 +7,7 @@ description: |
   gardener and reports to user. Auftragstaktik: set commander_intent + boundaries,
   trust subordinates inside intent, adjust intent as back-briefs arrive.
 mode: subagent
-model: github-copilot/gemini-3.8-flash
+model: github-copilot/gpt-6.1-sol
 tools:
   webfetch: false
   searxng_web_search: false

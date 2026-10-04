@@ -1,6 +1,6 @@
 ---
 name: rust-dep-intake
-description: Secure intake procedure for Rust/cargo dependency changes — gates build-time code execution (build.rs, proc-macros, build-dependencies) behind a mandatory source read. Tiered: cheap non-executing triage always, deep source review only when triage flags. Use when the user says "update dependencies", "cargo update", "bump a crate", "add a dependency", "new dependency", "is this crate safe", "vet a crate", "review build.rs", "cargo deny says yanked", "yanked crate", "supply chain", or when a dependency gate (cargo-deny / cargo-audit / renovate / dependabot) has fired on a Rust project.
+description: 'Secure intake procedure for Rust/cargo dependency changes — gates build-time code execution (build.rs, proc-macros, build-dependencies) behind a mandatory source read. Tiered: cheap non-executing triage always, deep source review only when triage flags. Use when the user says "update dependencies", "cargo update", "bump a crate", "add a dependency", "new dependency", "is this crate safe", "vet a crate", "review build.rs", "cargo deny says yanked", "yanked crate", "supply chain", or when a dependency gate (cargo-deny / cargo-audit / renovate / dependabot) has fired on a Rust project.'
 ---
 
 # Rust Dependency Intake

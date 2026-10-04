@@ -15,7 +15,7 @@ empty slot means "no standard tool"; record `SKIPPED (no standard tool)`, not
 
 Where a row has a matching `adapters/stacks/<stack>.md` profile, the
 stack-profile column names it — Phase 0 binds both the toolchain row and the
-profile per service (see `adapters/stacks/README.md`). A row with no profile
+profile per service (see `adapters/stacks/index.md`). A row with no profile
 column entry runs the generic reference only (`none (unseeded)`).
 
 | Ecosystem | Detect via | test | lint | audit | deny | Stack profile |

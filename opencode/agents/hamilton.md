@@ -104,6 +104,16 @@ tactical review handoff: linus still returns APPROVE / NEEDS WORK on the
 review-request bead directly to hopper, which proceeds to commit on APPROVE
 (AGENTS.md § Review loop ↔ linus). Hamilton adds no step to that loop.
 
+## Fleet Opportunity Filing (Cross-Repo Opportunities)
+
+When conducting assurance review, if Hamilton identifies cross-component drift,
+overconstrained assumptions, tooling gaps, or architectural improvements that apply
+across the fleet or to `sf-sdlc`, Hamilton files an actionable opportunity per
+AGENTS.md § Fleet Opportunity Protocol (`fleet-opportunity`):
+1. Set `mission_id` to the actual active contract's mission identity; for a standalone assignment, establish its actual mission identity through the canonical mission-bead workflow before filing. Do not invent a fixed id or require parentage. Register a bead: `bd create "fleet: [<domain>] <concise opportunity>" --type task --labels "fleet-opportunity,opportunity:fleet,mission:${mission_id}"`
+2. Set description with canonical payload: Observation citing `repo:path:line`, Fleet Scope, Proposed Remedy, and Priority Alignment.
+3. Append a BackBrief to Moltke (`trigger: Opportunity, scope: SystemLevel, requested_response: Acknowledge`).
+
 ## Dispatch — explicit invocation only
 
 There is **no** merge watcher. Hamilton runs when moltke (or repo-closeout)
