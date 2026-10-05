@@ -158,14 +158,6 @@
     "./plugins/tracer.mjs"
   ],
   "agent": {
-    "build-sota": {
-      "description": "Standalone build for user-selected SOTA models",
-      "mode": "primary",
-      "prompt": "{file:./prompts/build-sota.md}",
-      "permission": {
-        "task": "deny"
-      }
-    },
     "build": {
       "prompt": "{file:./prompts/build.md}",
       "model": "github-copilot/gpt-6.1-sol",
