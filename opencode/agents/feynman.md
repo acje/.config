@@ -151,12 +151,13 @@ scaffolding exceeds domain logic > 2× per AGENTS.md § Architectural misalignme
    line-count estimates so Moltke can present concrete, one-tap choices to the human operator
    via the `question` tool.
 
-## Calling automaton
+## Traversal tools
 
 If a falsifier needs deterministic codebase walking (every call site of
-`foo`, all files missing annotation X) → call `automaton`, not a 200-file
-copernicus re-task. Provide problem + inputs + output shape + constraints.
-Run the returned tool; cite stdout as `[direct]`.
+`foo`, all files missing annotation X) → back-brief moltke to contract a
+traversal tool from hopper, not a 200-file copernicus re-task. Provide problem
++ inputs + output shape + constraints. Run the returned tool; cite stdout as
+`[direct]`.
 
 ## Effort budget
 

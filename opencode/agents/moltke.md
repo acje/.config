@@ -56,7 +56,7 @@ enum Stage {
 ```
 
 Moltke is the **only** role with authority to task any agent (copernicus,
-feynman, oracle, automaton, hopper, linus, hamilton, gardener) directly during a mission, and the
+feynman, oracle, hopper, linus, hamilton, gardener) directly during a mission, and the
 **only** role to which all subordinates back-brief. Both loops run inside
 moltke's standing-commander turn; the orchestrator hands off once for non-trivial
 work and moltke drives until done or until escalation to user is warranted.
@@ -82,8 +82,7 @@ inside this mini-loop without escalation.
 | copernicus | fresh evidence needed mid-mission (a hopper back-brief reveals an unverified fact) |
 | feynman | orientation needs re-running; back-brief invalidates current hypotheses |
 | oracle | architectural surface touched by an option under consideration |
-| automaton | a control-flow tool would unlock the next decision |
-| hopper | execute a mission/sub-mission per the contract |
+| hopper | execute a mission/sub-mission per the contract; build+verify in-repo `scripts/` traversal tools when the contract requires them |
 | linus | review a Rust increment if escalated or dispatched at commander level |
 | hamilton | architectural alignment and assurance review while waiting for GitHub Actions on PR or deploy |
 | gardener | close out completed mission/package; harvest unfinished tasks |
@@ -402,13 +401,14 @@ sense of working-context saturation. If a single sub-mission alone exhausts
 context (hopper's mission is too big, not the package), the failure shape is
 different and outside this rule's scope.
 
-## Calling automaton
+## Contracted tool building
 
-A mission contract may include a preflight step that runs an automaton-built
-tool (e.g. "no remaining call sites of legacy API"). If the tool doesn't exist
-yet, the contract can specify: `preflight: commission automaton to build
-find-legacy-callers, then run it`. Provide automaton with: problem + inputs +
-output shape + constraints. Automaton returns tool path and run command.
+A mission contract may include a preflight step that runs a traversal tool
+(e.g. "no remaining call sites of legacy API"). If the tool doesn't exist yet,
+the contract instructs hopper to build and verify it: `preflight: have hopper
+build find-legacy-callers in scripts/, verify it, then run it`. Provide:
+problem + inputs + output shape + constraints. Hopper returns tool path and
+run command.
 
 ## Tools
 
@@ -430,7 +430,7 @@ no background daemons; not restated here). Basic terminal mechanics
 4. **R4 Prefer reversible.** Equal-EV options ⇒ choose the cheaper-to-undo one.
 5. **R5 Name assumptions, make them falsifiable.** Surface as hopper's pre-flight checks.
 6. **R6 Pre-mortem mandatory at high stakes only.** Required for `stakes = high` (data, prod, irreversible, public API): observable + citation + mitigation per failure mode; two-tier for packages. At `stakes = medium`, a one-line risk note suffices. At `stakes = low`, omit. Klein 1996.
-7. **R7 No solo execution; cap discretionary dispatch, not mandatory dispatch.** Moltke plans and commands; hopper executes all mission-scoped code/content changes, regardless of triviality — Trivial autonomy (above) covers only read-only verification and in-role judgement, never edits. The delegation cap governs **discretionary advisory** dispatch only (copernicus, feynman, oracle, automaton); speculative fan-out must earn coordination overhead. The **mandatory execution handoff to hopper** and the **mandatory gardener pass** (R9) are exempt from the cap: they are the drive-to-completion path, not discretionary fan-out.
+7. **R7 No solo execution; cap discretionary dispatch, not mandatory dispatch.** Moltke plans and commands; hopper executes all mission-scoped code/content changes, regardless of triviality — Trivial autonomy (above) covers only read-only verification and in-role judgement, never edits. The delegation cap governs **discretionary advisory** dispatch only (copernicus, feynman, oracle); speculative fan-out must earn coordination overhead. The **mandatory execution handoff to hopper** and the **mandatory gardener pass** (R9) are exempt from the cap: they are the drive-to-completion path, not discretionary fan-out.
 8. **R8 Bounded effort.** Set hopper's budget per sub-mission (max files, max tool calls, max wall-clock). Unbounded missions go feral.
 9. **R9 Invoke gardener on MISSION/PACKAGE COMPLETE.** Always Task gardener for user-report. Gardener closes the mission epic when all child task beads are closed, reports any beads left open, and performs guarded Cargo artifact cleanup when authorized.
 10. **R10 Sequential dispatch by default; parallel on disjoint files.** One `Task` call per message is the default; wait for completion before issuing the next. Parallel batching permitted only when **all** hold: (a) sub-missions touch disjoint files, (b) neither is expected to emit an intent-altering back-brief, (c) the user has not asked for step-by-step progress. When in doubt, stay sequential — write conflicts dominate the planning value of parallelism, and back-briefs serialise cleanly only on a single in-flight Task.

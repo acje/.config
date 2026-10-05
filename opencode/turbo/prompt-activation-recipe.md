@@ -1,23 +1,25 @@
 # Prompt Activation Recipe (P1–P12)
 
-Single source of truth for the twelve principles `turbo` applies during
-prompt rewrites. Referenced from `opencode/agents/turbo.md`. When this file
-changes, update turbo.md's principle citations in the same commit — two
-sources of truth drift silently otherwise.
+Single source of truth for the twelve prompt-activation principles.
+Authored for the retired `turbo` workflow; retained here (frozen-marker P12a
+reference at agents/hopper.md only) as a non-agent recipe
+reference. The sole consumer file `opencode/agents/turbo.md` was removed
+with the role.
 
 ## Status
 
-- Authored 2026-05-14, reverse-engineered from `opencode/agents/turbo.md`'s
-  existing principle citations.
+- Authored 2026-05-14, reverse-engineered from the retired
+  `opencode/agents/turbo.md`'s existing principle citations.
 - P1, P3, P5, P6, P7, P8, P9, P10, P11, P12a, P12b: **high confidence** —
-  turbo.md cites enough context to write them directly.
-- P2, P4: **medium confidence — [EVIDENCE GAP]** — turbo.md names them by
-  number but does not describe them. Defined here from gap analysis;
-  verify on first real turbo invocation and revise on mismatch.
-- Cross-surface table: **high** — turbo.md's clarify-step enumerates the
+  the original citation context supports them.
+- P2, P4: **medium confidence — [EVIDENCE GAP]** — the original file named
+  them by number but did not describe them. Defined here from gap analysis;
+  verify on the first real prompt rewrite and revise on mismatch.
+- Cross-surface table: **high** — the original clarify-step enumerates the
   three surfaces and differential treatment.
-- Tensions + dead-letter tables: **medium** — turbo.md references them by
-  name. Entries inferred from observable patterns across the agent fleet.
+- Tensions + dead-letter tables: **medium** — referenced by name in the
+  original file. Entries inferred from observable patterns across the
+  agent fleet.
 - Frozen. Changes require cited trace evidence per P12a.
 
 ---
@@ -255,8 +257,8 @@ treat the model's internal scratch as a log.
 
 ## Cross-surface table
 
-How P1–P12 weight differs by the prompt's surface (turbo's `surface`
-clarify-step):
+How P1–P12 weight differs by the prompt's surface (the retired turbo
+workflow's `surface` clarify-step):
 
 | Surface | P1 weight | P2 weight | P4 weight | P9 application | Output destination default |
 |---|---|---|---|---|---|
@@ -419,18 +421,16 @@ lines of context]
 
 ---
 
-## Re-running this recipe
+## Applying this recipe
 
-Turbo reads this file once per invocation (workflow step 1). When you
-update a principle here:
+When applying these principles to a prompt rewrite (executed by hopper
+under moltke's contract):
 
-1. Update the matching citation in `opencode/agents/turbo.md` in the
-   same commit (turbo.md line 20 mandates this).
-2. Add the trace evidence that motivated the change to the commit
+1. Add the trace evidence that motivated the change to the commit
    message (P12a).
-3. If the change affects a dead-letter table entry, audit existing
+2. If the change affects a dead-letter table entry, audit existing
    prompts under `opencode/agents/*.md` for the pattern.
 
 Do not edit P2 or P4 without first checking whether the
-`[EVIDENCE GAP]` markers can be removed — the next real turbo
-invocation should surface concrete content for them.
+`[EVIDENCE GAP]` markers can be removed — the next real prompt rewrite
+should surface concrete content for them.

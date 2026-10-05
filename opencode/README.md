@@ -1,9 +1,11 @@
 # OODA Loop Agents for opencode
 
-**Ten subagents**: five OODA-phase agents (`copernicus`, `feynman`,
-`moltke`, `hopper`, `linus`), one post-merge assurance agent (`hamilton`)
-plus four specialists (`gardener`, `automaton`, `oracle`, `turbo`). Names
-are role mnemonics, not claims about historical people or model behavior.
+**Eight subagents**: five OODA-phase agents (`copernicus`, `feynman`,
+`moltke`, `hopper`, `linus`), one post-merge assurance agent (`hamilton`),
+plus two specialists (`gardener`, `oracle`). Tool building and prompt
+rewriting are executed by `hopper` under `moltke`'s contract, not by
+separate agents. Names are role mnemonics, not claims about historical
+people or model behavior.
 
 | Role        | Agent        | Responsibility                                                                            |
 |-------------|--------------|--------------------------------------------------------------------------------------------|
@@ -14,9 +16,7 @@ are role mnemonics, not claims about historical people or model behavior.
 | Act         | `linus`      | Rust-specialist review — idioms, unsafe soundness, cargo-audit/deny. **Pre-merge, blocking.** Read-only on source; tactical feedback in Hopper TDD increments. |
 | Assurance   | `hamilton`   | Architectural alignment & assurance (runs while waiting on GitHub Actions) — cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns. Dispatched by Moltke / repo-closeout during CI/deploy wait windows; read-only, never self-fixes. |
 | Specialist  | `gardener`   | Workspace cleanup after loop completes: closes bd mission epics, surfaces unfinished tasks, guarded Cargo cleanup |
-| Specialist  | `automaton`  | Writes idiomatic Rust CLI tools to `scripts/` when control flow exceeds in-context budgets |
 | Specialist  | `oracle`     | Surfaces architectural constraints from the repo's ADRs                                    |
-| Specialist  | `turbo`      | Prompt rewriting via the P1–P12 activation recipe. Leaf-only; emits output, never in-place edits. |
 
 ## The two OODA loops
 
@@ -70,8 +70,8 @@ and adjusts intent or decomposition; authorized local adaptation stays local.
 Review is feedback within tactical OODA, not a third loop.
 
 Supporting paths omitted for clarity: plan mode returns a written plan to the
-user without execution; Automaton supplies scoped tools; Turbo emits prompt
-rewrites. Material backbriefs from these specialists also route to Moltke.
+user without execution; hopper builds scoped tools (`scripts/`) and executes
+prompt rewrites under moltke's contract. Material backbriefs route to Moltke.
 
 Exactly two fleet loops pivot on moltke:
 
@@ -102,14 +102,12 @@ effects gaps motivate evidence, intent checks and verified feedback.
   contracts, deployment topology). Surfaces relevant ADRs and any tensions.
 - `gardener` — invoked by moltke on package complete to close bd epics
   and surface retained-open beads. `.ooda/traces/` curation is the user's job.
-- `automaton` — commissioned by any agent (most often hopper or copernicus)
-  when a control-flow problem is too large for in-context solving (walking
-  many files, deterministic transforms, graph traversals). Writes a small
-  Rust CLI tool to `scripts/` and returns a tool description (purpose,
-  inputs, output schema, exit-code semantics, performance envelope).
-- `turbo` — leaf-only specialist for prompt rewriting via the P1–P12
-  activation recipe (`opencode/turbo/prompt-activation-recipe.md`). Emits
-  output as text or `.ooda/` artefact; never edits prompt files in place.
+
+Tool building (a small Rust CLI in `scripts/`) and prompt rewriting are not
+specialist roles: they are mission-scoped code/content work executed by
+`hopper` under `moltke`'s contract. The P1–P12 recipe
+(`opencode/turbo/prompt-activation-recipe.md`) is retained as a non-agent
+reference.
 
 Linus is the tactical review counterpart to hopper; Oracle participates in
 strategic work as an informational specialist, never a decision-maker.
@@ -129,11 +127,11 @@ Two opencode prompt modes orchestrate the agents differently:
   routes through `copernicus → feynman (→ oracle)` to produce a written
   plan as text output. Never edits source. Never dispatches moltke —
   moltke lives in build mode.
-- **Build mode** drives both OODA loops through Moltke. Trivial → inline edit. Turbo
-  prompt rewrites → `@turbo` directly. Everything else → `@moltke`, which
-  authors the mission contract, drives tactical execution and Rust review
-  feedback, and invokes gardener on
-  MISSION/PACKAGE COMPLETE.
+- **Build mode** drives both OODA loops through Moltke. Trivial → inline edit.
+  Everything else — including prompt rewrites and tool building — → `@moltke`,
+  which authors the mission contract, commands `hopper` to execute the
+  code/content work, drives tactical execution and Rust review feedback, and
+  invokes gardener on MISSION/PACKAGE COMPLETE.
 
 Build mode also accepts a plan-mode-produced plan as input: hand the plan
 (file path, pasted body, or bd bead id) to moltke, which turns it into a
@@ -171,12 +169,8 @@ under uncertainty, multi-file/irreversible work, cross-role gaps.
   and one OPEN `assurance-finding` bead per live finding, routed to
   moltke. Read-only; never self-fixes; never defers a mandatory pre-merge
   gate. Explicit dispatch only — no merge watcher, no CI integration.
-- `automaton` — write tool, build, smoke-test, hand back tool path + run
-  command + tool description.
 - `gardener` — query bd mission/evidence beads, close completed epics,
   surface retained-open beads, report to moltke.
-- `turbo` — single-pass rewrite + P1–P12 self-audit. No internal cycle
-  beyond the recipe pass. Leaf-only; never re-tasks another agent.
 
 ## Decomposition by coupling (Moltke)
 
@@ -243,7 +237,7 @@ generation.
 5. **Start broad, narrow down** — encoded in copernicus and feynman workflows.
 6. **Just-in-time context via beads** — large evidence lives in the bd bead `description`; `.ooda/` is only the narrow escape hatch for bodies that genuinely cannot live in a bead, still bead-pointed. Handoffs pass the bead id (`bd-NNN`), not the body or path. Avoids the "telephone game" through the orchestrator.
 7. **Compaction & note-taking** — moltke creates a bd epic per mission; hopper closes child task beads on verify-green; gardener closes the epic and surfaces retained-open beads when missions complete. Gardener does not prune `.ooda/` files.
-8. **Token-efficient tool design** — automaton writes a Rust CLI rather than simulating a for-loop in tokens.
+8. **Token-efficient tool design** — hopper writes a Rust CLI to `scripts/` rather than simulating a for-loop in tokens.
 9. **End-state evaluation** — hopper's "Result vs intent" check is grounded in moltke's `success_criteria`, not adherence to prescribed steps.
 10. **Interleaved thinking between tool calls** — feynman's stress-test loop and hopper's verify-after-each-step enforce this.
 11. **Explicit effort ceilings** — `max_files_changed`, `max_tool_calls`, `max_wall_clock_minutes` in every moltke contract.
@@ -398,7 +392,7 @@ stores.
 ```
 .ooda/
 ├── traces/<date>/<session>.jsonl    # Tracer plugin output
-├── turbo-<slug>-<ts>.md             # User-facing prompt rewrites
+├── rewrite-<slug>-<ts>.md           # User-facing prompt rewrites (legacy `turbo-*` artefacts may persist)
 ├── review-<ts>.md                   # Generic code-review reports
 └── PRDs/<slug>.prd.md               # User-facing PRDs
 ```
@@ -412,10 +406,10 @@ creates is represented by beads and closed (`bd close <id> --reason ...`) the
 moment it finishes. Gardener closes mission epics only when child beads are
 closed and surfaces retained-open beads back to moltke.
 
-## The `scripts/` directory (automaton's workspace)
+## The `scripts/` directory (hopper-maintained)
 
-Automaton bootstraps `scripts/` lazily on first invocation. Single cargo
-workspace, one binary per tool:
+Hopper bootstraps `scripts/` on first in-mission tool need, under moltke's
+contract. Single cargo workspace, one binary per tool:
 
 ```
 scripts/
@@ -475,8 +469,7 @@ Build mode picks one of:
 ```rust
 enum BuildAction {
     InlineEdit,                              // single edit, no tradeoffs
-    InvokeMoltke { brief: MissionBrief },    // default for non-trivial; moltke drives end-to-end
-    InvokeTurbo { source: PromptSource, surface: Surface }, // prompt-rewriting request
+    InvokeMoltke { brief: MissionBrief },    // default for non-trivial; moltke drives end-to-end (incl. prompt rewrites / tool building → hopper)
     ExecutePlan { plan_ref: PlanRef },       // plan-mode artefact → moltke turns into contract
     AskUser { question: &'static str },      // medium+ risk only
 }
@@ -497,9 +490,9 @@ For plan-mode-produced plans:
 > @hopper execute mission package bd-60
 > @oracle survey ADR coverage of the event-store storage layer
 > @linus review the unsafe blocks in crates/ffi/
-> @automaton write a tool to find every .rs file whose tests block lacks #[cfg(test)]
+> @moltke contract a tool to find every .rs file whose tests block lacks #[cfg(test)] (hopper builds it in scripts/)
 > @gardener clean up after package rename-getcwd-1730300000
-> @turbo rewrite my draft prompt for claude-opus with .ooda/ artefact output
+> @moltke rewrite my draft prompt for claude-opus with .ooda/ artefact output (hopper executes the edit)
 ```
 
 ### What good looks like
@@ -509,7 +502,7 @@ For plan-mode-produced plans:
 - Moltke contracts always have a pre-mortem, `rollback_plan`, and a one-sentence **coupling judgement**. Oracle is consulted (or explicitly skipped with reason) when architectural surface is touched.
 - Hopper's `Result vs intent` is backed by an exit-0 verify command, not vibes. Every mission has bd child tasks; sub-missions are closed when their `verify.mid` goes green.
 - Gardener reports clean bd-state GC outcomes (`closed_epics: [...]`, `retained_open_beads: [...]`) per package; back-briefs accumulating retention as a system-level signal.
-- Automaton always returns a tool description (purpose / inputs / output schema / exit codes / determinism / performance) alongside the run command.
+- Hopper-built tools in `scripts/` always return a tool description (purpose / inputs / output schema / exit codes / determinism / performance) alongside the run command.
 
 ## Role discipline (doctrine, not permissions)
 
@@ -519,12 +512,12 @@ role-creep. The role separation is doctrinal:
 - `copernicus` observes (no hypotheses, no decisions).
 - `feynman` orients (no decisions, no execution).
 - `moltke` decides and commands.
-- `hopper` executes (verify-before-claim).
+- `hopper` executes (verify-before-claim) — mission code/content changes and
+  mechanical traversal tools built as in-repo `scripts/` content work.
 - `linus` reviews Rust code pre-merge (read-only; no edits, no decisions).
 - `hamilton` assures a merged revision post-merge (read-only; no edits, no
   fixes, no decisions; findings go to moltke).
 - `oracle` informs about architecture (no decisions).
-- `automaton` builds tools (no business logic).
 - `gardener` closes bd state and reclaims authorized mission-repository Cargo build artifacts (never touches source files or arbitrary working trees).
 
 An agent stepping outside its role is a doctrine violation even though the
@@ -555,13 +548,11 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 │   ├── moltke.md                Decide / supreme commander — mission command, two-loop owner
 │   ├── hopper.md                Act — verify-before-claim execution
 │   ├── gardener.md              Garbage collect — close completed bd epics
-│   ├── automaton.md             Specialist — Rust CLI tool-builder for scripts/
 │   ├── oracle.md                Specialist — ADR-driven architectural guidance
 │   ├── linus.md                 Act — Rust-specialist code reviewer, pre-merge (read-only)
-│   ├── hamilton.md              Assurance — post-merge reviewer of merged revisions (read-only)
-│   └── turbo.md                 Specialist — prompt rewriter (P1–P12 recipe)
+│   └── hamilton.md              Assurance — post-merge reviewer of merged revisions (read-only)
 ├── turbo/
-│   └── prompt-activation-recipe.md   P1–P12 recipe; single source of truth for turbo
+│   └── prompt-activation-recipe.md   P1–P12 recipe (retired turbo workflow; non-agent reference)
 ├── plugins/
 │   ├── searxng.mjs              Web search tool + Moltke chat.message readiness hook
 │   └── tracer.mjs               Session trace writer → .ooda/traces/

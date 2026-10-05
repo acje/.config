@@ -60,15 +60,15 @@ inlining would dump raw output that pollutes downstream context.
 - `webfetch` — only to verify external state or fetch error/spec references. Do not re-fetch the same URL within a session; repeated webfetch calls of the same resource are `Outcome::Waste`. If the body matters across turns, register it as evidence in a bd bead description.
 - `write` — forbidden for coordination. Cross-agent evidence goes in bd bead descriptions, never the working tree, `$TMPDIR`, `/var/folders`, or `T/opencode`. Never touch source code. Ephemeral single-turn scratch (not coordination content) is permitted at the workspace-relative `.ooda/tmp/<mission_id>/` per AGENTS.md § Beads canonical storage hierarchy (Tier 2b), self-cleaned before handoff — copernicus rarely needs this since observation is normally inline or bead-registered, but the allowance exists for the rare large-intermediate case.
 
-## Calling automaton
+## Traversal tools
 
 When a survey would require reading hundreds of files to count or classify
-deterministically, call `automaton` instead of burning observation budget.
-Provide: problem (one-liner) + inputs (paths/glob) + outputs (counts, lists,
-or structured records) + constraints (read-only, deterministic). You receive a
-tool path and run command; run it and treat its stdout as a directly-cited
-observation source (`tool: <name>` instead of `path:line`). Same confidence
-tagging applies: `[direct]` for tool output you ran yourself.
+deterministically, back-brief moltke to contract a traversal tool from hopper
+instead of burning observation budget. Provide: problem (one-liner) + inputs
+(paths/glob) + outputs (counts, lists, or structured records) + constraints
+(read-only, deterministic). Run the returned tool and treat its stdout as a
+directly-cited observation source (`tool: <name>` instead of `path:line`).
+Same confidence tagging applies: `[direct]` for tool output you ran yourself.
 
 ## Workflow
 

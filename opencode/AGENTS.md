@@ -13,9 +13,7 @@ assigned role; build mode defaults to `@moltke` for all non-trivial work. Scale 
 | `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review (**pre-merge, mandatory**) | hopper (TDD pair programming), moltke | `review:approved` / `review:needs-work` / `review-report` |
 | `hamilton`    | Assurance  | Architectural alignment & assurance verdict (**runs while waiting on GitHub Actions**) | moltke (triage) | `assurance-report` / `assurance-finding` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
-| `automaton`   | Specialist | Rust CLI binary in `scripts/` (persistent) | caller (consumes stdout) | none                              |
 | `gardener`    | GC         | Reclamation report; closes mission epic, spent scaffolding, and guarded Cargo cleanup | moltke → user | none                       |
-| `turbo`       | Specialist | Rewritten prompt text (leaf-only; never in-place edits) | user                | none                                |
 
 Conventions: rows are roster order, not invocation order. "Handoff target" is the agent that consumes the primary output; back-briefs route to moltke regardless (see § Back-brief protocol). Bead labels follow bd's `<dimension>:<value>` convention (see § Beads → Label conventions).
 
@@ -246,9 +244,9 @@ User: "Review the unsafe blocks in crates/ffi/."
 → `linus` (Rust-specialist review, unsafe soundness analysis, cargo-audit/deny). NOT the generic `code-review` skill — Rust deep-dive routes to linus. Linus registers a `review-report` evidence bead and hands back verdict.
 </example>
 
-<example name="automaton-for-control-flow">
-Hopper mid-mission: "I need to find every .rs file under crates/ whose tests block lacks #[cfg(test)]." Hundreds of files, deterministic.
-→ call `automaton` with problem + inputs + output shape. Receive tool path + run command. Run it. Consume stdout. Resume mission.
+<example name="tool-building-for-control-flow">
+A mission needs deterministic many-file traversal: "find every .rs file under crates/ whose tests block lacks #[cfg(test)]".
+Moltke contracts hopper to build and verify a small Rust CLI in `scripts/`, run it, and consume its stdout as evidence.
 </example>
 
 ## How to invoke
@@ -426,8 +424,8 @@ Caveats:
 comments. No `//` line comments, no `/* … */` block comments — no
 exceptions for `// SAFETY:`, `// TODO`, `// FIXME`, `// NOTE`,
 `#[allow(...)]` justifications, commented-out code, or "why" annotations.
-Applies to every agent producing Rust source: `hopper`, `automaton`,
-`linus` (when suggesting fixes), and any other.
+Applies to every agent producing Rust source: `hopper`, `linus` (when
+suggesting fixes), and any other.
 
 **Doc comments are not a default home for rationale.** Write `///` or
 `//!` only when documentation is part of the code contract:
@@ -633,17 +631,17 @@ the stated contract. These are findings through existing review tiers, not
 new labels or a fleet-wide CI gate. New or edited enforcement guards still
 require plant → fail → revert → clean evidence (§ Code-quality methods).
 
-## When to call automaton
+## Tool building in `scripts/`
 
-Any agent (including hopper and gardener) may call `automaton` when it hits a
-control-flow problem too large to solve token-efficiently in-context — walking
-many files, deterministic transforms, graph traversals, large-scale exact text
-munging. Automaton writes a small Rust CLI tool to `scripts/` as a cargo binary;
-the calling agent then runs it via `cargo run --bin <tool>` and consumes its
-stdout. Tools are persistent — reuse before rebuild.
+Deterministic traversal that would be too large to solve token-efficiently
+in-context — walking many files, deterministic transforms, graph traversals,
+large-scale exact text munging — is mission-scoped content work: moltke
+contracts hopper to write a small Rust CLI tool to `scripts/` as a cargo
+binary; hopper verifies and runs it via `cargo run --bin <tool>` and consumes
+its stdout. Tools are persistent — reuse before rebuild.
 
 Heuristic: if you catch yourself about to simulate a for-loop in tokens, stop
-and call automaton.
+and contract the tool to hopper.
 
 ## Directed Opportunism
 
@@ -696,8 +694,9 @@ guard-bite proof, changed security posture and known correctness failures are
 blocking pre-merge, and "Hamilton will catch it" is never a valid deferral
 (`agents/hamilton.md` Rule 1). Non-Rust diffs still route pre-merge to the
 `code-review` skill, since linus halts without `.rs` files.
-Internal role workflows are not additional fleet OODA loops. Automaton and
-turbo support scoped work; gardener closes mission state. Plan mode may consult
+Internal role workflows are not additional fleet OODA loops. Tool building
+and prompt rewriting are mission-scoped code/content work executed by hopper
+under moltke's contract; gardener closes mission state. Plan mode may consult
 oracle without starting tactical execution.
 
 ## Back-brief protocol
@@ -925,8 +924,9 @@ post-verification mission-repository Cargo artifact cleanup (Rule 3).
 When asked to improve an agent prompt, mode prompt, model choice, or tool
 permission set based on traces, run the standard chain:
 
-1. **`copernicus`** reads the chosen trace files (`rg`, `jq`, or commission
-   `automaton` if control flow exceeds in-context budget). Surfaces
+1. **`copernicus`** reads the chosen trace files (`rg`, `jq`, or via a
+   moltke-contracted hopper tool if control flow exceeds the in-context
+   budget). Surfaces
    patterns: repeated tool sequences, ignored doctrine rules, places where
    permission was asked / denied (surfaced as `kind: "event"` with
    `input.event.type == "permission.asked"` / `"permission.replied"` —
@@ -955,7 +955,7 @@ you pick the runs that matter.
 
 - No replay harness. opencode has no hook for re-running a session.
 - No automated A/B testing of prompts. Sample size is 1; trust judgement.
-- No reader CLI by default. Build one via `automaton` only when grep/jq
+- No reader CLI by default. Contract hopper to build one only when grep/jq
   becomes the bottleneck.
 
 ### Attended-tool outcomes
@@ -1115,7 +1115,7 @@ Re-measure before relying on one (§ Iteration speed #2).
 
    - **(a) Bodies that cannot live in a bead** — binary or oversized
      artefacts, tracer output (`.ooda/traces/`), and user-facing generated
-     docs such as turbo rewrites, code-review reports, and PRDs.
+     docs such as prompt rewrites, code-review reports, and PRDs.
      Cross-agent material staged here still needs a bead pointer
      (`artefact: bd-NNN`); the file path is never itself a cross-agent
      handoff artefact.
@@ -1462,7 +1462,7 @@ Hopper records TDD boundary events; linus records review verdicts via
 
 ### User-facing artefacts vs cross-agent evidence
 
-Generated artefacts that are user-facing local outputs (turbo prompt rewrites,
+Generated artefacts that are user-facing local outputs (prompt rewrites,
 generic `code-review` skill reports, PRD/source artefacts) may live under
 `.ooda/` and need no bead. The moment such an artefact becomes cross-agent
 handoff evidence, register an evidence bead (Bucket A) and pass the bead id;
