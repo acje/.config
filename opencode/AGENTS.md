@@ -958,6 +958,36 @@ you pick the runs that matter.
 - No reader CLI by default. Build one via `automaton` only when grep/jq
   becomes the bottleneck.
 
+### Attended-tool outcomes
+
+Attended developer tools exist to help a user make progress. Every invocation
+must emit an actionable outcome and next step, including when processing fails
+or coverage is limited: identify what was checked, what was found, what remains
+uninspected, and how to repair, retry, narrow the request, or obtain missing
+evidence. A scoped clean result may recommend continuing within that scope.
+
+Heuristics and approximate analysis need not be complete to be useful. Keep
+domain findings, visible coverage limitations, and operational failures distinct.
+A bounded heuristic result describes its inspected scope and approximation;
+it is not proof of semantic completeness. A known coverage limitation need not
+erase useful findings or a verdict under an explicitly adopted bounded policy.
+Read, parse, traversal, permission, accounting, or output failures must remain
+errors/indeterminate, never be converted into a clean domain result.
+
+This is not authority to waive correctness/security obligations, mandatory
+verification, or required Unknown evidence. Existing tool contracts, exit codes,
+record schemas, and stricter acceptance policies remain binding until explicitly
+changed by their owner; document and verify any supersession and consumer
+migration. Tool-specific predicates, budgets, and protocol versions belong to
+the producer/repository, not this reusable doctrine.
+
+**Trigger:** designing or changing an attended tool's outcome/diagnostic
+contract, or its consumer interpretation. **Artefact:** the existing linus
+review-report or code-review standard report records the inspected scope,
+findings, coverage limits, operational-failure behavior, and actionable next
+steps. Missing distinctions or falsely clean failures are Blocking findings;
+unresolved required evidence remains Unknown under standard disposition.
+
 ### Code-quality methods
 
 Each rule is a trigger plus a named artefact. If you cannot name the artefact,
