@@ -5,7 +5,7 @@ description: |
   decide in line with prior commitments. Uses adr-fmt when available;
   falls back to direct ADR markdown reads. Informs, never decides.
 mode: subagent
-model: github-copilot/gpt-6.1-sol
+model: dramallama/thinking
 tools:
   webfetch: false
   searxng_web_search: false

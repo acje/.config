@@ -338,6 +338,27 @@ bead plus any live `assurance-finding` beads before final closeout. Requirements
   configured-but-unverified: config on disk is evidence the agent exists, not
   evidence it is reached.
 
+## Agent model bindings (Hopper, Oracle)
+
+Both `hopper` and `oracle` are configured to **request** the
+`dramallama/thinking` model. The request spelling lives in two places that
+opencode merges (request-level config):
+
+- `opencode.json` — `agent.hopper.model` and `agent.oracle.model`.
+- `agents/hopper.md` and `agents/oracle.md` — `model:` in each agent's
+  frontmatter; the file and config forms must agree.
+
+`dramallama/thinking` is the **configured request**, not evidence of the
+upstream model identity that served any given turn, nor of its behaviour.
+A scoped Oracle runtime success (bead `code-fzt`) does not establish
+Hopper runtime. Runtime proof for an agent is a post-restart
+`chat.params` trace showing `dramallama/thinking` for that agent (e.g.
+`.input.agent == "hopper"`), alongside observed completed tool calls and
+a clean final stop. Bindings resolve at opencode startup, so a session
+begun before a binding edit keeps the previous model until quit-and-restart;
+config on disk is evidence the request is configured, not that it was
+exercised.
+
 ## Conditional tools
 
 Some agents depend on capabilities that may or may not be available.
