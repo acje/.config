@@ -8,7 +8,7 @@ description: |
   Use first when
   investigating any non-trivial problem or answering a factual external question.
 mode: subagent
-model: github-copilot/gpt-6.1-sol
+model: dramallama/thinking
 tools:
   webfetch: true
   searxng_web_search: true

@@ -7,6 +7,7 @@ description: |
   live in bead `description` fields and survive closure — gardener does not delete
   bead bodies. Closes the loop.
 mode: subagent
+model: dramallama/thinking
 tools:
   webfetch: false
   searxng_web_search: false

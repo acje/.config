@@ -181,7 +181,7 @@
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6.1-sol",
+      "model": "dramallama/thinking",
       "reasoningEffort": "high"
     },
     "feynman": {
@@ -211,14 +211,8 @@
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6.1-sol",
+      "model": "dramallama/thinking",
       "reasoningEffort": "high"
-    },
-    "dramallama": {
-      "prompt": "{file:./prompts/build.md}",
-      "model": "dramallama/code",
-      "reasoningEffort": "high",
-      "mode": "primary"
     }
   }
 }
