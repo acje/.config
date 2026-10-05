@@ -39,14 +39,15 @@ define policy. Linus uses read-only modes only.
 `--dry-run` and `--context <N>` require `--rewrite`. Do not use the deprecated
 `--rustdoc-link-idioms` alias. Default lint is already read-only.
 
-## Opt-in two-threshold gate
+## Opt-in two-threshold gate — identify the policy version
 
 Select thresholds from the mission/repository policy, not this example. Supply
 both explicitly: `A <= E`; equal thresholds, including zero, are valid. The
 legacy default of 80 does not supply an omitted gate threshold. Gate mode
 conflicts with `--rewrite`, `--dry-run`/`-n` and `--rustdoc-link-idioms`.
 
-Canonical-source example (verified mechanics: evidence `config-p7w`):
+Canonical-source example (matching source contract: CF-0008 and
+`docs/record-format.md`, policy v2):
 
 ```sh
 cargo run --locked -- --check-doc-budget --doc-advisory-words 80 --doc-max-words 120 --max-warning-files 0 .
@@ -69,19 +70,47 @@ undecided items or errors. All scoped files are still scanned; summaries retain
 full and shown/hidden totals. `unlimited` removes the detail cap. The cap is not
 accepted with rewrite or the deprecated alias.
 
+Policy v2 is a **bounded-source** check, not a macro-expansion check. Each
+contiguous literal doc-attribute block inside macro tokens is counted once at
+its visible spelling, labelled `macro NAME source block`. An interleaved
+non-doc attribute splits the block and can under-count one expanded item's
+combined prose. Generated item identity, repetition multiplicity, nonliteral
+or conditional macro docs and synthesized prose remain unevaluated.
+
+Macro `uninspected_macro_body` counters are coverage evidence, not required
+uncertainty. At each threshold, required undecided is
+`undecided - uninspected_macro_body`; only required uncertainty dominates the
+bounded verdict. Macro detail events use `coverage_limitation`, not
+`doc_lint_undecided`. Do not erase coverage counts or call a bounded pass
+complete documentation coverage.
+
 | Gate exit | Meaning |
 |---|---|
-| `0` | Pass: all inspected payloads evaluated, no enforced findings, no undecided items at either threshold, no errors. Advisory-only findings pass. |
-| `1` | Confirmed enforced violation with no undecided items or errors. |
-| `2` | Unknown/error, overriding any confirmed violation: invalid CLI/thresholds/root, walk/read/parse errors, undecided at either threshold, empty Rust scope, counter overflow, or output write/flush failure. Never treat it as pass or merely an enforced violation. |
+| `0` | Bounded-source pass: no enforced findings, no required undecided at either threshold, no errors. Advisory-only findings and macro coverage limitations pass. |
+| `1` | Confirmed enforced source violation with no required undecided or errors. |
+| `2` | Unknown/error, overriding any confirmed violation: invalid CLI/thresholds/root, walk/read/parse errors, required nonmacro unreadable or configuration-dependent docs at either threshold, empty Rust scope, counter overflow, or output write/flush failure. Never treat it as pass or merely an enforced violation. |
 
-Gate JSON Lines use `kind` and `version: 1`: `policy_detail` on stdout,
-`policy_summary` on stderr. Legacy records instead use `record` and `v`
+Gate JSON Lines use `kind` and `version: 2`: `policy_detail` on stdout,
+`policy_summary` on stderr. The summary includes `coverage="bounded-source"`
+and nonempty `next_step`; retain that actionable guidance alongside findings,
+coverage limits and errors. Legacy records instead use `record` and `v`
 (doc-lint/diagnostics v3); a legacy `run_error` may accompany gate output on
 stderr. Dispatch by record family/version, not a guessed unified schema. Keep
 the producer exit and both streams; missing/corrupt output is not a clean
-verdict. The envelope and mechanics above come from `config-p7w`; consult the
-matching canonical record grammar only when access is authorized.
+verdict. Reject unsupported policy versions, malformed records, duplicate keys
+and unknown discriminators rather than reinterpret them as a clean result.
+Consult the matching canonical record grammar only when access is authorized.
+
+**Installed legacy distinction:** the canonical installed revision
+`e45de7ef3b0fcd9a1ec299b9026b14fb5b0cf534` emits policy v1. Its gate treats
+all undecided items, including macro bodies, as Unknown exit 2. CF-0008 v2
+does not change that binary or legacy lint/rewrite behavior. Check installed
+provenance and actual record version; help/version alone does not prove v2.
+A local candidate run is diagnostic, not installed canonical adoption and
+not a substitute for a repository's mandatory installed gate. Publication
+and subsequent canonical git installation require separate authority and a
+remotely available revision; never install from a local path or waive an
+Unknown installed obligation because the candidate passes.
 
 ## Legacy lint / preview / write exits (not the gate)
 
@@ -101,8 +130,9 @@ are plain text: do not feed mixed output wholesale to a JSON parser. Preserve
 non-JSON stderr as diagnostics. Consult the installed version's help and,
 when authorized, `docs/record-format.md` in its canonical source for grammar.
 
-Macro-valued doc attributes and doc attributes inside macro token bodies can
-be undecided. Docs synthesised by procedural macros without a spelled `doc`
+Legacy lint keeps macro-valued doc attributes and doc attributes inside macro
+token bodies undecided; v2 gate separates macro coverage as described above.
+Docs synthesised by procedural macros without a spelled `doc`
 token are not detected. Neither lint/gate exit 0 nor lexer-based rewriting proves
 semantic correctness, complete documentation coverage or fleet compliance.
 
