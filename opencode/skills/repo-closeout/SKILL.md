@@ -206,6 +206,20 @@ cleanup pass after that command before claiming success.
    before execution; ensure concurrent builds/writers cannot change that scope
    during cleanup. Changed paths, contents or ownership require renewed
    inspection/authority; inability to establish a stable scope blocks cleanup.
+   **Single-user, repo-owned target carve-out.** For a resolved canonical
+   target directory that is inside the mission repository and is a plain Cargo
+   build-output directory (contains `.fingerprint/`, `build/`, `deps/`,
+   `incremental/`, etc.), with no `CARGO_TARGET_DIR` environment, `--target-dir`
+   CLI or Cargo config redirect (metadata `target_directory` equals the resolved
+   path), no active cargo/rustc/build process or concurrent writer (repo not
+   mid-build), and no target-directory symlink, sharing with another
+   repo/worktree or external/shared location, `cargo clean` is authorized
+   without the unattainable stable-writer-exclusion guarantee. The carve-out
+   does not weaken ownership proof for external/shared/symlinked targets (still
+   Blocked), the `rm`/`git clean` prohibition (still forbidden),
+   no-rebuild-after-clean (still required) or fail-closed-on-Unknown (still
+   required); where any condition is unmet or Unknown, the strict requirement
+   above continues to bind.
    Use only supported `cargo clean` options in that exact context, explicitly
    selecting the resolved manifest and target directory where supported.
    Account for distinct build directories too; unresolved deletion semantics
