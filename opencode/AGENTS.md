@@ -9,8 +9,8 @@ assigned role; build mode defaults to `@moltke` for all non-trivial work. Scale 
 | `copernicus`  | Observe    | Evidence file + bd bead (pure sensor; no hypotheses) | feynman, moltke, or caller | `evidence`                  |
 | `feynman`     | Orient     | Ranked hypotheses + falsifiers          | moltke                   | `evidence` (orientation subtype)    |
 | `moltke`      | Decide     | Mission contract / package + pre-mortem | hopper (exec), feynman (re-orient), oracle (arch input) | mission epic + `mission:<id>` |
-| `hopper`      | Act        | Verified commits per TDD increment      | linus (pair review), moltke (complete) | `review-request`         |
-| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review (**pre-merge, mandatory**) | hopper (TDD pair programming), moltke | `review:approved` / `review:needs-work` / `review-report` |
+| `hopper`      | Act        | Verified commits per TDD increment      | caller (moltke: review-ready handoff), moltke (complete) | `review-request`         |
+| `linus`       | Act        | APPROVE / NEEDS WORK verdict on Rust review (**pre-merge, mandatory**) | caller (moltke; verdict relayed to hopper) | `review:approved` / `review:needs-work` / `review-report` |
 | `hamilton`    | Assurance  | Architectural alignment & assurance verdict (**runs while waiting on GitHub Actions**) | moltke (triage) | `assurance-report` / `assurance-finding` |
 | `oracle`      | Specialist | ADR summary (binding constraints, gaps) | moltke (Decide input) or plan-mode user | `oracle-summary`         |
 | `gardener`    | GC         | Reclamation report; closes mission epic, spent scaffolding, and guarded Cargo cleanup | moltke → user | none                       |
@@ -1376,8 +1376,10 @@ pair programming:
 
 1. Hopper creates a review-request bead (`bd create --type task --labels review-request`)
    with the diff context in the bead's `description` field.
-2. Hopper dispatches `@linus` synchronously via `Task(linus)` for pair-programming
-   review on each non-trivial Rust increment. Linus picks up the review-request bead.
+2. Hopper hands `review-ready` to its caller (moltke). The caller dispatches
+   `@linus` (Rust) or the generic `code-review` skill (non-Rust) on the bead for
+   pair-programming review on each non-trivial increment. Linus picks up the
+   review-request bead.
 3. Linus reviews, comments APPROVE or NEEDS WORK with actionable findings.
 4. On APPROVE: linus performs three bd actions atomically:
    (a) relabels the review-request bead `review-request` → `review:approved`
@@ -1389,10 +1391,12 @@ pair programming:
        (`bd close <id> --reason "review:approved"`) so the bead does not linger
        open in `review:approved` state.
    Keeping (a) before (c) preserves APPROVE/NEEDS-WORK signal on closed beads
-   for historical bd queries. Hopper proceeds.
+   for historical bd queries. The verdict returns to the caller, which relays
+   approval to hopper; hopper then proceeds (commits).
 5. On NEEDS WORK: linus relabels `review:needs-work`. The round-N report bead
-   stays OPEN — its findings are live, unactioned work. Hopper fixes,
-   re-requests. **The cap counts repeat rejections, not rounds.** A round that
+   stays OPEN — its findings are live, unactioned work. The caller relays
+   needs-work to hopper; hopper fixes and re-requests via a `review-ready`
+   handoff, and the caller re-dispatches. **The cap counts repeat rejections, not rounds.** A round that
    surfaces a *new* defect class is convergent discovery and does not consume
    the cap; two rounds rejecting on the *same* class →
    `SurpriseKind::ReviewRejected` → moltke. Linus states which case applies in

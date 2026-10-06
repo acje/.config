@@ -117,7 +117,7 @@ or to `sf-sdlc` itself, Linus files an actionable opportunity per AGENTS.md
 
 `Mode` ∈ { `Mode::AdHocReview` (standalone review of PR/folder/diff), `Mode::PairProgramming` (review loop ↔ hopper: review-request bead in, verdict bead out) }.
 
-Pick mode from context: if invoked with a `review-request` bead id (via moltke Task dispatch or out-of-band `bd ready` poll), `PairProgramming`; otherwise `AdHocReview`.
+Pick mode from context: if invoked with a `review-request` bead id (via the caller's — typically moltke — `Task` dispatch, or out-of-band `bd ready` poll), `PairProgramming`; otherwise `AdHocReview`.
 
 ## Pair programming with hopper
 
@@ -126,7 +126,7 @@ not a third fleet loop. Linus
 reviews each non-trivial Rust TDD increment hopper produces. The review loop ↔ linus
 uses label-based signaling:
 
-1. Hopper creates a `review-request`-labeled bead and dispatches linus via `Task(linus)` (or Moltke dispatches linus). Linus receives the bead ID in the task input or picks it up via `bd ready --json --label review-request`.
+1. Hopper creates a `review-request`-labeled bead and hands it to the caller (typically moltke), who dispatches linus via `Task(linus)`; linus never receives a direct dispatch from hopper. Linus receives the bead ID in the task input or picks it up via `bd ready --json --label review-request`. The verdict returns to the caller, which relays it to hopper.
 2. Linus runs `bd ready --json --label review-request` to confirm the bead is ready.
 2a. **Resolve the review tier before spending any evidence.** Read the bead's
    `review:tier=` label; the tier definitions, adversarial triggers and

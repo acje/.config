@@ -40,8 +40,10 @@ flowchart LR
         direction TB
         H[Hopper · Execute and verify]
         L[Linus · Review Rust]
-        H -->|Review request| L
-        L -->|Verdict and findings| H
+        H -->|Review-ready bead| M
+        M -->|Dispatch review| L
+        L -->|Verdict| M
+        M -->|Verdict relay / approval| H
     end
 
     M -->|Observation task| C
@@ -51,7 +53,6 @@ flowchart LR
     O -->|Constraints and gaps| M
     M -->|Intent, bounds and contract| H
     H -->|Results and verification evidence| M
-    L -->|Independent review verdict| M
 
     Strategic -.->|Surprise / Opportunity backbrief| M
     Tactical -.->|Surprise / Opportunity backbrief| M
@@ -76,9 +77,9 @@ prompt rewrites under moltke's contract. Material backbriefs route to Moltke.
 Exactly two fleet loops pivot on moltke:
 
 - **Strategic OODA** — Copernicus observes, Feynman orients, Oracle informs architectural constraints, Moltke decides intent and bounds. Closes on an actionable contract/package.
-- **Tactical OODA** — Hopper executes/verifies, Linus reviews Rust, Moltke commands and independently checks results. Closes on verified completion or abandonment; surprise may reopen strategic work.
+- **Tactical OODA** — Hopper executes/verifies and returns review-ready; Moltke dispatches reviewers (Linus Rust / code-review non-Rust) and relays verdicts back to Hopper, and independently checks results. Closes on verified completion or abandonment; surprise may reopen strategic work.
 
-Hopper ↔ Linus review iteration is tactical feedback, **not a third OODA loop**.
+The caller-owned review iteration (hopper review-ready → caller → reviewer → caller → hopper) is tactical feedback, **not a third OODA loop**.
 Review labels, tiers and two repeat rejections on the same defect class remain
 unchanged. Internal role workflows are not additional fleet loops.
 

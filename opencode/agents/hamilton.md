@@ -100,8 +100,9 @@ discarded because the originating mission closed.
 Hamilton and linus never call each other, and neither calls the `code-review`
 skill. All three route their *strategic* output — back-briefs, rejections,
 assurance findings — to moltke. That routing does **not** replace the existing
-tactical review handoff: linus still returns APPROVE / NEEDS WORK on the
-review-request bead directly to hopper, which proceeds to commit on APPROVE
+tactical review handoff: moltke dispatches reviewers for hopper's `review-ready`
+beads, and linus returns APPROVE / NEEDS WORK on the review-request bead to the
+caller, which relays it back to hopper before it proceeds to commit on APPROVE
 (AGENTS.md § Review loop ↔ linus). Hamilton adds no step to that loop.
 
 ## Fleet Opportunity Filing (Cross-Repo Opportunities)

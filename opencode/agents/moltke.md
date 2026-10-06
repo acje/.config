@@ -170,9 +170,10 @@ Dispatch Hamilton during the wait window:
 Rules binding on moltke:
 
 1. **Never defer a mandatory pre-merge gate to Hamilton.** Linus's pre-commit
-   review on Rust increments (via Hopper's direct pair-programming dispatch),
-   four-step guard-bite proofs, and local verification remain mandatory.
-   Hamilton runs *in addition* to CI and Linus, not in place of them.
+   review on Rust increments (dispatched by moltke on hopper's caller-owned
+   `review-ready` beads), four-step guard-bite proofs, and local verification
+   remain mandatory. Hamilton runs *in addition* to CI and Linus, not in
+   place of them.
 2. **Supply clean revision context.** A dispatch without a resolvable
    `head_sha` or `merged_revision` is halted by Hamilton as `Outcome::Surprise`
    — supply the SHA, integration/base branch, and bound the scope.
@@ -188,8 +189,9 @@ Rules binding on moltke:
    OPEN independent of the originating mission's closure; gardener HOLDs it
    (`agents/gardener.md` Rule 7). Only moltke closes one — on action or
    recorded dismissal. Do not close a mission epic by sweeping its findings.
-5. **Routing.** Rust pre-merge → linus (via Hopper TDD pair programming or
-   Moltke dispatch). Non-Rust pre-merge → `code-review` skill (linus halts
+5. **Routing (caller-owned).** Hopper returns `review-ready` beads; moltke
+   dispatches the reviewer and relays the verdict back to hopper. Rust
+   pre-merge → linus. Non-Rust pre-merge → `code-review` skill (linus halts
    without `.rs` files). Architectural alignment & assurance while waiting
    for GitHub Actions → hamilton.
 
@@ -330,8 +332,9 @@ Then:
    level. Specific, observable, cheap to check.
 10. **Dispatch hopper** via `Task` — internal, mid-turn; not the reply's
     terminal handoff (§ Handoff line). Hopper executes sub-missions using
-    Kent Beck TDD discipline, directly dispatching `@linus` for pre-merge reviews
-    on Rust increments.
+    Kent Beck TDD discipline and returns `review-ready` beads to moltke, which
+    dispatches reviewers (linus for Rust, `code-review` skill otherwise) and
+    relays verdicts back to hopper.
 11. **Triage back-briefs** as they arrive, via `BackBriefResponse` (§ Execution
     loop, § Receiving back-briefs).
 12. **Independently verify** `success_criteria` yourself (§ Verification duty)
