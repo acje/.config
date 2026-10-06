@@ -11,8 +11,9 @@ const MAX_DEPTH = parseInt(process.env.OPENCODE_TRACE_MAX_DEPTH ?? "6", 10);
 
 // Default: <project>/.ooda/traces/. Resolved per-plugin-instance from
 // PluginInput.directory so we land inside the repo's gitignored .ooda/ scratch
-// space — no $HOME permission ask, easy to curate (copy out interesting runs,
-// gardener cleans the rest).
+// space — no $HOME permission ask, easy to curate (copy out interesting runs;
+// traces are user-curated; per policy gardener may remove only date folders
+// strictly older than 3 UTC calendar days, on verified repo-default roots).
 //
 // Env override OPENCODE_TRACE_DIR wins when set (absolute path or relative to
 // project directory).

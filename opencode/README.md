@@ -102,7 +102,9 @@ effects gaps motivate evidence, intent checks and verified feedback.
   touches architectural surface (data model, public API, cross-module
   contracts, deployment topology). Surfaces relevant ADRs and any tensions.
 - `gardener` — invoked by moltke on package complete to close bd epics
-  and surface retained-open beads. `.ooda/traces/` curation is the user's job.
+  and surface retained-open beads. `.ooda/traces/` curation is the user's job;
+  gardener may remove eligible date folders strictly older than 3 UTC calendar
+  days per gardener.md Rule 3.
 
 Tool building (a small Rust CLI in `scripts/`) and prompt rewriting are not
 specialist roles: they are mission-scoped code/content work executed by
@@ -237,7 +239,7 @@ generation.
 4. **Canonical few-shot examples** — every agent ends with at least one trivial and one complex worked example.
 5. **Start broad, narrow down** — encoded in copernicus and feynman workflows.
 6. **Just-in-time context via beads** — large evidence lives in the bd bead `description`; `.ooda/` is only the narrow escape hatch for bodies that genuinely cannot live in a bead, still bead-pointed. Handoffs pass the bead id (`bd-NNN`), not the body or path. Avoids the "telephone game" through the orchestrator.
-7. **Compaction & note-taking** — moltke creates a bd epic per mission; hopper closes child task beads on verify-green; gardener closes the epic and surfaces retained-open beads when missions complete. Gardener does not prune `.ooda/` files.
+7. **Compaction & note-taking** — moltke creates a bd epic per mission; hopper closes child task beads on verify-green; gardener closes the epic and surfaces retained-open beads when missions complete. Gardener does not prune `.ooda/` files, save the age-bounded trace-retention grant (gardener.md Rule 3).
 8. **Token-efficient tool design** — hopper writes a Rust CLI to `scripts/` rather than simulating a for-loop in tokens.
 9. **End-state evaluation** — hopper's "Result vs intent" check is grounded in moltke's `success_criteria`, not adherence to prescribed steps.
 10. **Interleaved thinking between tool calls** — feynman's stress-test loop and hopper's verify-after-each-step enforce this.
@@ -380,8 +382,9 @@ and bodies that genuinely cannot live in a bd bead. Cross-agent observations,
 orientation, mission contracts, journals, and oracle summaries live in bd bead
 `description` fields by default. If cross-agent material is staged under
 `.ooda/`, it still needs a bead pointer; handoffs pass `bd-NNN`, never the file
-path. Gardener does not delete `.ooda/` files; users curate traces and local
-artefacts.
+path. Gardener does not delete `.ooda/` files, save the age-bounded
+trace-retention grant (eligible date folders strictly older than 3 UTC calendar
+days, per gardener.md Rule 3); users curate traces and local artefacts.
 
 `.ooda/traces/` is repo-local, partially redacted and gitignored. It is a
 different store from opencode's own global SQLite database at

@@ -893,7 +893,7 @@ of one to the other.
 | Written by | `plugins/tracer.mjs` — the plugin contains no database writer | opencode runtime; not this repo's code |
 | Content | **Filtered** hook events only (`tracer.mjs:239-251`) — not a complete session archive | Not established here |
 | Redaction | **Partial**: selected headers/keys plus Bearer/GitHub/AWS patterns, with length/depth caps (`tracer.mjs:8-10,37-113`). Partial redaction is not proof of secret-free output | **Unverified** — no redaction claim is established |
-| Retention | User-curated; gardener does not curate or delete traces (see below) | **Unverified** — no retention, encryption or purge policy established |
+| Retention | User-curated; gardener may remove date folders strictly older than 3 UTC calendar days on verified repo-default roots (see below) | **Unverified** — no retention, encryption or purge policy established |
 | Git | `.gitignore:43` ignores `.ooda/`; never committed | Outside the repo entirely; not git-managed |
 
 Two consequences follow. First, the tracer's redaction, truncation, gitignore
@@ -903,21 +903,29 @@ inspected at `--help` and `path` level only — schema, content categories,
 redaction, retention and override rules remain **gaps**, and an agent needing
 them must observe them rather than infer them from the tracer.
 
-The comment at `tracer.mjs:15` saying gardener cleans traces contradicts the
-curation doctrine below and is **not** retention-policy authority.
+The comment at `tracer.mjs:15` describes the user retention grant; the
+authoritative age-bounded cleanup procedure is gardener.md Rule 3 and the
+Curation workflow below.
 
 ### Curation workflow
 
 You decide which traces matter. Copy interesting `.jsonl` files out of
-`.ooda/traces/` if you want them long-term. Gardener does not curate or delete
-traces. Don't commit traces — `.ooda/` is gitignored for a reason.
+`.ooda/traces/` if you want them long-term. Gardener does not curate traces,
+but by user grant may remove date folders strictly older than 3 UTC calendar
+days on verified repo-default roots (eligibility and failure handling in
+gardener.md Rule 3). Don't commit traces — `.ooda/` is gitignored for a reason.
 
 **Doctrine for `.ooda/`-only sweeps.** Because `.ooda/` is fully gitignored,
 deletions under that tree produce no git diff and therefore no git commit is
-possible or expected. Pure `.ooda/` deletion sweeps are user-driven local
-cleanup, not gardener mission GC. Gardener's auditable work is bd-state
-mutation (epic closures, label changes, orphan-bead cleanup) plus guarded
-post-verification mission-repository Cargo artifact cleanup (Rule 3).
+possible or expected. Pure `.ooda/` deletion sweeps — standalone, user-driven
+filesystem-only cleanup of saved runs — remain user-only and are never
+gardener mission GC. Gardener's separate age-bounded trace-folder removal
+(Rule 3) is a policy-bound, invocation-triggered retention step with its own
+exact root/eligibility/reporting contract in gardener.md; it is not the pure
+sweep and does not widen it. Gardener's auditable work is bd-state mutation
+(epic closures, label changes, orphan-bead cleanup) plus guarded
+post-verification mission-repository Cargo artifact cleanup (Rule 3) and the
+age-bounded trace-folder removal granted in that rule.
 
 ## Self-improvement
 
@@ -1148,7 +1156,7 @@ All agent-produced state falls into exactly one bucket:
 |---|---|---|---|
 | **A — Coordination & evidence** | Mission epics, sub-mission tasks, cross-agent observation / orientation / summary artefacts, dependency edges, labels, status | bd epic + bd tasks; bodies live in the bead's `description` field | Created by moltke (epics, sub-tasks) or by evidence producers (copernicus, feynman, oracle); closed by gardener on package complete or by linus on review approval |
 | **C — Review loop** | Hopper ↔ linus code-review signalling | bd task with `review-request` / `review:approved` / `review:needs-work` labels; report body in the bead's `description` field | Created by hopper; relabeled and closed by linus on approval or rejection |
-| **D — Runtime tracing + Tier-2 escape hatch** | Tracer JSONL under `.ooda/traces/` (see § Tracing), user-facing generated artefacts, and rare bead-indexed bodies that cannot live in bd. | `.ooda/` files; cross-agent bodies also have a Bucket A bead pointer | User-curated; gardener does not delete files |
+| **D — Runtime tracing + Tier-2 escape hatch** | Tracer JSONL under `.ooda/traces/` (see § Tracing), user-facing generated artefacts, and rare bead-indexed bodies that cannot live in bd. | `.ooda/` files; cross-agent bodies also have a Bucket A bead pointer | User-curated; gardener may remove eligible date folders > 3 UTC calendar days old per Rule 3 |
 
 Bucket membership is exclusive for the coordination record. If it crosses agent
 boundaries, the record belongs in A (bead-indexed, body in description unless
