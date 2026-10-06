@@ -361,7 +361,7 @@ empty, pass `none` rather than dropping it:
 | `mission_epic_id` | bd epic id from contract (e.g. `bd-42`), else `none` |
 | `mission_repository` | canonical repository root path, else `none` / `unknown` |
 | `cargo_clean_authority` | `authorized` (commander default under standing rule) or `skip` (explicit user/mission opt-out) / `none` |
-| `cleanup_context` | evidence bead pointer recording verification build context (cwd, toolchain, manifest, env, config, CLI overrides, writer exclusion), else `unknown` |
+| `cleanup_context` | evidence bead pointer to the shared per-repo record (repo-closeout § Reuse and refresh) — the same record hopper writes at closeout — recording build context (cwd, toolchain, manifest, env, config, CLI overrides), build-output writers and reuse/refresh applicability, else `unknown` |
 
 Task gardener strictly after completing independent verification (§ Verification duty) and confirming all mission deliverables are verified complete; gardener performs cleanup last.
 

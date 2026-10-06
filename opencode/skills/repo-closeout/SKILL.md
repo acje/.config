@@ -9,12 +9,35 @@ Produce an evidence-backed closeout snapshot, not a promise of perpetual
 synchronization. Loading or editing this skill does not invoke closeout.
 Repository instructions, active permissions and mission bounds remain binding.
 
+## Reuse and refresh the shared per-repo record
+
+A closeout unit may reuse unchanged discovery facts from a prior shared
+per-repo record instead of re-running the same commands. A per-repo record
+is the evidence-disposition section of an existing mission/evidence bead
+(§ Report the snapshot), not a new store. Before rediscovering, read any
+record pinned to this repository and its main/remote identity: for each
+fact it supplies, reuse it only while every applicability condition it
+records still holds (same git root, remote and main identity, same scoped
+bead/PR IDs, same revision where reuse is claimed, same build
+contexts/writers); otherwise refresh that fact. Unknown and cross-writer
+state is always refreshed, never reused. Conditional branches change which
+discovery runs; all applicable acceptance and independent-replay
+obligations remain binding — applicability itself is resolved and
+recorded, never assumed, for every obligation a branch could touch.
+Trigger and named artefact: when a closeout unit reuses discovery under
+this section, the named artefact is the per-repo record in the existing
+bead description, and the standard review checklist verifies the record's
+applicability condition held and that reuse never waives a mandatory
+acceptance or independent-replay obligation.
+
 ## Resolve scope and authority before mutation
 
 1. Read repository instructions. Resolve the git root, remote name and URL,
    GitHub `[HOST/]OWNER/REPO`, and the intended main branch. Do not assume
    `origin`, `main`, or the current branch's PR identifies the whole scope.
    Use the tool's `workdir` for that root and quote resolved arguments.
+   Consult the shared per-repo record (§ Reuse and refresh) so unchanged
+   discovery from a prior closeout is reused, not re-run.
 2. Enumerate exact bead IDs/mission labels and all scoped PR IDs/URLs. Record
    base/head branches and stacked relationships; trace the stack through to
    main. A child PR merged into an unmerged parent is not delivered to main.
@@ -52,7 +75,9 @@ Read every scoped task and its completion evidence, including dependency and
 review state. Closed status without supporting verification is insufficient.
 Run the repository/mission's actual verification entries, including declared
 E2E and local CI entry points, or cite still-applicable evidence tied to the
-exact commit and scope. Stale/missing evidence and unfinished beads block
+exact commit and scope. Apply the shared per-repo record's reuse/refresh
+conditions (§ Reuse and refresh); a changed revision or scope forces a re-run
+of the affected entries. Stale/missing evidence and unfinished beads block
 completion. Unfinished tasks must remain open and block closeout; do not close
 tasks just to make the inventory empty. Close genuinely completed scoped tasks
 within authority and verify their actual closed state. If closure authority is
@@ -264,6 +289,20 @@ failed probe or incomplete evidence), with exact remaining work. Partial
 cleanup is not Cleaned. Overall closeout success requires Cleaned for every
 Cargo scope, or justified NotApplicable, in addition to all bead/PR/main gates;
 clean git status alone cannot establish artifact cleanup.
+
+Write the shared per-repo record into the existing mission/evidence bead
+description: git root and bead-store identity, scoped bead/PR IDs, the
+revision (SHAs) at which each reusable fact was observed, its
+command/exit/actor, the applicability condition and refresh reason
+(changed/Unknown/cross-writer), build-output dependencies and final
+cleanup outcome. Later closeout units read this record (§ Reuse and
+refresh). A stale record cannot mark new changes, so the reader actively
+invalidates any newly observed change in root/scope/revision/environment/
+permissions/tool identity/remote state/build writer, or an Unknown, and
+refreshes that fact before reuse. Final git state is always re-checked
+fresh, and the cleanup-time build writer is always re-verified fresh.
+The record is a pointer to retained evidence, never a waiver of any
+acceptance or independent-replay obligation.
 
 Store cross-agent evidence in the existing bead workflow. Under fleet doctrine,
 handoff to moltke for gardener and final reporting; this skill does not replace
