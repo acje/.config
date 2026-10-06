@@ -143,26 +143,28 @@ Restart-staleness).
 
 ## Workflow
 
-1. **Resolve the revision AND establish that what you inspect IS that
-   revision.** Confirm the SHA exists (as the PR head commit or ancestor of the
-   named branch). Then establish correspondence before reading anything:
-   record the working-tree `HEAD` and `git status --porcelain`, and confirm
-   `HEAD` resolves to the named SHA with a clean tree. Every file you read and
-   every command you run must be evidence *about that SHA*; a dirty tree, or a
-   `HEAD` at a different revision, means your reads and test results describe
-   some other state. On mismatch, **halt** with `Outcome::Surprise` to moltke,
-   reporting the named SHA, the observed `HEAD`, and the dirty paths — do not
-   claim validation at the named SHA from a different one. You may **not**
-   `checkout`, `reset`, `stash`, `clean`, or otherwise mutate the tree to
-   create the correspondence: Rule 3 is read-only on source and this step does
-   not widen it. Moltke resolves the mismatch and re-dispatches. Where a
-   read-only worktree at the SHA is already provided in the dispatch, run the
-   same verification **inside that worktree** — its `HEAD` resolves to the named
-   SHA and its `git status --porcelain` is clean — and record that result as the
-   correspondence evidence. The supplied path is where you check, never itself
-   the proof: an unverified worktree path establishes nothing, and a worktree
-   whose `HEAD` or cleanliness fails to check out is the same mismatch halt as
-   any other.
+1. **Assess the revision as source objects, then decide whether runtime
+   evidence is obtainable.** Confirm the SHA exists (as the PR head commit or
+   ancestor of the named branch). Establish source correspondence by reading
+   the target revision's commit objects against the actual checkout's
+   **current diff**: record working-tree `HEAD` and `git status --porcelain`,
+   classify the match (identical tree at the same SHA, identical tree at a
+   rewritten SHA, or genuine drift), and record the limits of a
+   source-only assessment, classifying dirty state as relevant vs unrelated
+   to the scope. Reuse existing valid execution evidence (durable commands,
+   raw exits, revision/input correspondence, stable environment) before
+   running anything; run a check in the actual checkout only when its proof
+   is specifically missing, failed or stale. An unrelated dirty or untracked
+   path does not by itself invalidate relevant runtime evidence. Where
+   relevant inputs do not correspond or the environment is not stable,
+   report `SKIPPED`/`UNKNOWN` with the missing runtime proof rather than
+   claiming execution at the SHA. Never `checkout`, `reset`, `stash`, `clean`,
+   or otherwise mutate the tree to create correspondence (Rule 3 is read-only
+   on source), and never create a worktree/checkout copy as a verification
+   stand-in (AGENTS.md § Single verification state). A commit-object and
+   current-diff assessment is evidence about the source at the SHA; runtime
+   results from a different state are reported with that distinction named,
+   never as validation of the target.
 2. **Bound the scope.** Components/paths named in the dispatch, plus their
    direct resource owners. Record what was excluded.
 3. **Read project rules.** `AGENTS.md`, ADRs where present, and the manifests /
@@ -217,7 +219,7 @@ Findings reuse the existing named artefacts where they apply:
 ```
 Stage: PR_Assurance | PostMerge
 Target revision: <sha> (PR #<num> on <branch> | ancestor of <branch>: yes)
-Revision correspondence: HEAD=<sha> clean | MISMATCH(<observed>, <dirty paths>) | worktree=<path>
+Revision correspondence: source objects <tree/sha match, diff classification, dirty relevant/unrelated> | runtime evidence <actual-checkout HEAD, relevant inputs correspond, env stable> | missing-runtime-proof SKIPPED/UNKNOWN(<reason>)
 Scope: <paths/components reviewed>   Excluded: <what was not reviewed>
 Verdict: Clear | FindingsRaised | Incomplete(<unmet required scope>) | Halted(<reason>)
 Issues: <severity> / <confidence> / <axis> / <path:line> / <finding> / <recommendation>

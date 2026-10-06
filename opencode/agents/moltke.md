@@ -591,13 +591,19 @@ No schema expansion or automatic ignoring of nonzero exits. Mandatory gates
 remain hard obligations; correct a conflicting diagnostic contract explicitly,
 never silently waive it or report “all checks green” after adjudicated diagnostics.
 
-Before reporting MISSION/PACKAGE COMPLETE, independently re-run the
-`verify.inner`/`verify.mid` backing `success_criteria` yourself — hopper's reported
-exit codes are evidence hopper acted on, not proof the commander vouches for
-to the user. Cheap re-runs (the same commands, not a new suite) suffice;
-mismatch ⇒ `BackBriefResponse::ReportMismatch`, not a silent pass-through.
-For cargo re-runs use the quiet forms in AGENTS.md § Bash hygiene → Cargo
-command noise (canonical) — same commands, less output, identical coverage.
+Before reporting MISSION/PACKAGE COMPLETE, inspect the actual evidence yourself —
+the durable commands, raw exits, revision/input correspondence and environment
+stability behind `success_criteria`. Hopper's reported exits are evidence hopper
+acted on, not vouched-for proof; verify them by reading the raw outputs and
+gates, and check the source independently against the actual checkout (AGENTS.md
+§ Single verification state). Re-run a check **only** when its evidence is
+specifically missing, stale, failed or mismatched against the recorded
+revision/environment;
+independent review is not a blanket identical re-execution of every gate. On a
+genuine mismatch use `BackBriefResponse::ReportMismatch`, not a silent
+pass-through. For cargo re-runs use the quiet forms in AGENTS.md § Bash hygiene
+→ Cargo command noise (canonical) — same commands, less output, identical
+coverage.
 
 ## What to include in your reply
 

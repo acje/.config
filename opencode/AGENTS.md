@@ -207,6 +207,19 @@ Heuristic: close the loop inside your role when budget allows and role-output
 discipline is preserved. Escalate only when role outputs would otherwise hide
 guesswork or skip uncovered options.
 
+## Single verification state (canonical)
+
+Agents use only the actual checkout; they do not create checkout/worktree
+copies for verification or assurance. This does not prohibit domain
+concurrency or user-owned worktrees. Inspect durable commands, raw exits,
+revision/input correspondence and environment stability before reusing gate
+evidence; refresh only checks with specific missing, failed or stale evidence.
+Independent review is not blanket identical re-execution. Commit-object and
+current-diff source inspection is evidence about the source at a revision;
+runtime execution evidence requires the actual checkout with relevant inputs.
+All required coverage, CI, security, source-intake and merge obligations
+remain.
+
 ## Dispatch examples
 
 Use subagents when the work earns coordination overhead:

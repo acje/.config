@@ -21,14 +21,16 @@ records still holds (same git root, remote and main identity, same scoped
 bead/PR IDs, same revision where reuse is claimed, same build
 contexts/writers); otherwise refresh that fact. Unknown and cross-writer
 state is always refreshed, never reused. Conditional branches change which
-discovery runs; all applicable acceptance and independent-replay
+discovery runs; all applicable acceptance and independent-verification
 obligations remain binding — applicability itself is resolved and
 recorded, never assumed, for every obligation a branch could touch.
+Refreshing an obligation is targeted at specific missing, failed or
+stale evidence, never a blanket identical re-execution.
 Trigger and named artefact: when a closeout unit reuses discovery under
 this section, the named artefact is the per-repo record in the existing
 bead description, and the standard review checklist verifies the record's
 applicability condition held and that reuse never waives a mandatory
-acceptance or independent-replay obligation.
+acceptance or independent-verification obligation.
 
 ## Resolve scope and authority before mutation
 
@@ -76,8 +78,9 @@ review state. Closed status without supporting verification is insufficient.
 Run the repository/mission's actual verification entries, including declared
 E2E and local CI entry points, or cite still-applicable evidence tied to the
 exact commit and scope. Apply the shared per-repo record's reuse/refresh
-conditions (§ Reuse and refresh); a changed revision or scope forces a re-run
-of the affected entries. Stale/missing evidence and unfinished beads block
+conditions (§ Reuse and refresh); a changed revision or scope forces a refresh
+of the affected entries only, never a blanket identical re-run. Stale/missing
+evidence and unfinished beads block
 completion. Unfinished tasks must remain open and block closeout; do not close
 tasks just to make the inventory empty. Close genuinely completed scoped tasks
 within authority and verify their actual closed state. If closure authority is
@@ -254,10 +257,15 @@ cleanup pass after that command before claiming success.
    `rm`, `git clean`, cache-wide deletion or a permission workaround.
 6. Capture each clean command, exact scope, exit and observed artifact state.
    A nonzero clean exit is Blocked even after partial deletion; record residue.
-   Missing/error evidence is Unknown. Require exit 0 plus read-only confirmation
-   of the intended artifact removal for every resolved Cargo scope before
-   Cleaned; an already-empty authorized scope still needs a successful clean
-   pass and confirmation. Narrow profile/package/target options cannot justify
+   Missing/error evidence is Unknown. For agent-executed cleanup, require exit 0
+   plus read-only confirmation of the intended artifact removal for every
+   resolved Cargo scope before Cleaned; an already-empty authorized scope still
+   needs a successful clean pass and confirmation. Where the user performed
+   the cleanup themselves, record exact scope and successful completion as
+   attestation with observable absence — never invent a recorded exit or use a
+   re-run as the sole proof, and an attestation path never waives the agent's
+   exit-0 obligation when the agent itself runs the command. Narrow
+   profile/package/target options cannot justify
    a whole-workspace cleanup claim. Recheck git status without rebuilding;
    unexpected source/lockfile changes block closeout, never reset them away.
 
@@ -267,6 +275,13 @@ Capture command exits and observable results, preserving producer status for
 any filtered output (`set -o pipefail;` per repository bash hygiene). A filter's
 success is not a producer verdict. Missing/error evidence is never negative
 domain evidence.
+
+Disposable copy removal. Never create verification checkout/worktree copies;
+user-owned worktrees are preserved. Removal of an existing agent-created copy
+requires explicit user authority and inspection for unique user data; record
+the actual `git worktree remove` exit plus copy-path and worktree-registration
+absence, and unchanged current-root refs/status; no prerequisite Cargo
+clean/rebuild.
 
 Report repository/remote/main and scope; verification commands and exits;
 bead completion/evidence and persistence limitations; each PR's actual state,
@@ -302,7 +317,7 @@ permissions/tool identity/remote state/build writer, or an Unknown, and
 refreshes that fact before reuse. Final git state is always re-checked
 fresh, and the cleanup-time build writer is always re-verified fresh.
 The record is a pointer to retained evidence, never a waiver of any
-acceptance or independent-replay obligation.
+acceptance or independent-verification obligation.
 
 Store cross-agent evidence in the existing bead workflow. Under fleet doctrine,
 handoff to moltke for gardener and final reporting; this skill does not replace
