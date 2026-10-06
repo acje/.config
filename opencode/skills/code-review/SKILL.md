@@ -106,9 +106,12 @@ For each finding record `file:line`, severity, disposition, witness, applicable
 authority/trigger (or none), and remedy. Read cited rules; do not invent a
 mandatory gate from a preference. A Low finding can block when a mandatory
 invariant really applies. Known correctness, security, unsafe soundness, and
-enforcement failures remain blocking; mandatory hooks, CI, whitespace gates,
-and changed-guard four-step proof requirements remain mandatory. Tracking or
-acknowledging a failure does not discharge them. Do not import security mode's
+enforcement failures remain blocking; mandatory hooks, CI, and
+changed-guard four-step proof requirements remain mandatory. Cite the guard
+scope in AGENTS.md § Code-quality methods (enforcement gates only) rather than
+applying an unconditional plant/fail/revert/clean ledger to ordinary runtime
+checks. Tracking or acknowledging a failure does not discharge them. Do not
+import security mode's
 `PASS WITH NOTES` / High-finding semantics into standard mode.
 
 **Scope and semantics adjudication:**
@@ -124,9 +127,8 @@ acknowledging a failure does not discharge them. Do not import security mode's
 - Intentional TSV terminal tabs encode an empty final field: splitting a
   ten-field row on tabs yields ten fields; trimming the terminal tab yields
   nine. A generic whitespace diagnostic is not itself a content defect.
-  Accidental whitespace with an actual defect witness, or whitespace violating
-  an applicable mandatory whitespace gate, blocks. Never blindly trim semantic
-  bytes or waive a required gate.
+  Accidental whitespace with an actual defect witness blocks. Never blindly
+  trim semantic bytes or waive a required gate.
 
 **Recommendation:** APPROVE only when no Blocking findings and no unresolved
 required Unknown evidence remain, and all applicable mandatory gates are

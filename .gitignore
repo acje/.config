@@ -30,6 +30,12 @@ Thumbs.db
 *.bak
 *.bak.*
 
+# Recovery/session-data reserve (opencode maintenance): the whole default
+# reserve is excluded so failed backup/restore probes and their -wal/-shm
+# sidecars are not accidentally staged by normal git add/status. This is not a
+# substitute for care: git add -f (force-add) can still stage these paths.
+opencode/maintenance/backups/
+
 # Top-level local scratch (anchored to repo root; redundant with /* but retained for clarity)
 /gh/
 /containers/

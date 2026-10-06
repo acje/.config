@@ -1022,12 +1022,25 @@ the rule does not apply here.
    fallible probe is a review reject (linus; code-review skill). Incident: an
    HTTP 404 read as "unprotected" when it equally means "unauthorised", risking a
    mis-verdict on ~99.6% of scanned repos.
-2. **Prove the guard bites.** A new or edited guard (tripwire, lint, CI gate,
-   assertion) is unverified until you plant a real violation, observe it fail,
-   revert, and observe clean. Record all four steps in the PR body or bead.
-   Trigger: any diff touching a guard's matching rules — especially *widening* a
-   whitelist or path, the shape that fails **open** with every check green.
-   Unproven guard ⇒ NEEDS WORK.
+ 2. **Prove the guard bites.** A new or edited guard (tripwire, lint, CI gate,
+    assertion, ignore/whitelist matching rule) is unverified until you plant a
+    real violation, observe it fail, revert, and observe clean. Record all four
+    steps in the PR body or bead.
+    Trigger: any diff touching a guard's matching rules — especially *widening* a
+    whitelist or path, the shape that fails **open** with every check green.
+    Unproven guard ⇒ NEEDS WORK.
+    Scope boundary (canonical): this four-step plant→fail→revert→clean
+    obligation attaches to **enforcement gates** — tripwires, lint/CI checks,
+    assertions on matching rules, ignore/whitelist patterns — not to ordinary
+    runtime preconditions and integrity checks in application or tool code.
+    A runtime branch (a refusal before an effect, a capacity or fingerprint
+    check, an offline-confirmation guard) is verified by **direct behavioral
+    positive/negative tests** — including real fault injection and
+    effect-non-reachability assertions — and does not need its own
+    plant/fail/revert/clean ledger or a proof inventory. Only the diff that
+    edits an actual enforcement matching rule keeps the four-step evidence.
+    Standard review cites this rule for guard scope rather than restating an
+    unconditional ledger.
 3. **Citations are read, not trusted.** A mechanism citing a rule id must cite
    text that actually states the invariant it enforces; open the rule and read
    it. Trigger: adding or moving a citation, or renaming/renumbering a rule.

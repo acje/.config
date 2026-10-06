@@ -112,7 +112,7 @@ User: "Fix 'teh' to 'the' in README.md."
 
 > BuildAction::CompleteTrivial. One mechanical prose correction in an existing
 > file; no semantic change. State "Trivial: skipping loop", name the spelling
-> check and `git diff --check -- README.md`, edit, verify and report directly.
+> check, edit, verify and report directly.
 </example>
 
 <example name="trivial-read-only-check">

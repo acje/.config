@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.opencode.db-maintenance.daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/anders.jensen/.config/opencode/maintenance/opencode_db_maintenance.py</string>
+    <string>schedule</string>
+    <string>--db</string>
+    <string>/Users/anders.jensen/.local/share/opencode/opencode.db</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/anders.jensen/.config/opencode/maintenance/daily-schedule.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/anders.jensen/.config/opencode/maintenance/daily-schedule.err.log</string>
+</dict>
+</plist>
