@@ -2,7 +2,8 @@
 
 You have specialised subagents available via the Task tool, implementing Boyd's
 OODA loop plus specialist roles. Subagents default to inlining within their
-assigned role; build mode defaults to `@moltke` for all non-trivial work. Scale effort to query complexity.
+assigned role; build mode defaults to `@moltke` for work outside its direct
+risk/uncertainty/coupling boundary (build.md rule 2). Scale effort to query complexity.
 
 | Agent         | Phase      | Primary output                          | Handoff target           | Bead label                          |
 |---------------|------------|-----------------------------------------|--------------------------|-------------------------------------|
@@ -29,6 +30,13 @@ repo the agent commits autonomously when **all** of the following hold:
    stray files, no `.ooda/` artefacts staged, no secrets).
 4. The change is non-destructive locally — never `push --force`, never amend
    a pushed commit, never bypass hooks.
+
+An explicitly authorized ordinary `git add`/`git commit` by build mode
+(per build.md rule 3 — a bounded inspected Git operation whose staged diff,
+including any intended code/config/doctrine payload, is inspected before commit
+or push)
+is admitted under (1)–(4) without a mission
+contract: it is in-scope, verified, tree-clean, and locally non-destructive.
 
 Push remains user-driven. If any of (1)–(4) fails, fall back to the
 system-prompt rule: surface diff + status to the user and ask.
@@ -103,85 +111,11 @@ medium+ risk decisions, not for clarification convenience.
 
 ### Evidence carrying — pointer over body
 
-Subordinate replies carrying evidence longer than ~20 lines must land in a
-durable store and surface in the handoff line as `artefact: bd-NNN` —
-the bd bead id is the only sanctioned cross-agent pointer. Commanders
-(moltke; hopper for sub-deliverables; feynman when re-tasking copernicus)
-read the artefact lazily via `bd show bd-NNN` — only when the evidence is
-needed for the next decision. Pointer ≠ body in working context. This
-rides existing handoff grammar (every agent's handoff already supports
-`artefact:`); the rule makes a present-but-implicit discipline explicit
-so working context is not silently inflated by routine evidence inlining.
-Do not re-`bd show` the same bead while its body is still in live context and
-no `bd update` / relabel / close / reopen touched that bead; tight-cluster
-re-shows of unchanged in-context bead bodies are `Outcome::Waste`. C1 FORCED
-exemption: lazy reads after bead churn, across compaction / prune boundaries,
-or across large work phases remain correct re-hydration — do not collapse them.
-Where an agent's existing handoff prescription explicitly permits or
-requires inline bodies, prefer pointer over body — the rule is additive,
-not overriding.
-
-**Cross-agent evidence lives inside a bd bead.** Body goes in the bead's
-`description` field; metadata (labels, title) is the pointer surface. The
-producer agent has two equivalent options:
-
-1. **Inline `--description`** — preferred when the body fits under the
-   trace truncation limit (`OPENCODE_TRACE_MAX_FIELD=4096`, ~80 lines):
-   `bd create "<title>" --type task --labels "evidence,mission:<id>"
-   --description "<full body>" --json`.
-2. **`bd update --stdin`** — for larger bodies, pipe the body
-   in via stdin or set it via `bd update <id> --stdin` after
-   create, so it lands directly in the bead description without an
-   inline heredoc hitting the trace limit. The body never touches the
-   working tree. This is the fresh-bead recipe: `--stdin` REPLACES the
-   description, so on a bead that may already have a body use the safe
-   accumulation recipe instead (§ Beads → Tier 1).
-
-Either way the handoff line carries `artefact: bd-NNN`. Commanders use
-`bd show bd-NNN` to read the body lazily; `bd list --label evidence`
-browses metadata without inlining bodies.
-
-Never stage evidence bodies on disk as the durable home. The bead
-`description` field is the durable home; the working tree is not.
-
-**A pointer to an empty body is a broken pointer.** The `artefact: bd-NNN`
-contract promises a dereferenceable body; a bead labelled `evidence`,
-`oracle-summary`, `review-report`, or `mission-brief` whose `description` is
-empty or whitespace-only breaks it, and the reader discovers this only after
-paying for the `bd show`. The write can fail silently — `--stdin` REPLACES, and
-a failed pipe leaves the description empty — so the **producing agent must
-confirm the body landed before handing off**:
-
-```
-set -o pipefail; bd show <id> --json | jq -er '.[0].description | select(test("\\S")) | .[:200]'
-```
-
-Enforcement surface (trigger + named artefact). **Trigger:** emitting
-`artefact: bd-NNN` in a handoff line for a bead whose `description` is empty
-or whitespace-only. **Artefact 1:** `bd-doctor` `EMPTY_EVIDENCE` (Error,
-exit 1) — `cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor --
---all`. **Artefact 2:** review reject (linus; `code-review` skill).
-**Artefact 3:** `Outcome::Surprise` for hopper mid-mission — the handoff does
-not ship until the body is confirmed present.
-
-**This applies to `Task` invocations too.** A task prompt that inlines a
-full mission brief will be truncated in traces and inflates the calling
-agent's context. Mission briefs live in a bd bead (label `mission-brief`
-or under the mission epic); the Task prompt carries the bead id plus a
-one-sentence intent:
-
-```
-# WRONG — inlines 4KB of contract; truncated in traces; inflates context
-Task(prompt="Execute sub-mission: objective: fix off-by-one … [3000 more chars]")
-
-# RIGHT — bead pointer + one-sentence intent; full contract in the bead description
-Task(prompt="Execute mission per bd-87. Intent: fix half-open range
-violation at list.rs:42 per ADR-0014.")
-```
-
-The bead must be self-contained: the receiving agent should be able to
-`bd show bd-87` and execute with no further context beyond the pointer
-and the intent sentence.
+Canonical contract: § Beads → Evidence carrying & handoff (pointer-over-body)
+and § Beads → Canonical storage hierarchy (Tier 1–3). Bodies live in the bead
+`description`; the bead id is the only sanctioned cross-agent pointer; `.ooda/`
+is only the narrow Tier-2 escape hatch; empty-bodies never ship. This heading
+is a reference, not a duplicate body.
 
 ## Internal vs outer OODA
 
@@ -230,16 +164,16 @@ Use subagents when the work earns coordination overhead:
 - decision touches architectural surface (data model, public API, cross-module contracts, deployment topology), or user asks an informational question about prior architectural decisions → `oracle` (registers an `oracle-summary` bead readable via `bd list --label oracle-summary,mission:<id>`; body lives in the bead's `description` field)
 - Rust code review (idioms, unsafe soundness, cargo-audit, cargo-deny, MSRV/edition) → `linus`. Generic / non-Rust / cross-language review → `code-review` skill. Linus and the skill are orthogonal; neither calls the other. Both are **pre-merge** and mandatory for their scope.
 - architectural alignment & assurance pass on a PR or merged revision — runs while waiting on GitHub Actions (CI checks or deploy workflows): cross-component failure, resource stress, recovery/shutdown, performance assumptions, broad regression patterns → `hamilton`, dispatched during the CI/deploy wait window. Hamilton never substitutes for a pre-merge gate and never self-fixes; findings route to moltke.
-- two or more viable approaches, or multi-file / irreversible / cross-module → `moltke`, then `hopper`
-- executing a non-trivial change with a clear plan → `hopper` directly
+- two or more viable approaches, or uncertain / coupled / irreversible / cross-module work → `moltke` (mission contract or package), which commands `hopper`
+- executing a non-trivial change → `moltke` as standing commander (build.md rule 1); it commands the execution loop. Catches trivial/bounded low-risk work inside build rule 2 — never a direct `hopper` dispatch from build/orchestration
 - copernicus's report came back thin or off-target → re-task copernicus *through* `feynman`, who issues a tightened observation brief
 
-Most real chains are `copernicus → hopper → moltke → gardener` or just `hopper → moltke → gardener`. Skip phases
-that don't earn their keep; the gardener pass is cheap and always closes the loop.
+Most real chains are `copernicus → feynman → moltke → hopper → gardener`.
+Skip phases that don't earn their keep; the gardener pass is cheap and always closes the loop.
 
-<example name="copernicus-then-hopper">
+<example name="copernicus-then-commander">
 User: "The CI build fails with 'cannot find module foo' on main."
-→ `copernicus` first (single error, traced behaviour, tier=trivial). Reports the failing import + recent commits. → `hopper` with inline brief carrying objective + verify (`pnpm build`). Skip feynman/moltke; one obvious cause, one obvious fix. Hopper reports to moltke on complete; moltke invokes gardener.
+→ `copernicus` first (single error, traced behaviour, tier=trivial). Reports the failing import + recent commits. The fix sits inside Build rule 2: Build completes the bounded low-risk fix directly (named verification, review discipline retained) — no delegation. If inspection shows it outside the boundary, Build dispatches `@moltke` (rule 1), which commands `hopper` to execute. Hopper reports to moltke on complete; moltke invokes gardener.
 </example>
 
 <example name="full-loop-multi-causal">
@@ -265,13 +199,10 @@ Moltke contracts hopper to build and verify a small Rust CLI in `scripts/`, run 
 ## How to invoke
 
 Call subagents via the Task tool. Inline communication is the default for small
-payloads. Cross-agent evidence belongs in a bd bead (Bucket A): the body lives
-in the bead's `description` field (loaded via `--description` or
-`bd update --stdin`, which replaces rather than appends — see § Beads
-→ Tier 1), and the bead id is the pointer. Don't
-re-summarise large evidence through yourself (avoids the telephone game).
-
-`.ooda/` is the narrow Tier-2 escape hatch described in § Beads. Cross-agent bodies default to bd; any cross-agent material staged under `.ooda/` must still be indexed by a bead and handed off as `bd-NNN`, never as the file path.
+payloads. Cross-agent evidence follows the single canonical contract in §
+Beads → Canonical storage hierarchy and § Beads → Evidence carrying & handoff
+(the bead id is the pointer; `.ooda/` is only the narrow Tier-2 escape hatch).
+Don't re-summarise large evidence through yourself (avoids the telephone game).
 
 On surprise or abort during Act, re-enter the loop at Copernicus or Feynman
 with the journal (or inline observations) as new evidence.
@@ -314,9 +245,22 @@ closed without escalation (see Trivial autonomy below).
 
 ## Trivial autonomy (formalized)
 
-Every agent — including subagents — may close trivially-scoped, in-role, reversible tasks
-inside its own internal OODA without handoff. "Trivial" = single-step, in-role, reversible.
-Anything multi-step, cross-role, or with surprise still escalates per the existing handoff rules.
+Every agent — including subagents — may close low-risk, in-role, reversible
+tasks inside its own internal OODA without handoff when they sit inside the
+direct-completion risk / uncertainty / coupling boundary (build.md rule 2):
+clear intent, named verification, no security/reversible-surface risk, no
+hidden coupling. There is no single-step / one-file / line-count cutoff — the
+boundary decides, and anything uncertain, coupled, or surprising escalates per
+the existing handoff rules.
+
+Bounded inspection-gated Git operations (build.md rule 3 — scoped local
+`git init` of an existing user-owned non-repository directory, and explicitly
+authorized ordinary `git add` / `git commit` / `git push`, including an
+existing code/config/doctrine payload) are likewise closeable
+inside internal OODA without a contract, beads, subagent or Gardener: they are
+low-risk, in-role and reversible. Verification still applies
+and observations are reused until stale; anything outside that bounded scope
+escalates per the existing handoff rules.
 
 ## Bash hygiene
 
@@ -662,7 +606,9 @@ Moltke runs the mission command structure end-to-end. This is a local adaptation
 of directed opportunism, informed by secondary [Bungay book notes](https://www.lostbookofsales.com/notes/book-summary-art-of-action-by-stephen-bungay/)
 (config-5de), not a verbatim Bungay protocol. Knowledge, alignment and effects
 gaps motivate evidence, intent checks and verified feedback respectively.
-Build mode hands off to moltke once for non-trivial work; plan mode returns a
+Build mode hands off to moltke once for work outside its direct
+risk/uncertainty/coupling boundary (build.md rule 2) — the standing default for
+non-trivial work; plan mode returns a
 written plan to the user without dispatching moltke. During execution moltke:
 
 (a) sets `commander_intent` + boundaries (Auftragstaktik),
@@ -1148,11 +1094,13 @@ Re-measure before relying on one (§ Iteration speed #2).
 2. **Tier 2 — ESCAPE-HATCH.** `.ooda/` (gitignored). Two sanctioned uses:
 
    - **(a) Bodies that cannot live in a bead** — binary or oversized
-     artefacts, tracer output (`.ooda/traces/`), and user-facing generated
-     docs such as prompt rewrites, code-review reports, and PRDs.
-     Cross-agent material staged here still needs a bead pointer
-     (`artefact: bd-NNN`); the file path is never itself a cross-agent
-     handoff artefact.
+      artefacts, tracer output (`.ooda/traces/`), and user-facing generated
+      docs such as prompt rewrites, code-review reports, and PRDs.
+      Cross-agent material staged here still needs a bead pointer
+      (`artefact: bd-NNN`); the file path is never itself a cross-agent
+      handoff artefact. Generated artefacts that are **only** user-facing
+      local outputs (never passed across an agent boundary) need no bead and
+      may stay under `.ooda/`.
    - **(b) Tier 2b — workspace-local ephemeral scratch**, at
      `.ooda/tmp/<mission_id>/`: single-turn or single-mission intermediate
      files (a diff staged before reading, a working file mid-transform),
@@ -1173,6 +1121,61 @@ Re-measure before relying on one (§ Iteration speed #2).
    P2: a `$TMPDIR/opencode` round-trip ran clean this session, so the
    fallback is not itself hazardous — it is simply not the default).
    State the reason when falling back to it instead of Tier 2b.
+
+### Evidence carrying & handoff (pointer-over-body)
+
+Subordinate replies carrying evidence longer than ~20 lines land in a bd bead
+(Bucket A) and surface in the handoff line as `artefact: bd-NNN` — the bead id
+is the only sanctioned cross-agent pointer. Commanders read the artefact lazily
+via `bd show bd-NNN` only when the body is needed for the next decision;
+`bd list --label evidence` browses metadata without inlining bodies. Pointer ≠
+body in working context: do not re-`bd show` a bead whose body is still in live
+context unchanged (tight-cluster re-shows are `Outcome::Waste`); C1 FORCED
+exemption — lazy reads after bead churn, across compaction/prune boundaries, or
+across large work phases remain correct re-hydration. Never stage evidence
+bodies on disk as the durable home; the bead `description` is the durable home,
+the working tree is not.
+
+Cross-agent evidence lives inside a bd bead: body in `description`, metadata
+(labels, title) is the pointer surface, two producer options — (1) inline
+`--description` when the body fits (`OPENCODE_TRACE_MAX_FIELD=4096`); (2)
+`bd update --stdin` on the freshly-created bead for larger bodies (fresh-bead
+recipe, Tier 1). Either way the handoff carries `artefact: bd-NNN`. Where an
+agent's handoff prescription explicitly permits inline bodies, prefer pointer
+over body — the rule is additive, not overriding.
+
+**A pointer to an empty body is a broken pointer.** A bead labelled `evidence`,
+`oracle-summary`, `review-report`, or `mission-brief` whose `description` is
+empty or whitespace-only breaks the `artefact: bd-NNN` contract, and the write
+can fail silently — so the producing agent must confirm the body landed before
+handing off:
+
+```
+set -o pipefail; bd show <id> --json | jq -er '.[0].description | select(test("\\S")) | .[:200]'
+```
+
+Enforcement (trigger + named artefact). **Trigger:** emitting `artefact:
+bd-NNN` for a bead whose `description` is empty or whitespace-only. **Artefact
+1:** `bd-doctor` `EMPTY_EVIDENCE` (Error, exit 1). **Artefact 2:** review
+reject (linus; `code-review` skill). **Artefact 3:** `Outcome::Surprise` for
+hopper mid-mission — the handoff does not ship until the body is present.
+
+**This applies to `Task` invocations too.** Mission briefs live in a bd bead
+(label `mission-brief` or under the mission epic); the Task prompt carries the
+bead id plus a one-sentence intent, never the full body:
+
+```
+# WRONG — inlines 4KB of contract; truncated in traces; inflates context
+Task(prompt="Execute sub-mission: objective: fix off-by-one … [3000 more chars]")
+
+# RIGHT — bead pointer + one-sentence intent; full contract in the bead description
+Task(prompt="Execute mission per bd-87. Intent: fix half-open range
+violation at list.rs:42 per ADR-0014.")
+```
+
+The bead must be self-contained: the receiving agent should be able to `bd show
+bd-87` and execute with no further context beyond the pointer and the intent
+sentence.
 
 ### Three-bucket model
 
@@ -1467,27 +1470,13 @@ pair programming:
      positive invariant proofs, or inappropriate layer ownership) and formulate $\ge 2$
      ranked clean architectural seams with concrete trade-offs.
    - **Step 3: Structured Operator Escalation.** Moltke packages Feynman's orientation into
-     a structured prompt delivered to the operator via the `question` tool (never inline prose).
-     Moltke provides 2–4 concise, mutually exclusive choices with a recommended default.
+      a structured risk decision for the operator: 2–4 concise, mutually exclusive choices
+      with a recommended default, delivered via the `question` tool when available, else as
+      a structured inline prompt (never forcing an unavailable tool).
    - **Step 4: Clean Execution.** Upon operator selection, Moltke re-decomposes and commands
      Hopper to implement the chosen clean seam, replacing hundreds of lines of fragile
      scaffolding with an authoritative, minimal solution.
    Standing priority hierarchy follows § Fleet engineering priorities.
-
-### Pointer discipline with beads
-
-Large evidence stays inside the bead as its `description` field; the bead id
-(`bd-NNN`) is the durable cross-session pointer. Handoff lines carry the bead
-id, not the body. Commanders use `bd list --label evidence` (metadata-only,
-no body inlining) to browse, and `bd show bd-NNN` only when the body is
-needed to decide the next step. This preserves pointer-over-body discipline
-(§ Evidence carrying) — the cost is paid once at decision time, not on every
-handoff.
-
-Handoff artefacts use `artefact: bd-NNN` for cross-agent evidence (Bucket A).
-`.ooda/` paths are sanctioned for tracing, user-facing local outputs, and the
-narrow Tier-2 escape hatch. Cross-agent material staged through Tier 2 still
-hands off the bead id; never pass the file path as the cross-agent pointer.
 
 ### Audit trail
 
@@ -1497,14 +1486,6 @@ gitignored — durable persistence comes from bd's Dolt remotes, not git). Use C
 
 Hopper records TDD boundary events; linus records review verdicts via
 `bd audit record --kind label`.
-
-### User-facing artefacts vs cross-agent evidence
-
-Generated artefacts that are user-facing local outputs (prompt rewrites,
-generic `code-review` skill reports, PRD/source artefacts) may live under
-`.ooda/` and need no bead. The moment such an artefact becomes cross-agent
-handoff evidence, register an evidence bead (Bucket A) and pass the bead id;
-never pass disk paths across agents.
 
 ## MCP servers
 

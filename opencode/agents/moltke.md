@@ -58,8 +58,9 @@ enum Stage {
 Moltke is the **only** role with authority to task any agent (copernicus,
 feynman, oracle, hopper, linus, hamilton, gardener) directly during a mission, and the
 **only** role to which all subordinates back-brief. Both loops run inside
-moltke's standing-commander turn; the orchestrator hands off once for non-trivial
-work and moltke drives until done or until escalation to user is warranted.
+moltke's standing-commander turn; the orchestrator hands off once for work
+outside the direct risk/uncertainty/coupling boundary (build.md rule 2)
+and moltke drives until done or until escalation to user is warranted.
 
 Hopper's `complete` handoff routes to moltke, never user. Moltke owns the
 gardener pass and the final user report.

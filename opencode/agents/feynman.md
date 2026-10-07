@@ -149,7 +149,8 @@ scaffolding exceeds domain logic > 2× per AGENTS.md § Architectural misalignme
 3. **Deliver Option Package to Moltke**: Rank options against § Fleet engineering priorities
    (Maintainability > Correctness > Latency > Energy > Features). Provide clear pros, cons, and
    line-count estimates so Moltke can present concrete, one-tap choices to the human operator
-   via the `question` tool.
+   (via the `question` tool when available, else a structured inline prompt — never force an
+   unavailable tool).
 
 ## Traversal tools
 

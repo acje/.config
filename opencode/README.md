@@ -86,7 +86,9 @@ unchanged. Internal role workflows are not additional fleet loops.
 ## Mission command (Auftragstaktik)
 
 **Moltke is the supreme commander** during a mission. The orchestrator
-(build mode) hands off to moltke once for non-trivial work; moltke drives the
+(build mode) hands off to moltke once for work outside its direct
+risk/uncertainty/coupling boundary (build.md rule 2) — the standing default
+for non-trivial work; moltke drives the
 mission to completion. Moltke is the only role with authority to task any
 agent directly during a mission, and the only role to which all subordinates
 **back-brief** strategic shifts.
@@ -130,8 +132,11 @@ Two opencode prompt modes orchestrate the agents differently:
   routes through `copernicus → feynman (→ oracle)` to produce a written
   plan as text output. Never edits source. Never dispatches moltke —
   moltke lives in build mode.
-- **Build mode** drives both OODA loops through Moltke. Trivial → inline edit.
-  Everything else — including prompt rewrites and tool building — → `@moltke`,
+- **Build mode** drives both OODA loops through Moltke. Trivial or bounded
+  low-risk work — including inspected Git ops (build.md rule 3) and
+  output-only doctrine advice — stays direct. Work outside the direct
+  risk/uncertainty/coupling boundary — including in-place prompt rewrites
+  and tool building — → `@moltke`,
   which authors the mission contract, commands `hopper` to execute the
   code/content work, drives tactical execution and Rust review feedback, and
   invokes gardener on MISSION/PACKAGE COMPLETE.
@@ -462,7 +467,7 @@ Plan mode proceeds with named assumptions (loads `grill-me` only on explicit use
 3. **oracle** — optional, when architectural surface is touched: ADR summaries, binding constraints, gaps.
 4. Plan mode writes the plan (goal, evidence, options, stakes, success criteria, risks, open questions) and hands it back. The user takes it to build mode for execution.
 
-### Build mode (full OODA loop; default for non-trivial work)
+### Build mode (full OODA loop; default for work outside the direct boundary)
 
 ```
 > @build fix the off-by-one in list_orders pagination
@@ -472,8 +477,9 @@ Build mode picks one of:
 
 ```rust
 enum BuildAction {
-    InlineEdit,                              // single edit, no tradeoffs
-    InvokeMoltke { brief: MissionBrief },    // default for non-trivial; moltke drives end-to-end (incl. prompt rewrites / tool building → hopper)
+    CompleteDirect,                          // within risk/uncertainty/coupling boundary (build.md rule 2); verify + report
+    InspectedGit,                            // build.md rule 3; inspected, authorized commit/push of existing payload
+    InvokeMoltke { brief: MissionBrief },    // default for uncertain/coupled/large work (build.md rule 1); moltke drives end-to-end
     ExecutePlan { plan_ref: PlanRef },       // plan-mode artefact → moltke turns into contract
     AskUser { question: &'static str },      // medium+ risk only
 }
@@ -588,7 +594,7 @@ Twelve slash commands are available in `opencode/commands/`. Invoke them with `/
 │   └── understand-onboard.md    /understand-onboard — onboarding guide generator
 └── prompts/
     ├── plan.md                  Plan mode — orient-only, read-only on the tree; never dispatches moltke; grill-me opt-in
-    └── build.md                 Build mode — owns the full OODA loop; hands off to moltke
+    └── build.md                 Build mode — owns the full OODA loop; hands off to moltke; inspected Git ops direct (rule 3)
 ```
 
 ## References

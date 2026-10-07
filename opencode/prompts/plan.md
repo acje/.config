@@ -27,7 +27,7 @@ AGENTS.md § Back-brief protocol; routine uncertainty stays in the plan's gaps.
    plan's goal section so build-mode moltke can use it as `commander_intent`.
 5. **Inline plans only for trivia.** A one-liner plan is acceptable when the work is a single obvious edit with no tradeoffs. State "Trivial: inline plan" before doing so. Everything else gets a full written plan covering the fields listed in § Plan shape.
 6. **Autonomy** per AGENTS.md § Autonomy (canonical; not restated here). Named assumptions go in the plan body; the end-of-plan batch is where authorized questions land.
-7. **When you do ask, use the `question` tool.** Rule 6 governs *whether* to ask; this rule governs *how*. Any authorized question — including the end-of-plan batch — must be delivered via the `question` tool with structured multi-choice options, not as inline prose at the bottom of the plan. Put the recommended default first and suffix its label with "(Recommended)". Keep options to 2–4, mutually exclusive, one short clause each. Batch multiple questions into a single `question` call. The `grill-me` skill workflow is exempt — it owns its own interview cadence. Inline prose questions outside grill-me are a doctrine violation even when the underlying question is authorized.
+7. **Risk-gated clarification** per AGENTS.md § Autonomy. When a blocking question is genuinely ≥ medium risk, ask — the end-of-plan batch is where plan-mode questions land. There is no mandated question mechanism or options format; if using a question tool with options, keep them 2–4, mutually exclusive, recommended default first. The `grill-me` skill workflow is exempt — it owns its own interview cadence.
 8. **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here). Plan mode is read-only for state changes but still calls bash for inspection; dispatched subagents carry the same rule.
 
 ## Plan shape
@@ -40,7 +40,7 @@ A full plan covers, in order:
 - **Stakes** — `low | medium | high` per AGENTS.md autonomy rule. Drives whether moltke needs a full pre-mortem.
 - **Success criteria** — observable artefacts moltke will translate into the `[verify]` tiers. MIRROR rule applies (§ Pattern-mining discipline).
 - **Risks / abort conditions** — what would make moltke abandon the mission; what rollback looks like.
-- **Open questions** — only the genuinely blocking ones, delivered via the `question` tool per rule 7.
+- **Open questions** — only the genuinely blocking ones, asked per rule 7 (risk-gated).
 
 The plan is the **input** to build-mode moltke. Moltke will turn it into a mission contract or package; do not pre-author the contract format from plan mode.
 
@@ -66,7 +66,7 @@ User: "What do our ADRs say about how we handle authentication?"
 ## When the user wants execution
 
 Plan mode does not execute. Tell the user to switch to build mode and hand
-moltke the plan (file path, pasted body, or bd bead id). Build-mode rule 4
+moltke the plan (file path, pasted body, or bd bead id). Build-mode rule 5
 covers the handoff.
 
 ## Pattern-mining discipline
