@@ -186,11 +186,14 @@ input in that picture changing invalidates the candidate, triggers the
 affected check tiers, and makes a fresh BOUNDARY proof part of the next
 stable candidate; sufficient exact-input proof is reused, never blanket-rerun.
 
-Independent reviewers may run targeted falsifiers against a changed surface to
-confirm or refute a specific claim; they do not blanket-re-execute the
-producer's identical run. Review tiers, mandatory gates (R12 E2E), guard
-proofs, and native NATS/WASM/browser/doc/audit/deny/intake coverage are
-unchanged; Hamilton assurance does not replace any pre-merge gate.
+Independent reviewers do not execute verification; targeted falsifiers a
+reviewer requests are executed by hopper through the review loop and the raw
+evidence recorded, then reviewed at source level. Reviewers do not
+blanket-re-execute the producer's identical run and do not audit whether the
+producer ran tests. Review tiers, mandatory gates (R12 E2E), guard proofs, and
+native NATS/WASM/browser/doc/audit/deny/intake coverage are unchanged; their
+execution is hopper-owned. Hamilton assurance does not replace any pre-merge
+gate.
 
 ## Dispatch examples
 
@@ -1406,11 +1409,11 @@ correctness. Historical rationale: config-jui.
 
 The tier is a **label on the review-request bead**, not prose:
 
-| Label | Applies to | Evidence linus may spend |
+| Label | Applies to | Review depth (execution of evidence is hopper-owned) |
 |---|---|---|
-| `review:tier=tidy` | Structural-only: deletions, renames, moves, doc-comment removal, formatting. No behavioural delta. | Read-level only. Confirm the diff is genuinely structural, test count unchanged, gates green. **No execution proofs, no class sweep, no downstream plants.** |
-| `review:tier=standard` | Behavioural change outside the adversarial triggers below. | Read plus targeted execution on the changed surface. Class sweep scoped to the changed file. |
-| `review:tier=adversarial` | Any adversarial trigger (below). | Full rigour: execution proofs, workspace-wide class sweep, downstream compile plants, four-step guard proof. |
+| `review:tier=tidy` | Structural-only: deletions, renames, moves, doc-comment removal, formatting. No behavioural delta. | Read-level only. Confirm the diff is genuinely structural, test count unchanged. Gate-green status is hopper/moltke-verified, not reviewer-confirmed. **No execution proofs, no class sweep, no downstream plants.** |
+| `review:tier=standard` | Behavioural change outside the adversarial triggers below. | Read-level review of the changed surface; reviewer-requested targeted checks and the class sweep are executed by hopper and recorded before completion. |
+| `review:tier=adversarial` | Any adversarial trigger (below). | Full-rigour review; reviewer-requested execution proofs, workspace-wide class sweep, downstream compile plants and the four-step guard proof are executed by hopper and recorded before completion. |
 
 **Adversarial triggers — any one forces the top tier:** guards / tripwires /
 CI gates; `unsafe`; public API surface change; parsing or emitting

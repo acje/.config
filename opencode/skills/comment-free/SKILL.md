@@ -6,7 +6,11 @@ description: "Use when checking Rust doc-comment word budgets, running the opt-i
 # comment-free
 
 CLI mechanics support existing Rust comment doctrine; tool defaults do not
-define policy. Linus uses read-only modes only.
+define policy. In review (linus / generic code-review), this skill is loaded
+for tool semantics, source-level doc-prose review and interpretation of
+Hopper-supplied output only; the mechanical checks below (capability probe,
+lint, budget/policy gate, rewrite preview) are Hopper-owned verification for
+mission scope. Authorized rewrites never run during review.
 
 ## Preflight
 
@@ -27,6 +31,9 @@ define policy. Linus uses read-only modes only.
   Fenced code is excluded mechanically, not by semantic example detection.
 
 ## Modes
+
+Modes below are executed by the verification owner (Hopper) and recorded;
+reviewers consume supplied output and do not run them.
 
 | Mode | Command | What it establishes |
 |---|---|---|

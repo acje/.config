@@ -60,27 +60,25 @@ ask the user.
 | Tests | New behavior has new tests; regressions have regression tests |
 | Control flow (Rust) | Is one decision SPLIT between leading `if … { return … }` guards and a `match` deciding the same thing? Where the guards only reject a sentinel (`""`/`Some("")`/`0`/magic default), flag the **type**, not the layout. Exempt: genuine preconditions, `?`/`let … else`, loop `continue` guards, early returns short-circuiting expensive work, guards establishing the scrutinee's validity. Not "always use exhaustive match". See AGENTS.md § House style — Rust control flow |
 
-### Phase 3 — Validate
+### Phase 3 — Source review only; mechanical gates are Hopper/Moltke-owned
 
-Run automated checks for the project. Detect from `package.json` /
-`Cargo.toml` / `pyproject.toml`:
+This review does not run automated checks. Mechanical verification (builds,
+type checks, lint, tests, vet/audit, guard proofs) belongs to Hopper before
+completion and to Moltke's independent completion confirmation under shared
+doctrine (AGENTS.md § Single verification state). The reviewer reads the diff
+and relevant configuration at source level, may identify a source-level proof
+obligation, and may request a targeted check on the review-request bead;
+requested-check tracking, recorded-run completeness, raw exits and gate
+acceptance are the execution owners' responsibility, not the reviewer's
+verdict. Approval asserts source review; it does not certify execution.
 
-```bash
-# Type check (one of)
-pnpm run build  |  npm run build  |  cargo check  |  mypy .  |  tsc --noEmit
-
-# Lint (one of)
-pnpm run lint  |  eslint .  |  cargo clippy  |  ruff check
-
-# Tests (one of)
-pnpm test  |  cargo test  |  pytest
-```
-
-Record exit codes. Don't fabricate PASS results.
-Keep the raw command result/exit separate from the finding's disposition
-(Phase 5). Interpret diagnostics using the command's documented contract and
-the actual output, not an unconditional `exit > 1` ⇒ domain defect rule.
-Execution errors or missing required evidence are Unknown, never a clean pass.
+Validation rows are non-executed by design: mark each `SKIPPED(reason)` (e.g.
+`SKIPPED(mechanical verification owned by Hopper)`); never a fabricated PASS.
+When Hopper supplies raw command result/exit as context, keep it separate from
+the finding's disposition (Phase 5) and interpret diagnostics using the
+command's documented contract and the actual output, not an unconditional
+`exit > 1` ⇒ domain defect rule. Execution errors or missing required evidence
+are Unknown, never a clean pass.
 
 ### Phase 4 — Severity
 
@@ -130,13 +128,19 @@ import security mode's
   Accidental whitespace with an actual defect witness blocks. Never blindly
   trim semantic bytes or waive a required gate.
 
-**Recommendation:** APPROVE only when no Blocking findings and no unresolved
-required Unknown evidence remain, and all applicable mandatory gates are
-satisfied. Report advisory notes and any optional evidence gaps explicitly;
-otherwise NEEDS WORK, distinguishing demonstrated failures from Unknowns.
-Preserve raw nonzero diagnostic results; approval is not “all checks green”.
-An explicit hard exit-0 mission obligation is not overridden by adjudication:
-hand back for contract correction if a diagnostic result conflicts with it.
+**Recommendation:** APPROVE when no Blocking findings and no unresolved
+required Unknown evidence remain at source level. Approval asserts source
+review of the diff, test design and relevant configuration; it does not
+certify execution. All applicable mandatory gates are enforced at completion
+by their mechanical owners (Hopper execution, Moltke independent
+confirmation), not by this verdict; the reviewer may note that a gate is
+unrecorded as `SKIPPED`/`UNKNOWN` and request it, but never claims a run it
+did not perform. Report advisory notes and any optional evidence gaps
+explicitly; otherwise NEEDS WORK, distinguishing demonstrated failures from
+Unknowns. Preserve raw nonzero diagnostic results supplied by execution
+owners; approval is not "all checks green". An explicit hard exit-0 mission
+obligation is not overridden by adjudication: hand back for contract
+correction if a supplied diagnostic result conflicts with it.
 
 ---
 

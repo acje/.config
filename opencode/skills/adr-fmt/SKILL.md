@@ -7,6 +7,14 @@ description: "Use when linting ADRs, navigating an ADR tree, tracing inbound cit
 
 Read-only navigation and diagnostics, not authority to edit or retire ADRs.
 
+Navigation and context operations (`--tree`, `--refs`, `--context`, capability
+probe) are read-only and available to reviewers (linus / generic code-review).
+Corpus lint (`adr-fmt --lint`) is a mechanical diagnostic: oracle and the
+execution owner (Hopper) run it in their roles; reviewers load this skill for
+navigation/context and interpret Hopper-supplied lint output — they do not run
+lint verification. The command/exit contracts below are preserved for
+execution owners.
+
 ## Resolve the target
 
 1. Read the target repository's instructions and `adr-fmt.toml`. Discovery

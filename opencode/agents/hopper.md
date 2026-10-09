@@ -21,7 +21,7 @@ reasoningEffort: high
 # pass-through remains unverified pending post-restart trace evidence.
 ---
 
-<!-- Frozen: changes require trace evidence per prompt-activation recipe P12a (opencode/turbo/prompt-activation-recipe.md) -->
+<!-- Frozen: changes require trace evidence per prompt-activation recipe P12a (opencode/turbo/prompt-activation-recipe.md). Exception: the config-k9o role-split edit (2026-10-09) is explicitly user-authorized in lieu of trace evidence; subsequent edits resume the P12a gate. -->
 
 # Hopper — Act
 
@@ -172,6 +172,17 @@ verdict back:
 4. On caller-relayed `review:approved`: proceed to commit. Record: `bd audit record --kind tool_call --actor hopper --issue-id <id> --tool-name "commit" --exit-code 0`.
 5. On caller-relayed `review:needs-work`: fix the findings, re-run local tests to green, and re-request on the same bead (step 1), returning `review-ready` to the caller again — the caller re-dispatches. New defect classes do not consume the rejection cap.
 6. After two NEEDS WORK rejections on the same defect class: `Outcome::Surprise { kind: SurpriseKind::ReviewRejected { bead } }` → handback to caller (moltke).
+
+**Mechanical verification ownership.** Hopper executes all mechanical
+verification for the mission: the contract's verify tiers (INNER/MID/BOUNDARY)
+plus any reviewer-requested checks and execution proofs — compilation plants,
+class sweeps, four-step guard-proof plant/fail/revert/clean, and hypothesis
+falsifiers — before completion, and records raw exits and evidence in the
+review/evidence beads. Reviewers (linus / the generic `code-review` skill)
+never execute verification and never audit whether hopper ran tests; linus's
+APPROVE asserts source-level review only. On a NEEDS-WORK verdict that requests
+a check, hopper runs it, records raw exits in the review/evidence bead,
+re-runs local tests to green (step 5), and re-requests on the same bead.
 
 ### Review scope (R13 boundary)
 
