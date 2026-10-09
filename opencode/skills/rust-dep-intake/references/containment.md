@@ -138,6 +138,13 @@ reason to skip containment. The bookworm variants are ~1.5 GB.
 - Containment proves nothing about what the code *would* do with network access.
   A clean contained build is not a clearance; it is a way to get an artefact
   without paying the exfiltration cost. The clearance still comes from T3.
+- **Source approval is distinct from runtime containment.** A T3 category
+  disposition (build-script-review.md §Approved activity categories) approves an
+  *activity* on source-review evidence; it makes no runtime-enforcement claim.
+  T5 containment is a runtime capability whose network-denial assurance stays
+  `Unknown` until an authorized, evidenced enforcement primitive exists on that
+  host/CI. A contained success approves neither further source nor runtime
+  capability.
 
 ## Environment-dependence
 

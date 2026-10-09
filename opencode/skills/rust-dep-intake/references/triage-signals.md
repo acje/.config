@@ -73,8 +73,13 @@ api "crates/<name>/<version>"         | jq -r '.version.published_by.login'
 ```
 
 Compare `published_by.login` on the **new** version against the login on the
-version you currently ship. A change is not automatically malicious, but it is a
-signal that must be explained.
+version you currently ship. A change is not automatically malicious, but a
+publisher-identity change (or a publishing account younger than the crate it is
+publishing into) is a **hard stop — `Halt` without judgement call** per SKILL.md
+§Hard stops. The surrounding signals here (account age, simultaneity,
+description/repo mimicry) explain *why* the change looks suspicious so the
+finding is cited with evidence; they are informational triage guidance and do
+not override the hard stop.
 
 Account age proxy: a low-download, brand-new crate published by an account whose
 own crates all appeared the same day. `proc-macro1`'s publishing account was

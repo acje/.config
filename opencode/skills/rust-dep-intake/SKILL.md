@@ -240,14 +240,26 @@ discriminate, escalate to T3 by default (`references/triage-signals.md` §N).
 **Hard stops — `Halt` without judgement call:**
 
 - A build script or proc-macro in the delta performs network access, writes
-  outside `OUT_DIR`, or decodes an obfuscated blob.
-- A build script or proc-macro in the delta spawns a process, except a build
-  script's exact `--version` compiler probe satisfying **every** criterion in
-  `references/build-script-review.md` §Bounded compiler-version probe. Missing
-  probe evidence is `Indeterminate` → `Investigate`, never permission to run;
-  a known non-probe or disallowed invocation is `Halt`. This exception disposes
-  only the identified spawn signal, not the crate or closure intake. All other
-  hard stops and the newly acquired dependent scope still apply.
+  outside `OUT_DIR` (the default output root; any other output root requires an
+  explicitly authorized, scoped owner amendment per
+  `references/build-script-review.md` §Output rule — absent that amendment,
+  `OUT_DIR`-only applies), or decodes an obfuscated blob.
+- A build script or proc-macro in the delta spawns a process, except a spawn
+  inside one of the approved activity categories in
+  `references/build-script-review.md` §Approved activity categories — (A)
+  compiler config/version/metadata queries, (B) C/Rust compilation of reviewed
+  package/generated inputs and helper chains, (C) local Git identity query,
+  (D) supported-platform conditional reachability — satisfying **every**
+  criterion of that section's shared disposition rubric. A category label is
+  decided by behaviour and context, never by binary name or crate popularity.
+  **Missing disposition evidence is `Unknown` → `Indeterminate` →
+  `Investigate`** (execution blocked, never permission to run, never by itself a
+  `Halt`); a **known forbidden activity** — an outside-category spawn, a
+  category claim contradicted by the evidence, or any retained hard-stop
+  behaviour — is `Halt`. This exception disposes only the identified activity's
+  spawn signal, not the crate or closure intake. All other hard stops, the
+  newly acquired dependent scope, and the retained network / obfuscation /
+  path-escape / unreviewed-execution / unauthorized-output stops still apply.
 - Multiple historical versions of a crate were yanked in one burst with no
   stated reason.
 - An added crate's name is within one edit of a crate already in your lock file.
