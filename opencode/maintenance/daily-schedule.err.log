@@ -1,2 +1,0 @@
-[schedule] REFUSED destructive execution: scheduled context cannot establish exclusive startup fencing; run offline apply (fixture only) or migrate explicitly with all OpenCode instances closed.
-[schedule] holders=present pids=3393
