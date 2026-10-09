@@ -161,7 +161,8 @@ Restart-staleness).
    claiming execution at the SHA. Never `checkout`, `reset`, `stash`, `clean`,
    or otherwise mutate the tree to create correspondence (Rule 3 is read-only
    on source), and never create a worktree/checkout copy as a verification
-   stand-in (AGENTS.md § Single verification state). A commit-object and
+   stand-in (AGENTS.md § Single verification state; § Verification cadence
+   (canonical)). A commit-object and
    current-diff assessment is evidence about the source at the SHA; runtime
    results from a different state are reported with that distinction named,
    never as validation of the target.

@@ -154,6 +154,44 @@ runtime execution evidence requires the actual checkout with relevant inputs.
 All required coverage, CI, security, source-intake and merge obligations
 remain.
 
+## Verification cadence (canonical)
+
+Single shared semantic schedule — a verify tier's scope matches the claim's
+scope. This section is the one owner of the cadence; consumers reference it
+and never restate a competing policy list.
+
+- **INNER** — per-edit targeted checks on the changed crate(s)/file(s) only.
+  Fast feedback for a single increment; it backs no done-claim.
+- **MID** — changed crate(s) PLUS their mechanically-derived reverse-dependent
+  closure, once per sub-mission, before that sub-mission's done-claim. Backs
+  a sub-mission `Result vs intent: Y`.
+- **BOUNDARY** — once per repository stable candidate, before that candidate's
+  done-claim. Backs the repository candidate claim (a `Single` mission is its
+  own epic and may carry a BOUNDARY entry). "Repository stable candidate" is a
+  specific source identity proposed as complete; an identical candidate is not
+  re-proven merely because a new epic claims it, and a changed candidate must
+  be re-proven.
+
+Commands are repository-native, never restated here nor in fleet consumers as
+a competing list: each repo's AGENTS.md, or its documented native harness,
+owns the exact INNER/MID/BOUNDARY command spellings and the single local host
+BOUNDARY execution owner (e.g. gh-report `scripts/verify.sh`). Tier
+definitions and ratios are repo-specific (§ Iteration speed #3).
+
+A repository stable candidate's identity is the exact source/input picture it
+was proven against: commit, dirty diff, relevant lockfiles, manifests,
+toolchain/config, and the effective selection, features, environment and
+coverage. Record enough identity for sufficient exact-input proof reuse. Any
+input in that picture changing invalidates the candidate, triggers the
+affected check tiers, and makes a fresh BOUNDARY proof part of the next
+stable candidate; sufficient exact-input proof is reused, never blanket-rerun.
+
+Independent reviewers may run targeted falsifiers against a changed surface to
+confirm or refute a specific claim; they do not blanket-re-execute the
+producer's identical run. Review tiers, mandatory gates (R12 E2E), guard
+proofs, and native NATS/WASM/browser/doc/audit/deny/intake coverage are
+unchanged; Hamilton assurance does not replace any pre-merge gate.
+
 ## Dispatch examples
 
 Use subagents when the work earns coordination overhead:

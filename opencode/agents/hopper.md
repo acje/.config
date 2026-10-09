@@ -109,7 +109,7 @@ struct MissionContract {                          // FROZEN — interface with m
 struct VerifyTiers {                              // tier-keyed; boundary UNREPRESENTABLE on a package's [[missions]]
     inner: Vec<String>,                            // changed crate(s) only — every TDD increment
     mid: Vec<String>,                              // changed + reverse-dependent closure — once per sub-mission
-    boundary: Option<Vec<String>>,                 // full workspace, once per epic — Some() only on Single or [mission_package]
+    boundary: Option<Vec<String>>,                 // once per repository stable candidate (shared AGENTS § Verification cadence (canonical)) — Some() only on Single or [mission_package]
 }
 ```
 
@@ -213,7 +213,7 @@ When `success_criteria` describe behavioural change, the smallest shippable incr
 
 One assertion-of-intent per cycle. Many small green commits beat one big green commit. Cycle dragging > ~5 min without green ⇒ slice too big; back the slice off, not the test.
 
-For cargo work, red/green/refactor uses INNER-LOOP scope for fast crate-local feedback; mission/sub-mission completion uses the BOUNDARY tier before reporting done.
+For cargo work, red/green/refactor uses INNER-LOOP scope for fast crate-local feedback. The completion done-claim is tier-scoped (shared AGENTS § Verification cadence (canonical); command spellings are repo-native): a sub-mission's done-claim is backed by `verify.mid`; `verify.boundary` backs a repository stable candidate done-claim once (a `Single` mission is its own epic).
 
 ## Tidy First (Beck) — separation rules
 
@@ -308,13 +308,16 @@ fn run_package(p: Package) {
     Cargo verify cadence is now three-tier and schema-enforced, not an R1
     weakening (trace evidence adr-fmt-c9lgv, adr-fmt-kg8f7, adr-fmt-j5ujb;
     frozen-unfreeze P12a; done-claim binding overwritten per adr-fmt-8whg7 /
-    adr-fmt-xdlw9 — see repo `AGENTS.md`). The done-claim is tier-scoped: a
-    sub-mission's `Result vs intent: Y` is backed by that sub-mission's
-    `verify.mid`; the epic's is backed by `verify.boundary`. A sub-mission no
-    longer claims workspace-wide correctness it never established.
-    - **INNER** (`verify.inner`, every TDD increment): changed crate only — `CARGO_TERM_PROGRESS_WHEN=never cargo atest -p <crate> --message-format=short` and `CARGO_TERM_PROGRESS_WHEN=never cargo aclippy -p <crate> -- -D warnings`. Fast feedback, not a done-claim surface. `--workspace`/`--all-features` are FORBIDDEN here — a contract that puts one under `verify.inner` is malformed; treat as `Outcome::Surprise`.
-    - **MID** (`verify.mid`, once per sub-mission, before that sub-mission's done-claim): changed crate(s) PLUS their reverse-dependent closure, computed via the one-liner in the repo `AGENTS.md` (`cargo metadata --format-version 1 --no-deps | jq …`) — never `--workspace`. Backs the sub-mission's `Result vs intent: Y`.
-    - **BOUNDARY** (`verify.boundary`, once per EPIC, before the epic done-claim — present only on `Single` or `[mission_package]`, absent from `[[missions]]` by schema): whole-workspace `cargo build --workspace --all-features --locked --quiet`, `cargo atest --workspace --all-features --locked`, `cargo aclippy --workspace --all-targets --all-features --locked -- -D warnings`, and `cargo fmt --all -- --check`. Exit codes from this tier back the epic's done-claim; declared E2E `verify` entries from R12 also live here.
+    adr-fmt-xdlw9). The done-claim is tier-scoped: a sub-mission's `Result vs
+    intent: Y` is backed by that sub-mission's `verify.mid`; the repository
+    stable candidate claim is backed by `verify.boundary`. A sub-mission no
+    longer claims workspace-wide correctness it never established. Tier
+    semantics are canonical in shared AGENTS § Verification cadence
+    (canonical); exact command spellings and the reverse-dependency one-liner
+    live in the repo `AGENTS.md`.
+    - **INNER** (`verify.inner`, every TDD increment): changed crate(s)/file(s) only — fast feedback, not a done-claim surface. `--workspace`/`--all-features` are FORBIDDEN here — a contract that puts one under `verify.inner` is malformed; treat as `Outcome::Surprise`.
+    - **MID** (`verify.mid`, once per sub-mission, before that sub-mission's done-claim): changed crate(s) PLUS their mechanically-derived reverse-dependent closure (one-liner in the repo `AGENTS.md`) — never `--workspace`. Backs the sub-mission's `Result vs intent: Y`.
+    - **BOUNDARY** (`verify.boundary`, once per repository stable candidate, before that candidate's done-claim — present only on `Single` or `[mission_package]`, absent from `[[missions]]` by schema; a `Single` mission is its own epic): repo-native command ownership. Backs the repository candidate claim; declared E2E `verify` entries from R12 and native NATS/WASM/browser/doc/audit/deny/intake gates live here.
     - **CI gates:** run the repo's documented local entry point before handoff per AGENTS.md § Code-quality methods. If unavailable, name the unverified gap; do not invent a local suite or classify deny/audit/tripwires as universally CI-only.
     - **Noise:** apply the quiet forms in AGENTS.md § Bash hygiene → Cargo command noise (canonical) to the commands above, keeping each tier's selection, features, `--locked` and harness arguments unchanged. Quiet is an output setting, never a coverage reduction.
 

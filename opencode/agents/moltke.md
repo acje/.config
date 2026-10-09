@@ -485,7 +485,7 @@ preflight_checks = [ "<assumption to verify>" ]
 [verify]
 inner    = [ "<cmd 1>", "<cmd 2>" ]  # changed crate(s)/file(s) only
 mid      = [ "<cmd 1>" ]             # changed + reverse-dependent closure
-boundary = [ "<cmd 1>" ]             # full workspace, ONCE, backs the terminal done-claim
+boundary = [ "<cmd 1>" ]             # per repository stable candidate, ONCE; semantics canonical in shared AGENTS § Verification cadence
 
 out_of_scope     = [ "<what NOT to touch>" ]
 preferred_tools  = [ "edit", "bash" ]
@@ -510,11 +510,12 @@ package_abort_if         = [ "<observation that kills the whole package>" ]
 package_rollback_strategy = "rollback_failed_only"  # default
 mission_epic_id           = "create bd epic when executing package; do not create in plan mode"
 
-# verify.boundary lives ONLY here (epic level) — full workspace, ONCE, before
-# the epic done-claim. There is no verify.boundary field on [[missions]]
-# below; a sub-mission cannot construct one, by schema.
+# verify.boundary has a slot ONLY here (epic/package level) — per repository
+# stable candidate; scheduling semantics canonical in shared AGENTS §
+# Verification cadence (canonical). There is no verify.boundary field on
+# [[missions]] below; a sub-mission cannot construct one, by schema.
 [mission_package.verify]
-boundary = [ "<cmd 1>", "<cmd 2>" ]
+boundary = [ "<cmd 1>", "<cmd 2>" ]  # per repo stable candidate; semantics: shared AGENTS § Verification cadence (canonical)
 
 [[missions]]
 mission_id       = "<slug>-01"

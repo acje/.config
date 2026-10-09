@@ -648,7 +648,8 @@ Other security checks:
 
 ## Validation
 
-Select existing project commands by AGENTS.md § Review tiers and the claims
+Select existing project commands by AGENTS.md § Review tiers, § Verification
+cadence (canonical) and the claims
 under review; the list below is a command reference, not an unconditional
 suite. Genuine tidy review is read-level with gate evidence; standard and
 adversarial reviews retain their prescribed execution and sweeps. Mandatory
