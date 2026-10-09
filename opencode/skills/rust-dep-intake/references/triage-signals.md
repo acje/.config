@@ -69,17 +69,60 @@ api "crates/<name>" | jq -r '.versions[] | "\(.num)\t\(.created_at)\t\(.yanked)"
 
 ```
 api "crates/<name>/owners"            | jq -r '.users[] | "\(.id)\t\(.login)\t\(.kind)"'
-api "crates/<name>/<version>"         | jq -r '.version.published_by.login'
+api "crates/<name>/<version>"         | jq -r '"\(.version.published_by.login)\t\(.version.trustpub_data)"'
 ```
 
-Compare `published_by.login` on the **new** version against the login on the
-version you currently ship. A change is not automatically malicious, but a
-publisher-identity change (or a publishing account younger than the crate it is
-publishing into) is a **hard stop — `Halt` without judgement call** per SKILL.md
-§Hard stops. The surrounding signals here (account age, simultaneity,
-description/repo mimicry) explain *why* the change looks suspicious so the
-finding is cited with evidence; they are informational triage guidance and do
-not override the hard stop.
+`trustpub_data` (`provider`/`repository`/`run_id`/`sha`) marks trusted-publishing
+versions; `published_by.login` is the account representation. **Identity versus
+representation.** The substantive question is who authorized the release, not
+how the account is spelled. A registry representation change between the version
+you ship and the new one (e.g. account login -> trusted-publishing workflow) is
+a **signal** — not by itself proof of an identity change (`Halt`) nor of
+continuity (`Clear`).
+
+**Positive canonical transition — evaluate, never pre-grant `Clear`.** A
+representation change is judged against the release-authorization record; every
+criterion below must be evidenced for a candidate:
+
+1. Version registry authenticated publish record: the new version's exact
+   `published_by` (login + id) or `trustpub_data` (`provider`/`repository`/
+   `run_id`/`sha`) from the crates.io API.
+2. Canonical controlled release workflow: repository, workflow path/id, ref,
+   event, `run_id`, actor and head sha — consistent with the crate's established
+   release channel.
+3. Upstream tarball/tag/source binding: published `.crate` checksum == index
+   `cksum`; tarball source (`.cargo_vcs_info.json`/`.git-commit`) == the
+   trusted-publishing sha; an annotated tag / GitHub release points at the run head.
+4. Release-specific authorized canonical maintainer transition evidence: the
+   release commit/branch/PR flows through the crate's established maintainer
+   path on its canonical repo.
+
+Missing any criterion — including a **missing public bridge** (a representation
+change claims continuity but no public record is witnessed) — is `Unknown` →
+`Indeterminate` → `Investigate` (execution blocked), never `Clear`; missing
+evidence is not a demonstrated changed issuer.
+**Public scope:** never require the private identity of the credential holder
+or crates.io registration operator (not observable; never required before);
+same-org/same-repo/popularity/checksum alone is never a pass.
+
+**Retained hard stops — `Halt` without judgement call:**
+- Demonstrated **account takeover** or changed substantive issuer/controller (a
+  different real publisher, not a representation change).
+- Publication by an **unrelated release workflow/repo**, or a **mismatch between
+  workflow head, tag, and tarball source** (demonstrated binding mismatch).
+- A publishing account younger than the crate it publishes into (`arrayref`'s
+  impersonator account was ~6 hours old).
+
+**Judgement matrix** — review-judgment evidence guiding a reviewer, not an
+automated matching rule (same status as build-script-review.md's matrix):
+
+| Registry representation delta | Evidence required | Adjudication |
+|---|---|---|
+| `published_by` login/id unchanged across versions | routine binding record | benign/churn candidate unless another signal fires |
+| account -> trusted publishing (e.g. libc 0.2.189 -> 0.2.190) | criteria 1–4 all evidenced | positive canonical-transition candidate; any missing criterion -> `Unknown`/blocked, never pre-granted `Clear` |
+| trusted publishing -> trusted publishing, same repo/workflow/actor (cc 1.5.1->1.6.0, zerocopy/-derive 0.8.59->0.8.62, zeroize 1.9.0->1.9.1) | old side repo/workflow **witnessed**, both sides bound per criteria 1–4 | candidate only when both sides witnessed and bound; an unwitnessed old side is `Unknown`, never falsely `Clear` |
+| different issuer/controller demonstrated (takeover, unrelated workflow, mismatched head/source/tag) | the demonstrated discontinuity | **`Rejected`; `Halt`** |
+| missing evidence — any unwitnessed criterion, including a **missing public bridge** (claims continuity, no witnessing record) | evidence absent on that criterion | `Unknown` → `Indeterminate` → `Investigate`, execution blocked, never `Clear` |
 
 Account age proxy: a low-download, brand-new crate published by an account whose
 own crates all appeared the same day. `proc-macro1`'s publishing account was

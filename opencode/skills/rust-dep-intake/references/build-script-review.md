@@ -188,6 +188,19 @@ amendment, `OUT_DIR`-only applies and a write anywhere else is the retained
 hard stop. SKILL.md §Hard stops carries this same rule by cross-reference; the
 two never compete.
 
+The source-output claim is scoped to **source-controlled output**: the
+package's own generated/command-directed outputs under `OUT_DIR`, or an
+explicitly authorized canonical root. **Independently trusted compiler/SDK
+tool-managed state is a documented exclusion from this claim** — the ordinary
+installation/cache state of a reviewed, independently trusted toolchain is not
+source-controlled output and is not a source-dir write. This is a scoped
+definitional exclusion, not a blanket licence for arbitrary writes and not a
+runtime filesystem-containment proof; it never asserts that a tool writes no
+cache. Helper identity still gates the exclusion: a helper whose plugin input
+paths, environment or cache redirection moves **source-controlled** output
+outside the authorized root is a source-output escape — reviewed and forbidden
+(`Halt`); an unresolved helper is `Unknown`, not accepted.
+
 Record `ActivityDisposition::Accepted` | `Rejected` | `Unknown` with the call
 site, the category (A–D) it was disposed under, exact argv, evidence for each
 rubric item, unresolved gaps, reviewer and date. `Accepted` removes only the

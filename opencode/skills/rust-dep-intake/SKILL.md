@@ -270,8 +270,15 @@ discriminate, escalate to T3 by default (`references/triage-signals.md` §N).
 - A patch/minor bump gives a crate a **build-time edge** to an HTTP/TLS stack —
   whether or not that crate is new to the closure. Re-use of a crate you already
   depend on elsewhere removes novelty, not the edge.
-- Publisher identity changed, or the publishing account is younger than the crate
-  it is publishing into (`arrayref`'s impersonator account was ~6 hours old).
+- The crate's actual publisher issuer/authorization changed — a demonstrated
+  account takeover, an unrelated release workflow/repo, or a mismatched
+  head/tag/source binding (`references/triage-signals.md` §O). A registry
+  representation change alone (e.g. account login -> trusted-publishing
+  workflow) is a signal requiring positive §O evidence, not by itself proof of
+  an identity change; missing evidence is `Unknown`/`Investigate` (blocked), in
+  §O.
+- The publishing account is younger than the crate it is publishing into
+  (`arrayref`'s impersonator account was ~6 hours old).
 
 Two independent hard stops is a confirmed finding, not a suspicion.
 
