@@ -29,22 +29,22 @@ Plan mode produces plans; build mode runs them. Inherits AGENTS.md
    State "Trivial: skipping loop", name the verification, perform, verify,
    report directly; no handoff needed. On uncertainty, failed verification or
    surprise, stop and hand the evidence to `@moltke`; never broaden inline work.
-3. **Inspection-gated Git operations may be completed directly.** `git init` of
-   an existing user-owned non-repository directory, and an explicitly
-   authorized ordinary `git add`/`git commit`/`git push` — including existing
-   code/config/doctrine payloads — are direct when every state mutation is
-   preceded by inspection. Authorizing commit/push of an existing payload is
-   NOT authorizing edits to that payload. Safety invariants: confirm exact
-   target and remote; no nested/ancestor/symlink surprise; no unexpected staged
-   changes or secrets; no hooks/filters/signing running unreviewed code; never
-   force, amend, skip hooks, reset, or clean from this authorization; unrelated
-   work stays unstaged. Expected no-repo discovery and content inspection
-   before init; status + full cached-diff content (not name-only) before
-   commit; exact path/remote confirmation before push. Surprise remains
-   escalation. No contract, beads, subagent or Gardener; verify after, reuse
-   observations until stale, report directly. Everything else — unsafe/ambiguous
-   Git, secrets or unrelated staging, unauthorized commit/push — hands to
-   `@moltke`.
+3. **Inspection-gated Git operations may be completed directly.** Authorized
+   `git init` of an existing user-owned non-repository directory, and an
+   explicitly authorized ordinary `git add`/`git commit`/`git push` —
+   including existing code/config/doctrine payloads — are direct when every
+   state mutation is preceded by inspection. Authorizing commit/push of an
+   existing payload is NOT authorizing edits to that payload. Safety
+   invariants: confirm exact target and remote; no nested/ancestor/symlink
+   surprise; no unexpected staged changes or secrets; no hooks/filters/signing
+   running unreviewed code; never force, amend, skip hooks, reset, clean, or
+   create parallel Git state (branches/worktrees/stashes/candidate stacks);
+   unrelated work stays unstaged. Load `git-workflow-and-versioning` for the
+   inspection-gated protocol and SCAR linear single-parent mechanics before
+   any Git state mutation. Surprise remains escalation. No contract, beads,
+   subagent or Gardener; verify after, reuse observations until stale, report
+   directly. Everything else — unsafe/ambiguous Git, secrets or unrelated
+   staging, unauthorized commit/push — hands to `@moltke`.
 4. **Output-only doctrine advice is direct; in-place edits need authority.**
    Producing output-only doctrine advice (documents, suggested rewrites,
    drafts) holds no mandatory mission. Editing managed doctrine in place
@@ -60,6 +60,18 @@ Plan mode produces plans; build mode runs them. Inherits AGENTS.md
 7. **Autonomy** per AGENTS.md § Autonomy (risk-gated clarification; no mandated
    question mechanism or options format).
 8. **Bash hygiene** per AGENTS.md § Bash hygiene.
+9. **Direct-path method loaders.** Within an already-authorized direct
+   completion, load the owning technique before use (and reload after context
+   reload): `fleet-execution-methods` (§ Non-interactive Commands before
+   non-interactive command use; § TDD before a bounded low-risk
+   red→green→refactor increment; § Tool Development before building developer/
+   verification tooling), `git-workflow-and-versioning` (§ Inspection-Gated Git
+   Protocol before any direct `git init`/`add`/`commit`/`push`; § Descriptive
+   Messages before constructing a commit message), and `rust-design-evidence`
+   when the bounded direct work touches Rust type design, evidence selection,
+   or lint suppression (§ Lint Suppression — load before a suppression-only
+   edit). Loading a technique never confers new authority; the
+   direct-completion and Git boundaries above still bind.
 
 For changed Rust/Tokio resource-sensitive paths, carry AGENTS.md § Rust/Tokio
 resource contracts into the brief. Tradeoffs follow § Fleet engineering

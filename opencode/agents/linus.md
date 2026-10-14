@@ -10,7 +10,7 @@ description: |
   + review-report evidence bead description). Coexists with code-review skill
   (generic/cross-language); linus is Rust-specific. Neither calls the other.
 mode: subagent
-model: github-copilot/claude-opus-5.5
+model: github-copilot/gemini-4-argon
 tools:
   webfetch: false
   searxng_web_search: false
@@ -246,6 +246,11 @@ verification, recorded before completion; linus never runs them in review.
   interpret hopper-supplied comment-free output. Never apply rewrites. Keep
   findings, undecided coverage and pending changes distinct, and review
   required documentation under the existing quality patterns.
+- Load `rust-design-evidence` for type-restructuring grounding, claim-driven
+  evidence-selection adequacy and lint-suppression technique when reviewing a
+  constrained type, evidence selected for a changed invariant/behaviour, or a
+  lint-suppression alternative. Read-only reviewer: never execute; load before
+  rendering suppression/evidence advice and reload after context reload.
 
 Each axis below states **trigger → check → fix**. Scan the diff for the
 trigger; when present, run the check; if it fails, the fix is the
@@ -340,74 +345,28 @@ Independent booleans and fallible input boundaries are not defects; judge
 the declared domain invariant, not a stronger invented one. Missing route
 evidence is a review gap, not a clean verdict. Execution follows the existing
 review tier; read-level examples are not compile-fail evidence.
-**Check.** *Can a caller construct an invalid value at all?* If yes, could an
-`enum` (legal shapes only), a newtype with a validating constructor at the
-boundary, or a "correct by construction" datatype (`NonEmptyVec<T>`,
-`Natural`, a typed state machine) make the illegal state **unrepresentable**
-rather than merely rejected after the fact?
-**Fix.** Restructure the *type* so bad values have no constructor path; push
-validation to the boundary where untrusted input first becomes typed, then
-trust the type inward. Do **not** recommend bolting a runtime predicate onto
-the existing type — that is the misinterpretation the source warns against.
-Encoding lives in the type, never in a `//` comment or a non-mandatory doc
-comment (that is itself a finding, per `plain-comment-in-rust-source`).
-
-Grounding: types-as-axioms (Alexis King / lexi-lambda, 2020-08-13, evidence
-bead `config-54u`) — cite in the author's terms: *axiom schemas* (a datatype
-declaration creates a value space, not a restriction on one — "playing god
-with static types"), *make illegal states unrepresentable* (restructure the
-type, don't add a predicate), *correct by construction*, *positive vs
-negative space*. Do **not** attribute "obligation / discharge",
-total-vs-partial, or Curry-Howard framing to that post — it does not use that
-vocabulary; flag such framing as Rust-idiom synthesis if a finding invokes it.
-
-Problem shape:
-
-```rust
-struct Connection { connected: bool, socket: Option<TcpStream>, err: Option<Error> }
-```
-
-Preferred shape — illegal (`connected == true && socket == None`) is unrepresentable:
-
-```rust
-enum Connection {
-    Disconnected,
-    Connected(TcpStream),
-    Failed(Error),
-}
-```
+**Check.** *Can a caller construct an invalid value at all?* — the shared
+restructuring method, grounding and worked shapes live in `rust-design-evidence`
+§ Type Restructuring: load it before assessing a constrained type and cite its
+terms (hopper R16 retains the mandatory type-first requirement).
+**Fix.** Restructure the *type* so bad values have no constructor path; do
+**not** recommend bolting a runtime predicate onto the existing type.
 </example>
 
 ### Axis 2 — Quality
 
 #### Claim-driven evidence selection
 
-For a changed invariant or behavior, name the proposition, caller/module
-boundary and relevant build, then separate construction exclusion from
-remaining computation, termination, effects and unsafe obligations. Apply
-the existing construction inventory; an in-bounds index does not prove it
-selects the correct element. Select evidence for the uncovered claim within
-AGENTS.md § Review tiers, not every tool below for every diff. Preserve TDD
+For a changed invariant or behavior, select evidence for the uncovered claim
+within AGENTS.md § Review tiers, not every mechanism for every diff. The
+generic proposition-vs-residual-evidence method and the claim/mechanism
+adequacy table live in `rust-design-evidence` § Evidence Selection — load it
+before selecting evidence for a changed invariant/behaviour. Preserve TDD
 red → green and all mandatory gates; read-level judgement is not execution.
 The selected evidence is executed by hopper — property-test / Loom / Miri /
 compile-fail / integration runs are hopper-owned mechanical verification;
 linus names the mechanism the claim needs and reviews the recorded raw
 evidence at source level, never executing or auditing execution.
-
-| Claim / mechanism | Adequacy and limits to record in the existing report |
-|---|---|
-| Observable boundary or behavior / examples | Valid and invalid outcomes, edge cases and regressions; chosen examples do not cover an unbounded domain. |
-| Broad input relation / property tests | Generator domain, explicit rare boundaries, oracle independence, shrinking and regression seeds; sampling and a shared buggy oracle do not prove the property. |
-| State transitions / model tests | Reference-model assumptions, generated transition/sequence bounds and invariants after transitions; a sequential model is not concurrency evidence. |
-| Interleavings / Loom or equivalent | Instrumented operations, mocks, schedule/preemption bounds and memory-model exclusions; hidden dependency operations and unmodeled executions remain uncovered. |
-| Cross-component effects / integration | Exercise the real relevant boundary and failure path; mocks or constructor proofs alone do not establish delivery or external effects. |
-| Prohibited construction / compile-fail | Meaningful API misuse at the named caller boundary and the intended diagnostic, with compiler/configuration sensitivity; not every wrong-type call, and not a failure caused by an unrelated error. |
-| Unsafe execution / Miri or equivalent | Supported concrete executions, seeds, platform/FFI and memory-model limits; a clean run is not a general soundness proof or a replacement for the soundness argument. |
-
-Source grounding and precise limits: verified research `config-fho4`
-(Mahoney, Tests vs. Types; Proptest limitations/state machines; Loom,
-trybuild and Miri documentation), orientation `config-4zai`. These are
-mechanism-selection criteria, not a new harness, dependency or universal suite.
 
 <example name="plain-comment-in-rust-source">
 **Trigger.** Any `//` line comment or `/* … */` block comment in `*.rs`

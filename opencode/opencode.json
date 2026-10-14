@@ -149,7 +149,7 @@
       "/Users/anders.jensen/code/gh-report/**": "allow"
     }
   },
-  "model": "github-copilot/gpt-6.1-sol",
+  "model": "github-copilot/gemini-4-argon",
   "experimental": {
     "continue_loop_on_deny": true
   },
@@ -160,17 +160,19 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gpt-6.1-sol",
-      "reasoningEffort": "high"
+      "model": "github-copilot/gemini-4-argon",
+      "reasoningEffort": "medium"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/gpt-6.1-sol",
-      "reasoningEffort": "high"
+      "model": "github-copilot/gemini-4-argon",
+      "reasoningEffort": "medium"
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
-      "mode": "subagent"
+      "mode": "subagent",
+      "model": "github-copilot/gemini-4-argon",
+      "reasoningEffort": "medium"
     },
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
@@ -187,8 +189,8 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6.1-sol",
-      "reasoningEffort": "high"
+      "model": "github-copilot/gemini-4-argon",
+      "reasoningEffort": "medium"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
@@ -199,13 +201,13 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/claude-opus-5.5",
+      "model": "github-copilot/gemini-4-argon",
       "reasoningEffort": "high"
     },
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "github-copilot/gpt-6-astra",
+      "model": "github-copilot/gemini-4-argon",
       "reasoningEffort": "high"
     },
     "gardener": {

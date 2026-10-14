@@ -41,19 +41,25 @@ Missing fields → most reversible interpretation, named explicitly, proceed.
 
 ## Workflow
 
-1. **Probe** — locate project-root `adr-fmt.toml` with file tools and check
-   `command -v adr-fmt`. With both present use `Mode::AdrFmt { Path }`.
-   If the binary is absent but this workspace has the config and a known
-   local CLI target, use `Mode::AdrFmt { Cargo }`. Otherwise use
-   `Mode::Fallback { corpus_path }`; do not try cargo to repair a missing
-   config. Keep discovery within the supplied scope and active permissions.
-   State the chosen mode.
-2. **Locate corpus** — when `Mode::AdrFmt`, list ADRs via `adr-fmt --tree` (the CLI has no `list` subcommand). Otherwise glob `docs/adr/`, `doc/adr/`, `adr/`, `architecture/adr/` for `[0-9]{3,4}-*.md`.
-3. **Run `--context` and inspect output.** Run `adr-fmt --context <scope>`
-   (or the cargo equivalent) directly. Interpret status/stderr by the CLI
-   contract; missing config or execution failure is not `NoCoverage`. If
-   evidence is masked or unexpectedly empty, recover producer evidence per
-   AGENTS.md § Bash hygiene before drawing a coverage conclusion.
+1. **Load the skill, then probe.** Load `skill({ name: "adr-fmt" })` first —
+   it owns the read-only CLI flags/tree/context mechanics (probe, `--tree`,
+   `--refs`, `--context`, exit interpretation); architectural interpretation
+   stays with oracle per that skill's own contract. Then locate project-root
+   `adr-fmt.toml` with file tools and check `command -v adr-fmt`. With both
+   present use `Mode::AdrFmt { Path }`. If the binary is absent but this
+   workspace has the config and a known local CLI target, use
+   `Mode::AdrFmt { Cargo }`. Otherwise use `Mode::Fallback { corpus_path }`;
+   do not try cargo to repair a missing config. Keep discovery within the
+   supplied scope and active permissions. State the chosen mode.
+2. **Locate corpus** — when `Mode::AdrFmt`, use the loaded adr-fmt skill's
+   tree mechanics to list the corpus. Otherwise glob `docs/adr/`,
+   `doc/adr/`, `adr/`, `architecture/adr/` for `[0-9]{3,4}-*.md`.
+3. **Run context and inspect output.** Use the loaded adr-fmt skill's
+   `--context` mechanics for the configured crate scope (or the cargo
+   equivalent) directly. Interpret status/stderr by the CLI contract; missing
+   config or execution failure is not `NoCoverage`. If evidence is masked or
+   unexpectedly empty, recover producer evidence per AGENTS.md § Bash hygiene
+   before drawing a coverage conclusion.
 4. **Filter to scope** — keyword match `decision_context` ∩ `scope` against ADR titles + status. Drop the rest.
 5. **Read only the filtered set.** Do not read the full corpus. Per ADR: id, title, status, decision (1 line), binding constraint on *this* decision (1 line).
 6. **Detect tensions** — does any candidate path contradict an accepted ADR? Flag loudly.

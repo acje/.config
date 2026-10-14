@@ -9,6 +9,17 @@ Produce an evidence-backed closeout snapshot, not a promise of perpetual
 synchronization. Loading or editing this skill does not invoke closeout.
 Repository instructions, active permissions and mission bounds remain binding.
 
+## SCAR linear single-checkout regime
+
+Under SCAR single-checkout environment design, closeout verifies **linear
+single-parent `main` history** (accepted successors are single-parent
+append-only, no merges or rewrites — see `git-workflow-and-versioning`) and a
+**clean single checkout** (no agent-created branches, worktrees, checkout
+copies, candidate stacks, or stashes). Legacy/external PRs, worktrees, or
+stashes are inspected **read-only** — verified without creating, mutating, or
+deleting them; pre-existing user-owned parallel state is reported, never
+"fixed" by closeout.
+
 ## Reuse and refresh the shared per-repo record
 
 A closeout unit may reuse unchanged discovery facts from a prior shared
@@ -60,10 +71,10 @@ acceptance or independent-verification obligation.
    Existing unrelated stashes/worktrees may remain, explicitly reported as
    preserved exclusions; never claim they were cleaned. If main is occupied in
    another worktree, resolve that location/authority instead of forcing a switch.
-5. Probe installed `gh pr view --help` and `gh pr merge --help`, available JSON
-   fields, and authentication for the resolved host. Missing tools, auth,
-   denied reads or unavailable remote probes mean blocked/unknown, not no work.
-   Do not install tools or change permissions as a closeout workaround.
+ 5. Probe installed `gh pr view --help`, available JSON fields, and
+    authentication for the resolved host. Missing tools, auth, denied reads or
+    unavailable remote probes mean blocked/unknown, not no work.
+    Do not install tools or change permissions as a closeout workaround.
 
 ## Verify the scoped beads
 
@@ -91,82 +102,65 @@ if no epic is in scope, record that resolved fact rather than inventing one.
 Record unavailable store/sync capabilities and whether they block the required
 durability contract; local closure alone is not proof of remote persistence.
 
-## Verify and merge each scoped PR
+## Verify legacy/external PR delivery evidence (read-only)
 
-Use explicit PR identities and `--repo` on every `gh` PR command. After resolving
-placeholders, the read-only evidence query is:
+Closeout inspects PR delivery evidence **read-only** (SCAR linear
+single-checkout regime above). Legacy/external PRs that already exist in an
+external/GitHub workflow are observed, never mutated: no `gh pr merge`, no
+admin bypass, no merge scheduling or merge-queue processing, and no branch,
+worktree, or PR creation — there is no place for parallel Git state. Authorized
+linear integration mechanics are routed to the single Git-mechanics owner,
+`git-workflow-and-versioning`, and proceed only under its inspection-gated
+protocol with the accepted-history invariants below; this skill records no
+second Git-operation procedure. No permission grants mutation: exact merge or
+bypass authorization alone never makes a legacy/external PR eligible for
+mutation under SCAR.
+
+Use explicit PR identities and `--repo` on every `gh` PR command. The
+read-only delivery evidence query is:
 
 ```sh
-gh pr view "<PR>" --repo "<HOST/OWNER/REPO>" --json number,url,state,baseRefName,headRefName,headRefOid,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,autoMergeRequest,mergedAt,mergeCommit
+gh pr view "<PR>" --repo "<HOST/OWNER/REPO>" --json number,url,state,baseRefName,headRefName,headRefOid,isDraft,mergedAt,mergeCommit
 ```
 
 Read checks/reviews and required policy, not merely an aggregate status or an
 empty check list. Confirm the verified commit equals `headRefOid`, the base is
-intended, and stack dependencies are satisfied. Unknown mergeability, failed
-or pending checks, draft status, requested changes, absent policy evidence and
-unexpected base/head changes block normal merge readiness. Process the stack
-in dependency order; re-read/re-verify affected PRs after any base/head change.
-Do not silently retarget or rebase the stack as a closeout shortcut.
+intended, and any stack dependencies are satisfied. Cross-check the delivery
+record against accepted history: resolve `git rev-parse --verify
+refs/heads/main^{commit}` and verify accepted-main / single-parent (sole
+parent = preceding accepted main) per `git-workflow-and-versioning`. Unknown
+mergeability, failed or pending checks, draft status, requested changes,
+absent policy evidence and unexpected base/head changes block any delivery
+claim. Process a legacy stack in dependency order; re-read/re-verify affected
+PRs after any base/head change. Do not silently retarget or rebase the stack as
+a closeout shortcut.
 
 **Run Hamilton while waiting for GitHub Actions.** While waiting for GitHub
-Actions CI checks to pass (`gh pr checks <PR> --watch` or polling) or while
-monitoring post-merge deployment workflows, dispatch `@hamilton` to conduct an
-architectural alignment review on the candidate PR commit or merged revision:
+Actions CI or post-merge deployment workflows, dispatch `@hamilton` — the
+primary/default assurance target is an **accepted linear revision on `main`**
+(`merged_revision: <sha>`, `integration_branch: main`); a pre-existing
+external PR is only a secondary source for read-only inspection:
+
 ```
 Task(hamilton, next_input:
-  "Assurance review. target_revision: <headRefOid>. pr_number: <PR>.
-   base_branch: <baseRefName>. scope: <bounded path list>.
+  "Assurance review. merged_revision: <sha>. integration_branch: main.
+   scope: <bounded path list>.
    focus: <architectural alignment, ADR compliance, resource contracts>.
    mission: <mission id or none>.")
 ```
+
 Hamilton's report bead and any actionable `assurance-finding` beads must be
-triaged before proceeding with merge or final closeout.
-
-When normal merge is authorized, choose the repository-approved strategy from
-installed help (or its merge-queue workflow) and bind it to the verified head:
-
-```sh
-gh pr merge "<PR>" --repo "<HOST/OWNER/REPO>" --match-head-commit "<VERIFIED_HEAD_SHA>" <APPROVED_STRATEGY_OR_QUEUE_FLAGS>
-```
-
-Placeholders are not executable shell syntax; replace them with resolved,
-quoted values and supported flags. Never add `--delete-branch`. Never infer
-success from this command's exit alone: `--auto` or a required queue may only
-schedule the merge. Poll PR state with a declared finite deadline and interval;
-on expiry report pending, not complete. `CLOSED` without merge is not `MERGED`.
-
-### Admin bypass: separate, exact approval
-
-Before any `--admin` attempt, first inspect recorded explicit authorization for
-this repository, PR number/URL, current verified head SHA, and the exact
-protections or queue bypass. If that matching authorization already exists and
-has not been withdrawn, retain and cite it in the existing mission/evidence
-bead without asking again. Blanket permission, skill invocation or approval of
-another PR, head or bypass is insufficient.
-
-Only when matching explicit authorization is absent, use the **question tool**
-to ask about that exact repository/PR/head/bypass, showing current checks,
-reviews and consequences. Require an affirmative answer and record it in the
-existing mission/evidence bead. Do not ask through shell prompts. When new
-approval is needed, an unavailable or denied question tool, an unanswered
-question or refused approval blocks admin bypass: hand back the missing
-authority/capability and do not attempt another bypass route. Question-tool
-unavailability alone does not invalidate an existing matching authorization.
-
-Approval does not override active tool policy or the mission's verification
-requirements. Immediately re-read PR state and head before the attempt; changed
-head invalidates the prior approval and requires renewed verification and
-authorization for the new head through the same check above. Use `--repo` and
-`--match-head-commit` even with approved `--admin`; poll for actual merge evidence
-as for normal merges.
+triaged before final closeout.
 
 ## Synchronize main without discarding work
 
-After every scoped PR is actually `MERGED`, record its URL, verified head,
+After every scoped PR whose read-only delivery evidence records
+`state=MERGED`, record its URL, verified head,
 `mergedAt` and `mergeCommit.oid`; absent fields leave evidence incomplete.
 Confirm the full stack's resulting changes reached the intended main, not
-just a side base branch. Do not require feature-head ancestry for squash/rebase
-merges; use the actual merge result and final stack delivery evidence.
+just a side base branch. Do not require feature-head ancestry for
+squash/rebase-merged records; use the actual recorded merge result and final
+stack delivery evidence.
 
 Only with a clean target worktree and switching/synchronization authority:
 

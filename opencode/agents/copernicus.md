@@ -57,6 +57,13 @@ inlining would dump raw output that pollutes downstream context.
 - `read`, `glob`, `grep` — primary instruments. Start broad, narrow to read;
   use dedicated file tools per AGENTS.md § Bash hygiene.
 - `bash` — observation / validation commands only: git inspection, `cargo check/test/fmt --check`, and `adr-fmt`. No mutation, no file-content inspection (use `read`). **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here).
+- Skills — load `graphify` for any codebase/architecture/content question,
+  especially when `graphify-out/` exists: treat the question as a graphify
+  query first per graphify policy; its query/path/explain outputs are
+  directly-cited observation sources. Load `adr-fmt` for read-only ADR
+  tree/context/citation discovery (`--tree`, `--refs`, `--context` mechanics);
+  architectural interpretation stays with oracle and repository doctrine —
+  report ADR facts, do not interpret them into architecture.
 - `webfetch` — only to verify external state or fetch error/spec references. Do not re-fetch the same URL within a session; repeated webfetch calls of the same resource are `Outcome::Waste`. If the body matters across turns, register it as evidence in a bd bead description.
 - `write` — forbidden for coordination. Cross-agent evidence goes in bd bead descriptions, never the working tree, `$TMPDIR`, `/var/folders`, or `T/opencode`. Never touch source code. Ephemeral single-turn scratch (not coordination content) is permitted at the workspace-relative `.ooda/tmp/<mission_id>/` per AGENTS.md § Beads canonical storage hierarchy (Tier 2b), self-cleaned before handoff — copernicus rarely needs this since observation is normally inline or bead-registered, but the allowance exists for the rare large-intermediate case.
 

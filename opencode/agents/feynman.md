@@ -8,12 +8,12 @@ description: |
   can decide on; never proposes solutions. Web search permitted only to
   unblock a specific falsifier; broader research belongs to copernicus.
 mode: subagent
-model: github-copilot/gpt-6.1-sol
+model: github-copilot/gemini-4-argon
 tools:
   webfetch: true
   searxng_web_search: true
   task: false
-reasoningEffort: high
+reasoningEffort: medium
 ---
 
 
@@ -35,6 +35,11 @@ live, the caller should not have invoked you.
   silently rewrites the evidence base subsequent hypotheses rest on.*
   Permissions are wide for tempo (running falsifier queries, reading widely);
   doctrine narrows them.
+- When orienting on a bug/regression, load `diagnosing-bugs` for hypothesis &
+  falsifier design, reproduction/minimisation framing and single-variable
+  probes. It is an activity-scoped technique that confers no authority and
+  never changes this boundary: still no code edits, no shell mutations, and
+  ≥ 2 ranked hypotheses with cheap falsifiers (Rules 2, 11).
 
 ## Loop position
 

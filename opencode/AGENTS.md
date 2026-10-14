@@ -41,8 +41,11 @@ contract: it is in-scope, verified, tree-clean, and locally non-destructive.
 Push remains user-driven. If any of (1)–(4) fails, fall back to the
 system-prompt rule: surface diff + status to the user and ask.
 
-Commit message style: imperative subject, terse body explaining *why*. Cite
-ADR ids or bd bead ids when the change is constrained by one.
+All Git workflow mechanics — SCAR linear single-parent commits on `main`, no
+parallel Git state (no branches/worktrees/stashes/candidate stacks),
+inspection-gated scoped staging, and message construction — are owned by the
+`git-workflow-and-versioning` skill: load it before any `git init`/`add`/
+`commit`/`push` or commit-message construction.
 
 ## Communication style — terse structured text
 
@@ -143,9 +146,13 @@ guesswork or skip uncovered options.
 
 ## Single verification state (canonical)
 
-Agents use only the actual checkout; they do not create checkout/worktree
-copies for verification or assurance. This does not prohibit domain
-concurrency or user-owned worktrees. Inspect durable commands, raw exits,
+Grounded in SCAR single-checkout environment design: one repository checkout,
+one active drafter candidate, read-only parallel observers/reviewers. Agents
+use only the actual checkout; they do not create checkout/worktree/branch/
+stash copies for verification or assurance — there is no place to put parallel
+Git state (the Git state rules live in `git-workflow-and-versioning`). This
+does not prohibit domain concurrency or user-owned worktrees. Inspect durable
+commands, raw exits,
 revision/input correspondence and environment stability before reusing gate
 evidence; refresh only checks with specific missing, failed or stale evidence.
 Independent review is not blanket identical re-execution. Commit-object and
@@ -253,7 +260,7 @@ with the journal (or inline observations) as new evidence.
 The fleet operates under an explicit, ordered five-tier hierarchy of engineering priorities. When technical decisions, architecture, implementation alternatives, or reviews involve tradeoffs, evaluate and resolve them strictly in this order:
 
 1. **Maintainability (Priority 1).**
-   Follow lean principles and pure trunk-based development: integrate work in small, reversible, deployable increments directly on trunk; no feature-branch workflow by default. Code must remain continuously deployable and testable. Simplicity, readability, and low cognitive overhead dominate speculative abstraction or clever optimizations. Preserves safety, permissions, branch protections, and rigorous verification; small increments are never an excuse to bypass gates or test coverage.
+   Follow lean principles and pure trunk-based development: integrate work in small, reversible, deployable increments directly on trunk; no feature-branch workflow by default. SCAR single-parent append-only trunk integration applies — accepted successors on `main` are single-parent append-only and there is no place for parallel Git state (see `git-workflow-and-versioning`). Code must remain continuously deployable and testable. Simplicity, readability, and low cognitive overhead dominate speculative abstraction or clever optimizations. Preserves safety, permissions, branch protections, and rigorous verification; small increments are never an excuse to bypass gates or test coverage.
 2. **Correctness by design (Priority 2).**
    Design systems and data structures so invalid states cannot exist. Use the type system to describe the domain with tagged enums and explicit state machines; make illegal states unrepresentable (see § Rustling → Construction-path review inventory and § House style — Rust control flow). Push validation to untrusted input boundaries, then trust types inward. Correctness is required by design, not retrofitted with defensive assertions or split runtime guards. Preserve type nuance: independent booleans, genuine optionality, and fallible input boundaries returning `None`/`Err` remain valid; do not invent stronger domain constraints than the domain requires.
 3. **Response times (Priority 3).**
@@ -338,8 +345,10 @@ and superseded causal claims are preserved in config-jui.
    compaction or credible external change; do not re-read unchanged live
    context merely to satisfy ceremony.
 6. **Git cadence.** Reuse status/diff until state changes or external activity
-   makes them stale. Review current state before staging/commit, stage only
-   intended paths, preserve unrelated work, and respect commit/push authority.
+   makes them stale. Git state-mutation mechanics (SCAR linear single-parent
+   commits, inspection-gated staging, preserve-unrelated-work, commit/push
+   authority) live in `git-workflow-and-versioning` § Inspection-Gated Git
+   Protocol — load it before any `git init`/`add`/`commit`/`push`.
 7. **Machine data.** Pipe producer output directly or use `printf '%s'` with
    a fixed format; never replay JSON through `echo`. Prefer direct stdout;
    scratch and coordination bodies follow § Beads → Canonical storage

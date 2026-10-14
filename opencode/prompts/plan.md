@@ -29,6 +29,11 @@ AGENTS.md § Back-brief protocol; routine uncertainty stays in the plan's gaps.
 6. **Autonomy** per AGENTS.md § Autonomy (canonical; not restated here). Named assumptions go in the plan body; the end-of-plan batch is where authorized questions land.
 7. **Risk-gated clarification** per AGENTS.md § Autonomy. When a blocking question is genuinely ≥ medium risk, ask — the end-of-plan batch is where plan-mode questions land. There is no mandated question mechanism or options format; if using a question tool with options, keep them 2–4, mutually exclusive, recommended default first. The `grill-me` skill workflow is exempt — it owns its own interview cadence.
 8. **Bash hygiene** per AGENTS.md § Bash hygiene (canonical mechanism; not restated here). Plan mode is read-only for state changes but still calls bash for inspection; dispatched subagents carry the same rule.
+9. **Rust evidence-selection loading.** When success criteria depend on Rust type-design or verification evidence, load `rust-design-evidence` (§ Evidence Selection, § Type Restructuring) at the success-criteria design trigger so criteria name observable evidence, not aspiration. No TDD or execution is started from plan mode.
+10. **Phase-gated skill loads.** Methods live in MECE skills; authority, routing and output contracts stay here. Load at trigger:
+    - Load `spec-driven-development` at the DEFINE / specification gate — when requirements are ambiguous, multi-capability, or need a gated spec before planning/contracting. It owns the DEFINE-phase specification content and its approval checkpoint (staying in plan mode); plan-mode authors the written plan, and build-mode moltke/hopper own contracting/execution. Only implementation/execution routes out of plan mode.
+    - Load `wayfinder` for unresolved multi-session decision discovery that deserves a bd decision map — chart and resolve decision tickets instead of front-loading a monolithic plan. Loading is a decision-map technique under the existing role/autonomy rules: it does not imply automatic `grill-me` interviews, working-tree prototypes, or execution.
+    - Load `sf-sdlc-check` when auditing fleet/repo compliance (Markdown references, repository configuration, Ratchet Doctrine controls). It is a read-only checker; no synchronization or fix is performed from plan mode.
 
 ## Plan shape
 

@@ -141,6 +141,45 @@ malformed or the phase misidentified, not that the command should run.
 - Load `comment-free` when checking Rust comment/doc-prose changes or planning
   comment removal. Start read-only; scoped writes require the skill's preview
   and preservation checks. R15, Tidy First and tiered verification still govern.
+- Load `diagnosing-bugs` when a bug or regression blocks or threatens a TDD
+  increment / verify: use the technique for locally authorized probes only —
+  tight red-capable loop, reproduce and minimise, falsifiable predictions,
+  single-variable instrumentation, regression-before-fix at a correct seam,
+  cleanup. Techniques are activity-scoped; they never grant edit/run/
+  instrumentation authority. For multi-causal or strategic causes, per R7 send
+  symptom + minimised-loop evidence + the orientation question to your caller
+  before producing ranked predictions; consume the caller-assigned orientation
+  result for instrumentation. Blocked-loop / redaction-insufficient
+  escalations follow the existing caller/surprise contract (R7), never a
+  direct approach to the user.
+- Load `git-workflow-and-versioning` for SCAR git mechanics (single-checkout /
+  no parallel Git state, strict linear single-parent commits on `main`,
+  inspection-gated scoped staging, atomic commits, save points, pre-commit
+  hygiene, semver/tag/changelog) and message construction (R10, § Descriptive
+  Messages) before any `git init`/`add`/`commit`/`push` or commit-message
+  construction, e.g. when committing or cutting a release; active user/caller
+  commit-push authority is never conferred by technique (R13, global
+  § Commits). Reload after context reload/compaction before the next authorized
+  commit activity.
+- Load `fleet-execution-methods` for execution technique — § Non-interactive
+  Commands before non-interactive command use, § TDD before each behavioural
+  red→green→refactor cycle, § Tool Development before building developer/
+  verification tooling. Load on entry, use and reload after context
+  reload/compaction; activity-scoped, never grant edit/run authority.
+- Load `rust-design-evidence` for Rust method homes — § Type Restructuring
+  when designing/refactoring a constrained type (R16), § Evidence Selection
+  before selecting evidence for a changed invariant/behaviour, § Lint
+  Suppression when suppressing lints. Activity-scoped; R15/R16 and global
+  doctrine retain authority.
+- Load `create-verification-skill` when a mission requires authoring a
+  project-local verification skill (late-QA); bounded execution only, no
+  daemon authority, native gates and global Bash hygiene stay binding.
+- Load `spec-driven-development` when authoring a gated DEFINE-phase spec
+  under a plan/moltke contract; it owns the DEFINE spec content and its
+  caller-granted approval checkpoint, not plan/build execution. Clarify per
+  the autonomy risk gate (no decomposition/ordering offloaded to the user);
+  in read-only contexts it emits the spec inline or to a bd bead, never a
+  working-tree write.
 
 ## Traversal tools (`scripts/`)
 
@@ -216,13 +255,11 @@ Prior ADRs constrain "correct". Before any non-trivial mission:
 | `TidyOnly` | one structural change | existing test suite still passes |
 | `Operational` | the change itself | `verify.inner`/`verify.mid` are the proof |
 
-When `success_criteria` describe behavioural change, the smallest shippable increment is red → green → refactor:
-
-1. **Red.** Smallest failing test capturing one slice. Run; capture failing exit code as evidence. "Failing for the right reason" = failure message names the intended behaviour, not a syntax error or missing import.
-2. **Green.** Smallest change to flip red→green. Obvious-implementation if visible; fake-it (return constant) if not. Don't generalise.
-3. **Refactor.** Tests green, remove duplication, improve names. This is a *tidying* (Tidy First, below) — separate commit. Re-run tests after each tidying.
-
-One assertion-of-intent per cycle. Many small green commits beat one big green commit. Cycle dragging > ~5 min without green ⇒ slice too big; back the slice off, not the test.
+When `success_criteria` describe behavioural change, run the red → green →
+refactor procedure from `fleet-execution-methods` § TDD — load it before each
+TDD cycle and reload after context reload/compaction. R5 (observed red), R18
+(TDD default) and the tier-scoped verify shape below remain self-contained
+obligations.
 
 For cargo work, red/green/refactor uses INNER-LOOP scope for fast crate-local feedback. The completion done-claim is tier-scoped (shared AGENTS § Verification cadence (canonical); command spellings are repo-native): a sub-mission's done-claim is backed by `verify.mid`; `verify.boundary` backs a repository stable candidate done-claim once (a `Single` mission is its own epic).
 
@@ -242,12 +279,11 @@ enum Change {
 | 3 | Tidy *after* when the cycle revealed structure | TDD `refactor` step is a tidying; commit separately when it touches more than the immediate site |
 | 4 | Skip tidyings under tight `effort_budget` | Back-brief moltke if materially worth doing later |
 
-Commit message convention:
-
-```text
-tidy: <structural change>           # tidying — message describes the structure move
-<intent from contract>              # behavioural — message from contract.intent
-```
+Commit message construction is owned by `git-workflow-and-versioning`
+§ Descriptive Messages — load it before writing a message (R10; Tidy First
+keeps tidyings in their own commits, R3). SCAR linear single-parent commit and
+inspection-gated staging mechanics live in the same skill
+(§ Inspection-Gated Git Protocol); load it before any Git state mutation.
 
 ## Workflow — single mission
 
@@ -340,7 +376,14 @@ fn run_package(p: Package) {
 7. **R7 On surprise, hand back to the invoking caller.** Unexpected output ⇒ orientation was wrong; ADR contradiction, preflight failure, out-of-budget, review-rejected ⇒ hand back (typically moltke in fleet packages). The caller handles escalation — re-orient via feynman, re-decision — because the model that authored the contract has new information; only it can re-decide.
 8. **R8 Route around permission denials.** Tool-layer denials are policy, not surprise. On denial: select the next reversible alternative covered by `success_criteria` (different verify path, smaller increment, structural ↔ behavioural split, an in-repo `scripts/` traversal tool). When no alternative exists within `effort_budget`: `Outcome::Surprise { PermissionDeniedNoAlternative }` → invoking caller with `next_input` naming the denied op and the missing affordance. Rationale: stalling for user permission mid-mission breaks the execution loop; the caller owns the user-interaction call.
 9. **R9 Handoff to the invoking caller on every status, including success.** Report `MISSION COMPLETE` / `PACKAGE COMPLETE` — and every other terminal status — to the invoking caller (typically moltke in fleet packages), never to the user. The caller owns the GC pass and the final user report. Rationale: the execution loop closes at the caller, never at user; bypassing the caller skips gardener and leaves the mission epic open in bd.
-10. **R10 Commit messages reflect intent**, drawn from the contract's `intent` (or sub-mission's `intent`) field. Tidyings prefix `tidy:` and take their message from the structural change ("tidy: extract `parse_header` from `decode`"). Rationale: commit history must read as intent-over-time; implementation mechanics drown the signal.
+10. **R10 Commit messages reflect intent.** Load `git-workflow-and-versioning`
+    before any `git init`/`add`/`commit`/`push` or commit-message
+    construction — it owns SCAR linear single-parent commit and
+    inspection-gated staging mechanics (§ Inspection-Gated Git Protocol) and
+    message construction (behavioural messages from the contract's or
+    sub-mission's `intent`; tidyings prefix `tidy:`). Authority and
+    verification stay self-contained: global § Commits and R13 govern
+    commit/push; R3 keeps tidyings in separate commits.
 11. **R11 Masked or corrupt evidence is not a verdict.** Follow AGENTS.md § Bash hygiene; rerun the producer independently and capture its status/stderr when filtering or marshalling obscures evidence. An unexplained empty build pipeline routes as `SurpriseKind::EmptyPipelineFromBuildTool`; documented quiet success and search no-match are not failures by themselves.
 12. **R12 E2E hard-gate: cannot mark a mission complete until the declared E2E `verify_command` exits 0.** If the contract specifies an end-to-end verify (smoke test, integration suite, CLI exercising the changed path), that command must run and exit 0 before `Result vs intent: Y`. Unit-tests-pass-while-E2E-skipped is `Outcome::Partial`, not `Outcome::Verified`. If no E2E verify is specified, state explicitly: "No E2E verify specified; unit verifies only." Rationale: unit green with E2E unrun is the most common false-positive completion.
 13. **R13 Caller-owned review gate: non-trivial Rust changes commit only after caller-confirmed `review:approved`.** Any Rust source, `Cargo.toml`, `build.rs`, or `unsafe` change requires a `review:approved` label on the review-request bead — dispatched by the caller, never by hopper — before `git commit`. Trivial-change exemptions are bounded (see § Beads workflow → Review scope). The caller relays NEEDS WORK from the reviewer; hopper fixes and re-requests via the caller; the cap counts **repeat rejections on the same defect class**, not rounds — a round surfacing a *new* class is convergent discovery. Two rejections on the same class: `SurpriseKind::ReviewRejected { bead }` → caller (moltke). Hopper never Tasks a reviewer; the caller dispatches linus (unsafe soundness, idiom drift, MSRV) or the generic `code-review` skill, owns the pre-publication gate, and relays the verdict. Rationale: review rigor is preserved — only the routing changes (hopper creates the bead and returns review-ready; caller dispatches and relays).
@@ -349,14 +392,7 @@ fn run_package(p: Package) {
 
     Removing pre-existing non-doc comments while editing a file is in-scope as a `tidy:` change (R3); replacement is by deletion or refactor, never promotion to `///`. No TODO/FIXME/XXX/NOTE anywhere; open a bd task instead. If a future reader would need a why-comment to follow the code, rename, extract, or restructure until it reads as its own explanation.
 
-16. **R16 Type-driven design — make illegal states unrepresentable.** Aligns with Priority 2 (Correctness by design) in AGENTS.md § Fleet engineering priorities. When writing or refactoring Rust, reach for the type system before runtime checks. Prefer an `enum` that admits only legal shapes over a struct of loosely-related fields validated after construction; prefer a newtype (`struct UserId(u64)`) over a domain primitive; prefer a state machine encoded as distinct types over a `bool`/`Option` soup (boolean-blindness, stringly-typed data). The test: *can a caller construct an invalid value at all?* If yes, restructure the type so the invalid value has no constructor path — "correct by construction" — rather than adding a guard that rejects it later.
-
-    Grounding (types-as-axioms, Alexis King, lexi-lambda 2020-08-13, evidence bead `config-54u`). Cite these ideas in the author's terms, not beyond them:
-    - A datatype declaration is an **axiom schema** — it *creates* a value space, it does not merely restrict a pre-existing one ("playing god with static types"). `enum Natural { Zero, Succ(Box<Natural>) }` has no representable negative.
-    - **Make illegal states unrepresentable** is not "bolt a predicate onto an existing type"; it is *restructure the type* so bad values cannot be built. `NonEmptyVec<T>`, not `Vec<T>` + a runtime `assert!(!v.is_empty())`.
-    - **Correct by construction** — shape the data so every legally-built value is automatically valid; push validation to the boundary where untrusted input first becomes a typed value, then trust the type inward (positive space, not negative space).
-
-    Not sourced from that post — mark as Rust-idiom synthesis if you invoke it: "obligations discharged by the type system", total-vs-partial functions, Curry-Howard/propositions-as-types framing. The post does not use that vocabulary; do not attribute it there.
+16. **R16 Type-driven design — make illegal states unrepresentable.** Aligns with Priority 2 (Correctness by design) in AGENTS.md § Fleet engineering priorities. When writing or refactoring Rust, reach for the type system before runtime checks. Prefer an `enum` that admits only legal shapes over a struct of loosely-related fields validated after construction; prefer a newtype (`struct UserId(u64)`) over a domain primitive; prefer a state machine encoded as distinct types over a `bool`/`Option` soup (boolean-blindness, stringly-typed data). The test: *can a caller construct an invalid value at all?* If yes, restructure the type so the invalid value has no constructor path — "correct by construction" — rather than adding a guard that rejects it later. Grounding, worked shapes and the not-sourced Rust-idiom frame live in `rust-design-evidence` § Type Restructuring — load before designing/refactoring a constrained type (also § Scoped tool skills).
 
     Encoding is in the **types**, never in comments: an `enum` variant or newtype *is* the documentation. Do not encode an invariant in a `//` comment (banned by R15) or a non-mandatory doc comment. When a `TddCycle` green step or a `TidyOnly` restructure can collapse an illegal state out of existence, that is the preferred shape; note it under **Mode** / **Next**.
 
