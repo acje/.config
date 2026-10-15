@@ -5,8 +5,6 @@ description: Generates a project-local verification skill that drives the app th
 
 # Create a verification skill
 
-Fleet adaptation (MIT) of `cursor/plugins/pstack/skills/create-verification-skill` by Lauren Tan, pinned at `c86f349b102feb91f1966f8a6a60882a4e601b50`. See `PROVENANCE.md` for the adaptation ledger.
-
 Every serious project needs a scripted way to drive the real app and prove behavior: launch it, exercise a feature the way a user would, and capture evidence. This skill generates that as a project-local skill (`<project>/.opencode/skills/verify-<app>/`, or `~/.config/opencode/skills/` for a paved workspace) tailored to the repo. You write the generator's output for the next agent, not for a human: it will be read cold, mid-task, by an agent that has never seen the app.
 
 Scope boundary: this is **verification-skill authoring**. It produces the method and its evidence standards. It does not run a persistent QA runner, does not grant daemon/long-lived-service authority, and does not confer acceptance or gate ownership — fleet native gates and the no-background-daemon Bash-hygiene rule stay binding (global AGENTS.md § Bash hygiene, § Code-quality methods).
@@ -47,7 +45,3 @@ Run its own instructions end to end once: launch, doctor, drive ONE mapped featu
 ## 5. Offer the maintenance loop
 
 Point the user at keeping the map honest as the app changes (a follow-up verification-skill maintenance pass in the same family, or a new authoring session). Suggest a cadence only if they ask.
-
-## Origin and adaptation
-
-Derived from Lauren Tan's `create-verification-skill` (MIT, Copyright (c) 2026 Lauren Tan), pinned at `cursor/plugins` commit `c86f349b102feb91f1966f8a6a60882a4e601b50` (pstack subtree). Adapted for opencode: emit target changed from Cursor's `.cursor/skills/verify-<app>/` to `.opencode/skills/` or `~/.config/opencode/skills/`; dropped Cursor slash-command syntax (`/create-verification-skill`, `/maintain-verification-skill`); removed the `disable-model-invocation` frontmatter flag (unsupported as opencode enforcement — user-invocation is expressed in the description and caller gate); added the bounded-execution/no-daemon boundary; bundled the three `feature-map-example` reference files verbatim. See `PROVENANCE.md`.

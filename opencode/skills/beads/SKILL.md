@@ -78,3 +78,28 @@ Use agent-local planning tools only for the current turn's execution checklist. 
 - Prefer `--json` when parsing `bd` output programmatically.
 - If hooks are installed, `bd prime` may already be injected. Run it manually when context is missing.
 - Do not auto-close or mutate tasks unless the work is actually complete.
+
+## Fleet Coordination Mechanics
+
+- **Database discovery (`bd where`)**:
+  - If `bd where` fails inside a git repo (`git rev-parse --show-toplevel` succeeds), run `bd init` at the repo root.
+  - If outside a git repo (including `$HOME`), **never run `bd init`** — report and halt.
+  - Pin workspace discovery with `bd -C <repo-root>` when targeting a specific repo (`bd --db` fails open on missing stores).
+- **Description updates (`--stdin` replaces)**:
+  - **Fresh bead**: `printf '%s' "$BODY" | bd update <id> --stdin`
+  - **Existing bead (safe accumulation)**:
+    ```bash
+    set -o pipefail
+    PREV=$(bd show <id> --json | jq -r '.[0].description') || exit 1
+    printf '%s\n\n%s\n' "$PREV" "$NEW_SECTION" | bd update <id> --stdin
+    ```
+  - **Non-empty verification before handoff**:
+    ```bash
+    set -o pipefail; bd show <id> --json | jq -er '.[0].description | select(test("\\S")) | .[:200]'
+    ```
+- **Parentage & membership**:
+  - Default membership is the `mission:<id>` label on every non-epic bead.
+  - When parenting tasks under an epic, prefer atomic create-time `--parent <EPIC>`:
+    `bd create "<title>" --type task --parent <EPIC> --labels "mission:<id>"`
+  - If using `bd dep add <CHILD> --depends-on <EPIC> -t parent-child`, always verify with `bd children <EPIC>` afterward.
+

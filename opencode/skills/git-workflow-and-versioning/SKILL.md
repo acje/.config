@@ -13,8 +13,6 @@ description: >-
 
 # Git Workflow and Versioning
 
-Fleet adaptation (MIT) of `addyosmani/agent-skills/skills/git-workflow-and-versioning`, pinned at `aeac41d4d005999432bb7312f7ff06383a91d59d`. See `PROVENANCE.md` for the adaptation ledger.
-
 ## Overview
 
 Git is your safety net. Treat commits as save points and history as documentation. With agents generating code at high speed, disciplined version control keeps changes manageable, reviewable, and reversible. Under SCAR (SCAR single-checkout environment design), the repository is the only codebase: one checkout, one linear history, no parallel Git state.
@@ -248,7 +246,3 @@ For every release (anything with consumers):
 - [ ] Version bump matches the change (breaking → major, additive → minor, fix → patch)
 - [ ] Release is tagged and the version is derived from the tag
 - [ ] Changelog has a curated, human-readable entry grouped by impact
-
-## Origin and adaptation
-
-Derived from Addy Osmani's `git-workflow-and-versioning` skill (MIT, Copyright (c) 2025 Addy Osmani), pinned at `aeac41d4d005999432bb7312f7ff06383a91d59d`. Adapted (Rev-2, SCAR linear single-checkout consolidation): made strict single-parent append-only commits on `main` and the single-checkout / no-parallel-Git-state environment the unconditional fleet default, removing all long-vs-short-lived-branch and feature-flag framing; made the inspection-gated init/add/commit/push protocol (consolidating scar `GIT-WORKFLOW.md` + build Rule 3 + AGENTS.md § Bash hygiene item 6) the owner of Git state mutation mechanics; removed feature-branch/worktree defaults and `git reset --hard` recovery as defaults; removed npm-specific and husky/lint-staged pre-commit commands (repo-native tiers replace them); repointed dangling cross-skill references to fleet doctrine or dropped them; and made commit/push authority explicit. See `PROVENANCE.md`.

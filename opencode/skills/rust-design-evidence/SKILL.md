@@ -105,32 +105,27 @@ mechanism-selection criteria, not a new harness, dependency or universal suite.
 
 Applies when suppressing a lint where no plain comment may be used: suppress
 lints with `#[expect(lint, reason = "...")]` per the global Rust comment
-contract (global AGENTS § House style — Rust comments; the positive technique
-for what would otherwise be a `//`-or-`#![allow]` comment). The reason is the
-load-bearing rationale for why the lint is expected here. Preserve the review
-trigger and disposition in the reviewer's role prompt (linus § Review
-patterns); this section owns the writing technique, not a new lint policy,
-gate or dependency configuration.
+contract. The reason is the load-bearing rationale for why the lint is expected
+here.
 
-## Local provenance
+## Rust House Style (Comments & Control Flow)
 
-Native fleet method home created by mission `sf-sdlc-4b56` / `sf-sdlc-4b56.4`
-(mission `sf-sdlc-4b56-migration`, 2026-10-14). Paragraphs extracted from:
-- `agents/hopper.md` R16 type-restructuring grounding and worked framing
-  (source C HEAD `1526930be58004d2493171d86efebac8bc5852be`);
-- `agents/linus.md` illegal-state-representable Check/Fix/Grounding/Problem
-  shapes and the Claim-driven evidence-selection proposition/mechanism-adequacy
-  table (same C HEAD);
-- `sf-sdlc/AGENTS.md` § 1 Doctrine "Zero compliance theatre" prose and the
-  locally-retained `#[expect]` suppression technique (source R HEAD
-  `36c4412005a91c67a9def86885be09dbe9f4d030`).
-Pre-deletion baseline paragraph ledger + per-paragraph SHA256: bead
-`sf-sdlc-k6v5`. Research grounding retained as-is within the moved text:
-`config-54u` (types-as-axioms; not-sourced Rust-synthesis boundary) and
-`config-fho4` (evidence-selection source grounding). Adaptations: grounding
-that was previously duplicated across hopper R16 and linus is now a **single
-deduplicated home**; activity-scoped sectioning with mandatory load-before /
-reload-after-context-reload. The canonical construction-path review inventory
-remains global AGENTS § Rustling → Construction-path review inventory (this
-skill references it, never competes with it). Upstream: n/a — native prose,
-not imported; no license/pin applies.
+- **No non-doc comments in `*.rs`**: Never write `//` or `/* ... */` comments (no `// SAFETY:`, `// TODO`, or why-comments). If code needs a comment to be understood, rename, extract, or restructure it. Write `///` or `//!` doc comments **only** when part of the public API contract (`# Errors`, `# Panics`, `# Safety`) or `unsafe fn/trait`. Durable rationale belongs in ADRs, commit messages, or `bd` beads.
+- **No split guard-then-match (`guard-then-match-split`)**: Do not split a single decision between leading `if <cond> { return <literal>; }` guards and a `match` that decides the same thing. Fix sentinel states in the type first (`illegal-state-representable`), then express the decision as one exhaustive `match`. (Exempt: preconditions in non-match functions, `?` / `let ... else`, loop `continue` guards, early returns short-circuiting expensive work, and slice-validity guards).
+
+## Construction-Path Review Inventory (`illegal-state-representable`)
+
+When designing or reviewing a changed constrained type:
+1. Name the invariant and caller boundary (distinguishing untrusted DTOs from validated domain types).
+2. Inventory all construction/mutation routes: public fields/literals, constructors/builders, `Default`, `From`/`TryFrom`, `serde`, and `&mut`/`DerefMut` (note that private fields do not constrain code inside the defining module).
+3. Cite how each route preserves the invariant or provide a constructible counterexample.
+4. Record a valid boundary case, an invalid-state witness, and the enum/newtype remedy.
+
+## Rust / Tokio Resource Contracts
+
+For changes to ingestion, buffering, concurrency, retries, recursion, long-running services, or hot paths:
+- **Boundary & Budget**: Name explicit limits with units (items and bytes accounted separately, active tasks, waiters, retries, depth, deadlines). Compose per-unit limits into an aggregate bound.
+- **Ownership & Exhaustion**: Keep permits/charges alive via RAII across errors and cancellation; use checked arithmetic. Define explicit exhaustion behavior (reject, deadline-wait, drop, degrade).
+- **Progress, Cancellation & Shutdown**: Bound individual work units and recursion depth; service loops require reachable shutdown and bounded work between checks. Dropping a future or task handle is neither rollback nor task termination — stop admission, drain/cancel admitted work, and supervise task exit.
+- **Review artefacts**: `resource-contract-gap` (missing budget/boundary/exhaustion policy/evidence) and `resource-bound-violated` (breached contract).
+

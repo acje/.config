@@ -45,15 +45,3 @@ delete SQL and never mutates without an explicit operator flag.
   `SQLITE_TMPDIR` is scoped to the source parent around SQLite steps.
 - FULL-mode VACUUM reclaims freed pages only; it does not recover
   currently-occupied data or partial-page slack.
-
-## History (brief)
-
-- 2026-10-05 (`code-pxb.1`/`code-pxb.2`): preparation contract; tool and plist
-  installed, fixture-proven; live DB untouched.
-- 2026-10-06 (`sf-sdlc-e5j2`, read-only audit): job registered idle, runs=1,
-  last exit 3 (schedule refusal).
-- 2026-10-07 (`config-5to`): `apply`/pruning and the native deletion harness
-  retired; reserve fully git-ignored; runbook condensed to this truth.
-- Detailed evidence, capacity figures and the migration-background fixture
-  proofs live in beads `code-i8k`, `code-ppu`, `code-4br`; do not re-derive
-  numbers from memory.

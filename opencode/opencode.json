@@ -147,8 +147,7 @@
       "~/.cargo/registry/**": "allow",
       "~/.config/opencode/skills/**": "allow",
       "~/.agents/skills/**": "allow",
-      "~/.claude/skills/**": "allow",
-      "/Users/anders.jensen/code/gh-report/**": "allow"
+      "~/.claude/skills/**": "allow"
     }
   },
   "model": "github-copilot/gemini-4-argon",

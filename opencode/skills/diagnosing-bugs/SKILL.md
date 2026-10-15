@@ -5,8 +5,6 @@ description: Diagnostic techniques for hard bugs and performance regressions —
 
 # Diagnosing Bugs
 
-Fleet adaptation (MIT) of `mattpocock/skills/skills/engineering/diagnosing-bugs`, pinned at `49dd158d1076134a641b33efb035946536778336`. See `PROVENANCE.md` for the adaptation ledger.
-
 A discipline for hard bugs and regressions. In the execution flow (an invoker authorized to build loops and assert fixes), skip phases only when explicitly justified. When exploring the codebase, read local glossary/ADR material (where present) for a mental model of the relevant modules; archive this skill's method as the loop to follow.
 
 ## Activity scope and authority boundary
@@ -122,7 +120,3 @@ Required before declaring done:
 - [ ] All `[DEBUG-...]` instrumentation removed (grep the prefix)
 - [ ] Throwaway prototypes deleted (or moved to a clearly-marked debug location)
 - [ ] The prediction that turned out correct is stated in the commit/change summary, so the next debugger learns
-
-## Origin and adaptation
-
-Derived from Matt Pocock's `diagnosing-bugs` skill (MIT, Copyright (c) 2026 Matt Pocock), pinned at `49dd158d1076134a641b33efb035946536778336`. Adapted for fleet: dropped the bundled `agents/openai.yaml` (host-specific descriptor) and the bundled `scripts/hitl-loop.template.sh` (upstream interactive script — not executed or bundled; the HITL concept is described in-repo instead), removed host tool assumptions (curl/Puppeteer wording generalized), and made the no-daemon, instrumentation-permission and role-neutral boundaries explicit. See `PROVENANCE.md`.

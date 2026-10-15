@@ -69,21 +69,29 @@ This preserves the compiled-Rust / AST-direct / fast-INNER intent with its
 existing developer-and-verification-tooling scope. It is not a universal
 implementation-language ban, a new latency threshold, or a daemon grant — the
 caller retains project-local authority over where tools live and how they are
-run (e.g. hopper § Traversal tools for `scripts/` commanded placement and
-verify-tier reuse; global AGENTS § Tool building in `scripts/` for the
-canonical contract).
+run.
 
-## Local provenance
+## Cargo Command Noise Reduction
 
-Native fleet method home created by mission `sf-sdlc-4b56` / `sf-sdlc-4b56.4`
-(mission `sf-sdlc-4b56-migration`, 2026-10-14). Paragraphs extracted from:
-- `agents/hopper.md` § Kent Beck TDD — red→green→refactor steps + slicing
-  heuristics — source C HEAD `1526930be58004d2493171d86efebac8bc5852be`;
-- `sf-sdlc/AGENTS.md` § 1 Non-Interactive Shell Commands and Doctrine "Make
-  tools fast" — source R HEAD `36c4412005a91c67a9def86885be09dbe9f4d030`.
-Pre-deletion baseline paragraph ledger + per-paragraph SHA256: bead
-`sf-sdlc-k6v5`. Adaptations: activity-scoped sectioning with mandatory
-load-before / reload-after-context-reload; explicit "techniques never confer
-authority" guard; global bash-hygiene and Cargo-alias ownership retained
-globally (not duplicated here). Upstream: n/a — native prose, not imported; no
-license/pin applies.
+When running Cargo in verification loops, use Cargo's native array aliases (configured in `~/.cargo/config.toml`) to reduce routine output noise without filtering streams or narrowing test coverage:
+
+```toml
+[alias]
+atest = ["test", "--quiet", "--no-fail-fast"]
+aclippy = ["clippy", "--quiet", "--message-format=short"]
+```
+
+- **Libtest run**: `cargo [+toolchain] atest <selection/options> [-- <harness args>]`
+- **Clippy**: `cargo [+toolchain] aclippy <selection/options> -- -D warnings`
+- Keep `<selection/options>` (`-p`, `--workspace`, `--all-targets`, `--all-features`, `--locked`) and post-`--` arguments verbatim. Check compatibility before passing `--quiet` to non-standard harnesses (`nextest`, `criterion`, `trybuild`).
+
+## Sourcing Unpublished In-House Rust CLIs
+
+Install in-house Rust CLI tools (`adr-fmt`, `comment-free`, etc.) from their canonical git repo with an explicit pinned toolchain and `--locked`, never via `cargo install --path`:
+
+```sh
+cargo +<pinned-toolchain> install --git https://github.com/<org>/<tool> --locked <tool>
+```
+
+ Verify provenance via `cargo install --list`, not `--version` alone.
+

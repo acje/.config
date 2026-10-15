@@ -1,63 +1,67 @@
-# Allowlist / Whitelist Policy for ~/.config dotfiles
-# ---------------------------------------------------
-# Because this repo's root is ~/.config, any CLI tool or application that drops
-# state or credentials into ~/.config must be ignored by default.
-# Only explicitly whitelisted dotfiles and directories are tracked.
+# Default-Deny Allowlist Policy for ~/.config
+# ---------------------------------------------------------------------------
+# Everything in ~/.config is ignored by default so new tools, state dirs,
+# runtime logs, or credentials are never accidentally staged or published.
+# Only explicitly allowlisted paths below can be tracked by Git.
 
-# 1. Ignore everything at root by default
+# 1. Default deny at root
 /*
 
-# 2. Whitelist tracked root files
+# 2. Allowlisted root files
 !/.gitignore
 !/AGENTS.md
 !/LICENSE
 
-# 3. Whitelist tracked root directories
+# 3. Allowlisted ghostty config (explicit file allowlist)
 !/ghostty/
-!/opencode/
-!/openspec/
+/ghostty/*
+!/ghostty/config
 
-# OS / editor cruft
+# 4. Allowlisted opencode config (explicit directory/file allowlist)
+!/opencode/
+/opencode/*
+!/opencode/AGENTS.md
+!/opencode/DB-MAINTENANCE.md
+!/opencode/README.md
+!/opencode/opencode.json
+!/opencode/package.json
+!/opencode/package-lock.json
+!/opencode/search-readiness.mjs
+!/opencode/search-readiness.test.mjs
+!/opencode/dramallama-guard.test.mjs
+!/opencode/plugins-command-preservation.test.mjs
+!/opencode/agents/
+!/opencode/commands/
+!/opencode/plugins/
+!/opencode/prompts/
+!/opencode/skills/
+!/opencode/maintenance/
+
+# Inside opencode/maintenance, allow only code and plist (ignore *.log, backups/)
+/opencode/maintenance/*
+!/opencode/maintenance/com.opencode.db-maintenance.daily.plist
+!/opencode/maintenance/opencode_db_maintenance.py
+!/opencode/maintenance/test_maintenance.py
+
+# 5. Global belt-and-braces exclusions (apply at any depth inside allowlisted dirs)
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
-.idea/
-.vscode/
-
-# Backups
 *.bak
 *.bak.*
-
-# Recovery/session-data reserve (opencode maintenance): the whole default
-# reserve is excluded so failed backup/restore probes and their -wal/-shm
-# sidecars are not accidentally staged by normal git add/status. This is not a
-# substitute for care: git add -f (force-add) can still stage these paths.
-opencode/maintenance/backups/
-
-# Top-level local scratch (anchored to repo root; redundant with /* but retained for clarity)
-/gh/
-/containers/
-/searxng/
-/gcloud/
-/bd/
-
-# Agent / tooling state
-opencode/auth.json
-opencode/.opencode/
+*.log
+__pycache__/
+*.pyc
+node_modules/
+target/
 .ooda/
 .beads/
 .beads.gate.lock
-/opencode-usage.csv
+auth.json
 
-# Build / dep artefacts (generic, not path-pinned)
-node_modules/
-target/
-
-# Secrets belt-and-braces — mirrors highest-risk entries from
-# opencode.json permission.read denylist. .gitignore stops commits;
-# the denylist stops reads. Defence in depth.
+# Secrets & credentials (mirroring opencode.json permission.read denylist)
 .env
 .env.*
 *.env
@@ -65,4 +69,14 @@ target/
 .netrc
 *.pem
 *.key
+*.p12
+*.pfx
+*.crt
+*.cer
 *.token
+*credentials*
+*Credentials*
+*secret*
+*Secret*
+*password*
+*Password*

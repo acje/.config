@@ -5,8 +5,6 @@ description: Writes a structured, human-approved specification before coding —
 
 # Spec-Driven Development
 
-Fleet adaptation (MIT) of `addyosmani/agent-skills/skills/spec-driven-development`, pinned at `aeac41d4d005999432bb7312f7ff06383a91d59d`. See `PROVENANCE.md` for the adaptation ledger.
-
 ## Overview
 
 Write a structured specification before writing code. The spec is the shared source of truth between the author and the human — it defines what we're building, why, and how we'll know it's done. Code without a spec is guessing. This skill owns the DEFINE-phase clarification, content, and approval gates; it does not run plan/build (fleet plan-mode, moltke, hopper own those).
@@ -180,7 +178,3 @@ Before proceeding to implementation:
 - [ ] The spec is saved to the mode-authorized location (repository file where writes are authorized; inline or bd bead in read-only mode)
 - [ ] If one request bundles several independently testable capabilities, a capability map (module ids, dependency direction, build order) was approved before any module spec was written
 - [ ] Every module spec traces to a module id in the approved map
-
-## Origin and adaptation
-
-Derived from Addy Osmani's `spec-driven-development` skill (MIT, Copyright (c) 2025 Addy Osmani), pinned at `aeac41d4d005999432bb7312f7ff06383a91d59d`. Adapted: capped to the DEFINE-phase gated-spec method, repointed the upstream plan/implement cross-references and slash-command/task-store conventions to fleet owners (plan-mode/moltke/hopper, bd beads), and made npm-shaped command examples repo-native. See `PROVENANCE.md`.
