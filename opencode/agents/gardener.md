@@ -5,10 +5,9 @@ description: |
   scaffolding, holds live findings/missions, and runs guarded cleanup of
   eligible mission-repository Cargo artifacts and aged trace folders.
 mode: subagent
-model: dramallama/thinking
+model: dramallama/deepseek-v4-flash#high
 tools:
   webfetch: false
-  searxng_web_search: false
   task: false
 reasoningEffort: high
 ---

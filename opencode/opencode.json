@@ -1,10 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "subagent_depth": 4,
   "share": "disabled",
+  "websearch": false,
   "compaction": {
     "auto": true,
-    "prune": true,
     "reserved": 60000
   },
   "provider": {
@@ -83,6 +82,12 @@
               "text"
             ]
           }
+        },
+        "deepseek-v4-flash": {
+          "limit": {
+            "context": 128000,
+            "output": 32000
+          }
         }
       }
     }
@@ -152,70 +157,88 @@
   },
   "model": "github-copilot/gemini-4-argon",
   "experimental": {
-    "continue_loop_on_deny": true
+    "subagent_depth": 4
   },
-  "plugin": [
-    "./plugins/searxng.mjs",
-    "./plugins/tracer.mjs",
-    "./plugins/dramallama-guard.mjs"
+  "plugins": [
+    {
+      "package": "@mattilsynet/opencode-dramallama-provider",
+      "options": {
+        "baseURL": "https://aiapi.mattilsynet.no/v1"
+      }
+    }
   ],
+  "mcp": {
+    "servers": {
+      "searxng": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "mcp-searxng@2.7.0"
+        ],
+        "environment": {
+          "SEARXNG_URL": "http://127.0.0.1:19217"
+        }
+      }
+    }
+  },
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "github-copilot/gemini-4-argon",
-      "reasoningEffort": "medium"
+      "model": "dramallama/deepseek-v4-flash#high",
+      "reasoningEffort": "high"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "github-copilot/gemini-4-argon",
-      "reasoningEffort": "medium"
+      "model": "dramallama/deepseek-v4-flash#high",
+      "reasoningEffort": "high"
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-4-argon",
-      "reasoningEffort": "medium"
+      "model": "dramallama/deepseek-v4-flash#high",
+      "reasoningEffort": "high"
     },
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "dramallama/thinking",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "dramallama/thinking",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-4-argon",
-      "reasoningEffort": "medium"
+      "model": "dramallama/deepseek-v4-flash#high",
+      "reasoningEffort": "high"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "dramallama/thinking",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-4-argon",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "github-copilot/gemini-4-argon",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
       "mode": "subagent",
-      "model": "dramallama/thinking",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     }
   }

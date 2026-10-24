@@ -74,6 +74,6 @@ flowchart LR
 ├── agents/              # Subagent definitions (8 agents)
 ├── skills/              # Reusable toolchain & workflow skills
 ├── commands/            # Custom slash commands (/prime, /validate, /create-prd, /create-rules)
-├── plugins/             # Runtime hooks (searxng.mjs, tracer.mjs, dramallama-guard.mjs)
+├── plugins/             # Runtime hooks (tracer.mjs, dramallama-guard.mjs)
 └── maintenance/         # Offline opencode.db VACUUM script & launchd plist
 ```

@@ -5,10 +5,9 @@ description: |
   strategic (copernicus/feynman/oracle) and tactical (hopper/linus/hamilton) loops
   until verified complete, then invokes gardener and reports to user.
 mode: subagent
-model: dramallama/thinking
+model: dramallama/deepseek-v4-flash#high
 tools:
   webfetch: false
-  searxng_web_search: false
   task: true
 reasoningEffort: medium
 ---
@@ -71,7 +70,7 @@ Load phase-triggered skills when applicable (skills provide methods; Moltke reta
 
 ## Workflow
 
-1. **Orient & Consult**: Check `SearchReadiness` once per assignment. Bounce weak orientations to `@feynman`. Consult `@oracle` on architectural surfaces.
+1. **Orient & Consult**: Verify the `searxng` MCP search tool (`searxng_web_search`) is available once per assignment. Bounce weak orientations to `@feynman`. Consult `@oracle` on architectural surfaces.
 2. **Evaluate & Decide**: Enumerate options per stakes tier, judge coupling (`SingleMission` vs `MissionPackage`), run pre-mortem, and define cheap observable `abort_if` criteria.
 3. **Contract**: Emit TOML contract inline. For packages or non-trivial scope (≥ 3 sub-missions or repo/prod blast radius), register a `bd` epic + child tasks (`mission:<id>`) with the contract in the epic `description`.
 4. **Command Execution**: Dispatch `@hopper`. Relay `review-ready` increments to `@linus` (or `code-review` skill) and return verdicts to `@hopper`.

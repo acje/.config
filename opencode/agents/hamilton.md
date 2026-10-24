@@ -5,10 +5,9 @@ description: |
   Reviews cross-component failure, ADR alignment, resource stress, recovery/shutdown,
   and broad regressions. Read-only on source; routes findings to moltke via bd beads.
 mode: subagent
-model: dramallama/thinking
+model: dramallama/deepseek-v4-flash#high
 tools:
   webfetch: false
-  searxng_web_search: false
   task: false
 reasoningEffort: high
 ---
