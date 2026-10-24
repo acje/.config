@@ -66,7 +66,8 @@ flowchart LR
 
 ```text
 ~/.config/opencode/
-├── opencode.json        # Model bindings, permissions, plugins
+├── opencode.json        # Model bindings, permissions, MCP servers, plugins
+├── cli.json             # CLI/theme/session preferences (v2)
 ├── AGENTS.md            # Shared fleet doctrine (auto-loaded)
 ├── README.md            # Overview (this file)
 ├── DB-MAINTENANCE.md    # Offline SQLite maintenance runbook
@@ -74,6 +75,5 @@ flowchart LR
 ├── agents/              # Subagent definitions (8 agents)
 ├── skills/              # Reusable toolchain & workflow skills
 ├── commands/            # Custom slash commands (/prime, /validate, /create-prd, /create-rules)
-├── plugins/             # Runtime hooks (tracer.mjs, dramallama-guard.mjs)
 └── maintenance/         # Offline opencode.db VACUUM script & launchd plist
 ```

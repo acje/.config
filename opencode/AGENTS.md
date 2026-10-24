@@ -99,5 +99,5 @@ Full CLI mechanics live in the `beads` skill (`skills/beads/SKILL.md`). Core inv
 
 - **External research**: Owned by `copernicus` (and `feynman` for narrow falsifier unblocking). `moltke` and `hopper` never perform web research.
 - **Web search**: Backed by self-hosted SearxNG via the `searxng` stdio MCP server (`opencode.json` → `mcp.servers.searxng`, `SEARXNG_URL=http://127.0.0.1:19217`). Search tools surface as `searxng_web_search`. If the server is unreachable, proceed degraded on non-research work or report blocked if web research is load-bearing.
-- **Tracing**: `plugins/tracer.mjs` writes partially-redacted hook events to `<project>/.ooda/traces/<YYYY-MM-DD>/<sessionID>.jsonl` (distinct from global `~/.local/share/opencode/opencode.db`).
+- **Tracing**: The v1 `tracer.mjs` plugin was removed (2026-10-24); per-session `.ooda/traces/` output is no longer written. Session history lives in the global `~/.local/share/opencode/opencode.db`.
 - **Restart-staleness**: Agent model and prompt bindings in `opencode.json` resolve at opencode startup; edits take effect after restarting opencode.

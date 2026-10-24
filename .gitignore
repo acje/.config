@@ -26,13 +26,8 @@
 !/opencode/opencode.json
 !/opencode/package.json
 !/opencode/package-lock.json
-!/opencode/search-readiness.mjs
-!/opencode/search-readiness.test.mjs
-!/opencode/dramallama-guard.test.mjs
-!/opencode/plugins-command-preservation.test.mjs
 !/opencode/agents/
 !/opencode/commands/
-!/opencode/plugins/
 !/opencode/prompts/
 !/opencode/skills/
 !/opencode/maintenance/
