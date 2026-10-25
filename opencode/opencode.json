@@ -196,7 +196,7 @@
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "opencode-go/deepseek-v4-pro#high",
       "reasoningEffort": "high"
     },
     "hopper": {
