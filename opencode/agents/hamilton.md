@@ -6,10 +6,16 @@ description: |
   and broad regressions. Read-only on source; routes findings to moltke via bd beads.
 mode: subagent
 model: opencode-go/kimi-k3.1-pro#high
-tools:
-  webfetch: false
-  task: false
-reasoningEffort: high
+request:
+  body:
+    reasoningEffort: high
+permissions:
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 # Hamilton — Architectural Alignment & Assurance

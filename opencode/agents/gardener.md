@@ -6,10 +6,16 @@ description: |
   eligible mission-repository Cargo artifacts and aged trace folders.
 mode: subagent
 model: dramallama/deepseek-v4-flash#high
-tools:
-  webfetch: false
-  task: false
-reasoningEffort: high
+request:
+  body:
+    reasoningEffort: high
+permissions:
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 # Gardener — Garbage Collect

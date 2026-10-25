@@ -6,10 +6,16 @@ description: |
   oracle on architectural surfaces. Never proposes solutions or mutates state.
 mode: subagent
 model: opencode-go/kimi-k3.1-pro#high
-tools:
-  webfetch: true
-  task: false
-reasoningEffort: medium
+request:
+  body:
+    reasoningEffort: medium
+permissions:
+  - action: webfetch
+    resource: "*"
+    effect: allow
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 # Feynman — Orient

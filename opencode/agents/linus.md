@@ -5,10 +5,16 @@ description: |
   source level. Read-only on source; writes only bd review beads and verdicts.
 mode: subagent
 model: opencode-go/glm-5.3#high
-tools:
-  webfetch: false
-  task: false
-reasoningEffort: high
+request:
+  body:
+    reasoningEffort: high
+permissions:
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 # Linus — Rust Pre-Merge Reviewer

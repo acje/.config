@@ -6,10 +6,16 @@ description: |
   outcomes back to caller (moltke).
 mode: subagent
 model: dramallama/deepseek-v4-flash#high
-tools:
-  webfetch: false
-  task: true
-reasoningEffort: high
+request:
+  body:
+    reasoningEffort: high
+permissions:
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: allow
 ---
 
 # Hopper — Act
