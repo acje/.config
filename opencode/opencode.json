@@ -155,7 +155,7 @@
       "~/.claude/skills/**": "allow"
     }
   },
-  "model": "github-copilot/gemini-4-argon",
+  "model": "dramallama/deepseek-v4-flash#high",
   "experimental": {
     "subagent_depth": 4
   },
@@ -214,7 +214,7 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "opencode-go/kimi-k3.1-pro#high",
       "reasoningEffort": "high"
     },
     "oracle": {
@@ -226,13 +226,13 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "opencode-go/glm-5.3#high",
       "reasoningEffort": "high"
     },
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "opencode-go/kimi-k3.1-pro#high",
       "reasoningEffort": "high"
     },
     "gardener": {
