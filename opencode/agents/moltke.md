@@ -6,10 +6,16 @@ description: |
   until verified complete, then invokes gardener and reports to user.
 mode: subagent
 model: opencode-go/deepseek-v4-pro#high
-tools:
-  webfetch: false
-  task: true
-reasoningEffort: medium
+request:
+  body:
+    reasoningEffort: medium
+permissions:
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: allow
 ---
 
 # Moltke — Decide & Command
