@@ -4,7 +4,10 @@
   "websearch": false,
   "compaction": {
     "auto": true,
-    "reserved": 60000
+    "keep": {
+      "tokens": 24000
+    },
+    "buffer": 30000
   },
   "provider": {
     "dramallama": {
@@ -85,7 +88,7 @@
         },
         "deepseek-v4-flash": {
           "limit": {
-            "context": 128000,
+            "context": 200000,
             "output": 32000
           }
         }
@@ -157,7 +160,8 @@
   },
   "model": "dramallama/deepseek-v4-flash#high",
   "experimental": {
-    "subagent_depth": 4
+    "subagent_depth": 4,
+    "background_compaction": true
   },
   "plugins": [
     {
@@ -196,7 +200,7 @@
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "opencode-go/deepseek-v4-pro#high",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "hopper": {
@@ -214,7 +218,7 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "opencode-go/kimi-k3.1-pro#high",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "oracle": {
@@ -226,13 +230,13 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3#high",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "opencode-go/kimi-k3.1-pro#high",
+      "model": "dramallama/deepseek-v4-flash#high",
       "reasoningEffort": "high"
     },
     "gardener": {

@@ -5,7 +5,7 @@ description: |
   strategic (copernicus/feynman/oracle) and tactical (hopper/linus/hamilton) loops
   until verified complete, then invokes gardener and reports to user.
 mode: subagent
-model: opencode-go/deepseek-v4-pro#high
+model: dramallama/deepseek-v4-flash#high
 request:
   body:
     reasoningEffort: medium
