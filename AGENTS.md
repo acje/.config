@@ -53,9 +53,7 @@ and don't commit scaffolding.
 - Agent frontmatter `description` is what opencode shows users in the
   agent picker; keep it tight and factual.
 - `.ooda/` is scratch space for live agent runs and is gitignored — never
-  stage anything from it. `opencode/plugins/tracer.mjs` writes session
-  traces there; see `opencode/AGENTS.md` § Tracing for shape and
-  redaction rules.
+  stage anything from it.
 
 ## Out of scope for this file
 
