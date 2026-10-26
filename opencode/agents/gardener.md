@@ -3,7 +3,7 @@ description: |
   @gardener subagent. Mission-state cleanup specialist. Invoked by moltke on
   mission/package completion. Closes completed bd mission epics and spent
   scaffolding, holds live findings/missions, and runs guarded cleanup of
-  eligible mission-repository Cargo artifacts and aged trace folders.
+  eligible mission-repository Cargo artifacts.
 mode: subagent
 model: dramallama/deepseek-v4-flash#high
 request:
@@ -49,7 +49,6 @@ Close out mission state in `bd` and reclaim eligible build/scratch artifacts wit
    - Optionally run read-only `bd-doctor` (`cargo run --manifest-path scripts/Cargo.toml --bin bd-doctor -- --all`) if present; report Error findings (`EMPTY_EVIDENCE`, `INVERTED_PARENT`, `CHILDLESS_EPIC`, `MISSING_MISSION_LABEL`) — ignore default `ORPHAN` Info lines.
 3. **Bounded filesystem cleanup (fail-closed)**:
    - **Scratch dir**: If `mission_id` is supplied, epic is CLOSED/absent, and `<mission_repository>/.ooda/tmp/<mission_id>/` exists, remove that exact directory only.
-   - **Trace retention**: If `mission_repository` is canonical and `OPENCODE_TRACE_DIR` is unset, remove `<mission_repository>/.ooda/traces/<YYYY-MM-DD>` folders strictly older than 3 UTC calendar days (real non-symlink directories, valid Gregorian date, containing only `<sessionID>.jsonl`, no active writer).
    - **Guarded Cargo cleanup**: After all verification and GC checks complete (never rebuild after clean):
      - Require `cargo_clean_authority == "authorized"`, verified canonical `mission_repository` (never infer CWD), and resolvable `cleanup_context`. Otherwise report `Blocked` or `Unknown`.
      - Inventory Cargo manifests across `mission_repository` (`NotApplicable` only if zero Cargo workspaces exist).

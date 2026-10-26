@@ -11,7 +11,7 @@ Specialized subagents available via the `Task` tool implement Boyd's OODA loop p
 | `hopper` | Act | Verified increments (`red → green → refactor`) | caller (`moltke`: `review-ready` or outcome) | `review-request` |
 | `linus` | Review | `APPROVE` / `NEEDS WORK` on Rust diffs (**pre-merge, blocking**) | caller (`moltke`; relayed to `hopper`) | `review:approved` / `review:needs-work` / `review-report` |
 | `hamilton` | Assurance | Architectural & resource assurance (**during CI/deploy wait**) | `moltke` (triage) | `assurance-report` / `assurance-finding` |
-| `gardener` | Closeout | Closes completed epics & spent scaffolding; guarded Cargo/trace GC | `moltke` → `user` | none |
+| `gardener` | Closeout | Closes completed epics & spent scaffolding; guarded Cargo GC | `moltke` → `user` | none |
 
 ## The Two OODA Loops & Directed Opportunism
 
@@ -80,7 +80,7 @@ Subordinates append a `BackBrief` after the handoff line **only** when a `Surpri
 
 Full CLI mechanics live in the `beads` skill (`skills/beads/SKILL.md`). Core invariants:
 - **Pointer over body (Tier 1)**: Cross-agent bodies (> ~20 lines) live in `bd` bead `description` fields (`evidence`, `oracle-summary`, `review-report`, `assurance-report`, `mission-brief`). Handoffs pass `artefact: bd-NNN`. Verify non-empty `description` before handoff.
-- **`.ooda/` (Tier 2 escape hatch)**: Gitignored local traces (`.ooda/traces/`), user-facing reports/PRDs, and workspace-local ephemeral scratch (`.ooda/tmp/<mission_id>/`, self-cleaned before mission end). Never use `$TMPDIR` for cross-agent coordination.
+- **`.ooda/` (Tier 2 escape hatch)**: Gitignored user-facing reports/PRDs and workspace-local ephemeral scratch (`.ooda/tmp/<mission_id>/`, self-cleaned before mission end). Never use `$TMPDIR` for cross-agent coordination.
 - **Review tiers (`review:tier=<tidy|standard|adversarial>`)**: `hopper` labels every `review-request` bead; missing label defaults to `adversarial`. Adversarial triggers: `unsafe`, guards/tripwires/CI gates, public API changes, machine-record parsers, path handling, verdict modelling, enforcement tooling.
 - **Circuit-breaker (> 3 review rounds or > 2× defensive scaffolding)**: Halt execution; `moltke` dispatches `feynman` to reframe the overconstrained assumption into ≥ 2 clean architectural seams, then escalates a structured choice to the user.
 

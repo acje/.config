@@ -13,7 +13,7 @@ Eight subagents orchestrated across two OODA loops (`Strategic` and `Tactical`),
 | Act | `hopper` | Executes mission contracts via TDD (`red → green → refactor`), Tidy First commit separation, and tier-scoped verification (`inner`/`mid`/`boundary`). Returns `review-ready` beads and outcomes to `moltke`. |
 | Review | `linus` | Pre-merge Rust-specialist code reviewer (source-level). Reviews idioms, type safety, `unsafe` soundness, resource contracts, and test design. Read-only on source; writes verdicts to `bd` beads. |
 | Assurance | `hamilton` | Runs during CI/deploy wait windows on `main` (or external PRs). Reviews cross-component failure, ADR alignment, resource stress, recovery/shutdown, and broad regressions. Read-only; files `assurance-finding` beads for `moltke`. |
-| Closeout | `gardener` | Closes completed `bd` mission epics and spent scaffolding, holds live findings, and runs guarded Cargo artifact and aged trace cleanup. |
+| Closeout | `gardener` | Closes completed `bd` mission epics and spent scaffolding, holds live findings, and runs guarded Cargo artifact cleanup. |
 
 ## The Two OODA Loops
 
