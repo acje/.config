@@ -521,6 +521,77 @@ class VacuumTest(unittest.TestCase):
         self.assertLess(after_free, free)     # strictly decreased
         self.assertEqual(after_mode, 2)       # stays INCREMENTAL
 
+    def test_converts_none_zero_freelist(self):
+        # A NONE-mode DB with a zero freelist must STILL run the full-VACUUM
+        # conversion so auto_vacuum persists as INCREMENTAL (M1): otherwise a
+        # zero-freelist NONE run would exit 0 leaving auto_vacuum=0.
+        db = self.dir / "nonezero.db"
+        conn = sqlite3.connect(db)
+        try:
+            conn.execute("CREATE TABLE session "
+                         "(id TEXT PRIMARY KEY, parent_id TEXT, time_created "
+                         "INTEGER, slug TEXT, directory TEXT, title TEXT, "
+                         "version TEXT, time_updated INTEGER)")
+            conn.execute("INSERT INTO session VALUES ('A',NULL,1,'a','/t','A',"
+                         "'1.18.34',1)")
+            conn.commit()
+            self.assertEqual(conn.execute("PRAGMA freelist_count")
+                             .fetchone()[0], 0)
+            self.assertEqual(conn.execute("PRAGMA auto_vacuum").fetchone()[0], 0)
+        finally:
+            conn.close()
+        result = run_script("vacuum", "--db", str(db))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        conn = sqlite3.connect(db)
+        try:
+            after_mode = conn.execute("PRAGMA auto_vacuum").fetchone()[0]
+            after_int = str(conn.execute("PRAGMA integrity_check")
+                            .fetchone()[0]).strip()
+        finally:
+            conn.close()
+        self.assertEqual(after_mode, 2)             # NONE -> INCREMENTAL
+        self.assertIn("method=full_vacuum", result.stdout)
+        self.assertEqual(after_int, "ok")
+
+    def test_full_mode_autovac_fixture(self):
+        # FULL-mode (auto_vacuum=1) DB: header defaults to FULL; deletes
+        # auto-reclaim on commit so the freelist stays ~0; vacuum must not
+        # disturb the mode or grow the freelist. Assertions stay loose across
+        # sqlite3 builds (never exact freelist counts).
+        db = self.dir / "full.db"
+        conn = sqlite3.connect(db)
+        try:
+            conn.execute("PRAGMA auto_vacuum = FULL")   # on EMPTY DB
+            conn.execute("CREATE TABLE t (id INTEGER PRIMARY KEY, payload TEXT)")
+            conn.execute("CREATE TEMP TABLE seed(n)")
+            conn.execute("INSERT INTO seed(n) VALUES (1),(2),(3),(4),(5),"
+                         "(6),(7),(8),(9),(10)")
+            conn.execute(
+                "INSERT INTO t(payload) SELECT printf('row%06d', "
+                "s1.n + 10*(s2.n-1) + 100*(s3.n-1) + 1000*(s4.n-1) "
+                "+ 10000*(s5.n-1)) "
+                "FROM seed s1, seed s2, seed s3, seed s4, seed s5")
+            conn.execute("DELETE FROM t WHERE id % 10 != 0")
+            conn.commit()
+            before_free = conn.execute("PRAGMA freelist_count").fetchone()[0]
+            self.assertEqual(conn.execute("PRAGMA auto_vacuum").fetchone()[0], 1)
+        finally:
+            conn.close()
+        result = run_script("vacuum", "--db", str(db))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        conn = sqlite3.connect(db)
+        try:
+            after_free = conn.execute("PRAGMA freelist_count").fetchone()[0]
+            after_mode = conn.execute("PRAGMA auto_vacuum").fetchone()[0]
+            after_int = str(conn.execute("PRAGMA integrity_check")
+                            .fetchone()[0]).strip()
+        finally:
+            conn.close()
+        self.assertEqual(after_mode, 1)               # stays FULL
+        self.assertLessEqual(after_free, 2)           # freelist stays ~0
+        self.assertLessEqual(after_free, before_free) # never grows
+        self.assertEqual(after_int, "ok")
+
     def test_integrity_verify_fail_closed(self):
         db = self.dir / "integrity.db"
         vacuum_freelist_fixture(db, incremental=False)

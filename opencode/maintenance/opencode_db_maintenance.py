@@ -552,12 +552,16 @@ def cmd_vacuum(args):
                 f"vacuum: re-read freelist_count after cheap pass failed: "
                 f"{exc}") from exc
 
-        # Fallback: the cheap pass only has a correct success state when the
-        # freelist is ~0. Any material remainder means reclaim is unproven
-        # (empirically each incremental_vacuum call in this runtime removes one
-        # page), so run a full VACUUM — re-recording INCREMENTAL in THIS
-        # connection so a NONE DB converts to INCREMENTAL — and commit.
-        if cheap_free != 0:
+        # Fallback: a NONE-mode DB must ALWAYS go through the full-VACUUM
+        # conversion (re-record INCREMENTAL in THIS connection, then VACUUM) so
+        # auto_vacuum persists as INCREMENTAL (mode 2) — even when the cheap
+        # pass left the freelist at zero or one page. Otherwise a zero/
+        # 1-page-freelist NONE run would report success leaving auto_vacuum=0
+        # (silent durability gap: future deletes would never be reclaimable).
+        # A material INCREMENTAL-mode remainder also falls back: the cheap pass
+        # only has a correct success state when the freelist is ~0 (empirically
+        # each incremental_vacuum call in this runtime removes one page).
+        if cheap_free != 0 or before_mode == 0:
             conn = sqlite3.connect(db_path)
             try:
                 if before_mode == 0:
