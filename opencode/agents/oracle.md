@@ -4,10 +4,6 @@ description: |
   relevant to the component at hand so moltke and feynman decide in line
   with prior commitments. Informs, never decides.
 mode: subagent
-model: dramallama/deepseek-v4-flash#high
-request:
-  body:
-    reasoningEffort: high
 permissions:
   - action: webfetch
     resource: "*"

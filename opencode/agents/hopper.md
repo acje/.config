@@ -5,10 +5,6 @@ description: |
   and tier-scoped verification. Routes review-ready increments and terminal
   outcomes back to caller (moltke).
 mode: subagent
-model: dramallama/deepseek-v4-flash#high
-request:
-  body:
-    reasoningEffort: high
 permissions:
   - action: webfetch
     resource: "*"

@@ -5,10 +5,6 @@ description: |
   names knowledge gaps. Re-tasks copernicus on blocked falsifiers; consults
   oracle on architectural surfaces. Never proposes solutions or mutates state.
 mode: subagent
-model: dramallama/deepseek-v4-flash#high
-request:
-  body:
-    reasoningEffort: medium
 permissions:
   - action: webfetch
     resource: "*"

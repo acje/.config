@@ -4,10 +4,6 @@ description: |
   unsafe soundness, type-driven design, resource contracts, and test design at
   source level. Read-only on source; writes only bd review beads and verdicts.
 mode: subagent
-model: dramallama/deepseek-v4-flash#high
-request:
-  body:
-    reasoningEffort: high
 permissions:
   - action: webfetch
     resource: "*"

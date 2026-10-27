@@ -16,76 +16,6 @@
         "baseURL": "https://aiapi.mattilsynet.no/v1"
       },
       "models": {
-        "code": {
-          "id": "drama/code-thinking",
-          "variants": {
-            "instruct-general": {
-              "temperature": 0.7,
-              "top_p": 0.8,
-              "top_k": 20,
-              "min_p": 0.0,
-              "presence_penalty": 1.5,
-              "repetition_penalty": 1.0
-            },
-            "instruct-reasoning": {
-              "temperature": 1.0,
-              "top_p": 1.0,
-              "top_k": 40,
-              "min_p": 0.0,
-              "presence_penalty": 2.0,
-              "repetition_penalty": 1.0
-            }
-          },
-          "tool_call": true,
-          "limit": {
-            "context": 192000,
-            "input": 192000,
-            "output": 8000
-          },
-          "modalities": {
-            "input": [
-              "text"
-            ],
-            "output": [
-              "text"
-            ]
-          }
-        },
-        "thinking": {
-          "id": "drama/code-thinking",
-          "variants": {
-            "precise-coding": {
-              "temperature": 0.6,
-              "top_p": 0.95,
-              "top_k": 20,
-              "min_p": 0.0,
-              "presence_penalty": 0.0,
-              "repetition_penalty": 1.0
-            },
-            "general-tasks": {
-              "temperature": 1.0,
-              "top_p": 0.95,
-              "top_k": 20,
-              "min_p": 0.0,
-              "presence_penalty": 1.5,
-              "repetition_penalty": 1.0
-            }
-          },
-          "tool_call": true,
-          "limit": {
-            "context": 192000,
-            "input": 192000,
-            "output": 32000
-          },
-          "modalities": {
-            "input": [
-              "text"
-            ],
-            "output": [
-              "text"
-            ]
-          }
-        },
         "deepseek-v4-flash": {
           "limit": {
             "context": 200000,
@@ -158,7 +88,7 @@
       "~/.claude/skills/**": "allow"
     }
   },
-  "model": "dramallama/deepseek-v4-flash#high",
+  "model": "dramallama/deepseek-v4-flash",
   "experimental": {
     "subagent_depth": 4,
     "background_compaction": true
@@ -189,60 +119,60 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
-      "reasoningEffort": "high"
+      "model": "dramallama/deepseek-v4-flash",
+      "reasoningEffort": "medium"
     },
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "copernicus": {
       "prompt": "{file:./agents/copernicus.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
-      "reasoningEffort": "high"
+      "model": "dramallama/deepseek-v4-flash",
+      "reasoningEffort": "medium"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     },
     "gardener": {
       "prompt": "{file:./agents/gardener.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash#high",
+      "model": "dramallama/deepseek-v4-flash",
       "reasoningEffort": "high"
     }
   }

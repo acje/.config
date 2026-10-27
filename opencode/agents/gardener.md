@@ -5,10 +5,6 @@ description: |
   scaffolding, holds live findings/missions, and runs guarded cleanup of
   eligible mission-repository Cargo artifacts.
 mode: subagent
-model: dramallama/deepseek-v4-flash#high
-request:
-  body:
-    reasoningEffort: high
 permissions:
   - action: webfetch
     resource: "*"

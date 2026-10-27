@@ -5,10 +5,6 @@ description: |
   search and webfetch without interpretation. Returns cited facts and gaps;
   registers large evidence in a bd bead `description`.
 mode: subagent
-model: dramallama/deepseek-v4-flash#high
-request:
-  body:
-    reasoningEffort: high
 permissions:
   - action: webfetch
     resource: "*"
