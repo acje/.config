@@ -8,7 +8,7 @@
   <array>
     <string>/usr/bin/python3</string>
     <string>/Users/anders.jensen/.config/opencode/maintenance/opencode_db_maintenance.py</string>
-    <string>schedule</string>
+    <string>vacuum</string>
     <string>--db</string>
     <string>/Users/anders.jensen/.local/share/opencode/opencode.db</string>
   </array>
@@ -22,8 +22,8 @@
   <key>RunAtLoad</key>
   <false/>
   <key>StandardOutPath</key>
-  <string>/Users/anders.jensen/.config/opencode/maintenance/daily-schedule.out.log</string>
+  <string>/Users/anders.jensen/.config/opencode/maintenance/daily-vacuum.out.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/anders.jensen/.config/opencode/maintenance/daily-schedule.err.log</string>
+  <string>/Users/anders.jensen/.config/opencode/maintenance/daily-vacuum.err.log</string>
 </dict>
 </plist>
