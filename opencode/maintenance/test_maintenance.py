@@ -6,7 +6,9 @@ pruning (`apply`) subcommand was retired, so no native opencode invocation and
 no deletion entrypoint remains in scope; the test suite asserts apply is
 rejected as an unknown command (no DB/native effect). Retained coverage:
 dry-run eligibility, offline-confirmed migrate, refusal-only schedule,
-holder refusal, capacity, backup/restore probe, and the logical fingerprint.
+vacuum (holder refusal, NONE/INCREMENTAL freelist reclaim, fail-closed
+integrity/read verify), holder refusal, capacity, backup/restore probe, and
+the logical fingerprint.
 Schema-present-but-broken tables must fail the tool, never yield a clean
 result. Fingerprint is rowid-independent (VACUUM-growing / WITHOUT ROWID /
 rowid-gap) and includes the schema definition; no counts-only fallback.
@@ -81,6 +83,32 @@ def mini_session_db(path, rows, with_schema=True):
         conn.commit()
     finally:
         conn.close()
+
+
+def vacuum_freelist_fixture(path, incremental=False):
+    """Disposable DB with a real freelist (insert many rows, delete most).
+    Returns (freelist_before, auto_vacuum_before). INCREMENTAL mode must be
+    set on the empty DB before the first table so the header is INCREMENTAL."""
+    conn = sqlite3.connect(path)
+    try:
+        if incremental:
+            conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
+        conn.execute("CREATE TABLE t (id INTEGER PRIMARY KEY, payload TEXT)")
+        conn.execute("CREATE TEMP TABLE seed(n)")
+        conn.execute("INSERT INTO seed(n) VALUES (1),(2),(3),(4),(5),"
+                     "(6),(7),(8),(9),(10)")
+        conn.execute(
+            "INSERT INTO t(payload) SELECT printf('row%06d', "
+            "s1.n + 10*(s2.n-1) + 100*(s3.n-1) + 1000*(s4.n-1) "
+            "+ 10000*(s5.n-1)) "
+            "FROM seed s1, seed s2, seed s3, seed s4, seed s5")
+        conn.execute("DELETE FROM t WHERE id % 10 != 0")
+        conn.commit()
+        free = conn.execute("PRAGMA freelist_count").fetchone()[0]
+        mode = conn.execute("PRAGMA auto_vacuum").fetchone()[0]
+    finally:
+        conn.close()
+    return free, mode
 
 
 class EligibilityTest(unittest.TestCase):
@@ -415,6 +443,116 @@ class CliTest(unittest.TestCase):
         build(d2, alter=True)
         self.assertNotEqual(m.logical_fingerprint(str(d1)),
                             m.logical_fingerprint(str(d2)))
+
+
+class VacuumTest(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="pxb2-vac-")
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name)
+
+    def test_vacuum_in_help(self):
+        result = run_script("--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("vacuum", result.stdout)
+
+    def test_holder_present_refuses_no_mutation(self):
+        db = self.dir / "holder.db"
+        mini_session_db(db, [("A", None, now_ms() - 61 * DAY_MS)])
+        before = db.read_bytes()
+        args = unittest.mock.Mock()
+        args.db = str(db)
+        buf = io.StringIO()
+        with contextlib.redirect_stderr(buf), \
+                unittest.mock.patch.object(
+                    m, "check_holders", return_value=(["7"], False)):
+            rc = m.cmd_vacuum(args)
+        self.assertEqual(rc, 2)
+        self.assertIn("REFUSED", buf.getvalue())
+        self.assertEqual(db.read_bytes(), before)  # no mutation
+
+    def test_holder_unknown_refuses_no_mutation(self):
+        db = self.dir / "unknown.db"
+        mini_session_db(db, [("A", None, now_ms() - 61 * DAY_MS)])
+        before = db.read_bytes()
+        args = unittest.mock.Mock()
+        args.db = str(db)
+        with unittest.mock.patch.object(
+                m, "check_holders", return_value=([], True)):
+            rc = m.cmd_vacuum(args)
+        self.assertEqual(rc, 2)
+        self.assertEqual(db.read_bytes(), before)  # no mutation
+
+    def test_reclaims_freelist_none_fixture(self):
+        db = self.dir / "none.db"
+        free, mode = vacuum_freelist_fixture(db, incremental=False)
+        self.assertEqual(mode, 0)
+        self.assertGreater(free, 0, "fixture must have a real freelist first")
+        result = run_script("vacuum", "--db", str(db))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        conn = sqlite3.connect(db)
+        try:
+            after_free = conn.execute("PRAGMA freelist_count").fetchone()[0]
+            after_mode = conn.execute("PRAGMA auto_vacuum").fetchone()[0]
+            integrity = str(conn.execute("PRAGMA integrity_check")
+                            .fetchone()[0]).strip()
+        finally:
+            conn.close()
+        self.assertLess(after_free, free)     # strictly decreased
+        self.assertEqual(after_mode, 2)       # NONE -> INCREMENTAL persisted
+        self.assertEqual(integrity, "ok")
+        self.assertIn("method=full_vacuum", result.stdout)
+        self.assertIn("integrity ok", result.stdout)
+
+    def test_reclaims_freelist_incremental_fixture(self):
+        db = self.dir / "incremental.db"
+        free, mode = vacuum_freelist_fixture(db, incremental=True)
+        self.assertEqual(mode, 2)
+        self.assertGreater(free, 0)
+        result = run_script("vacuum", "--db", str(db))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        conn = sqlite3.connect(db)
+        try:
+            after_free = conn.execute("PRAGMA freelist_count").fetchone()[0]
+            after_mode = conn.execute("PRAGMA auto_vacuum").fetchone()[0]
+        finally:
+            conn.close()
+        self.assertLess(after_free, free)     # strictly decreased
+        self.assertEqual(after_mode, 2)       # stays INCREMENTAL
+
+    def test_integrity_verify_fail_closed(self):
+        db = self.dir / "integrity.db"
+        vacuum_freelist_fixture(db, incremental=False)
+        args = unittest.mock.Mock()
+        args.db = str(db)
+        real = m.single_value
+        def fake(db_path, sql):
+            if "integrity_check" in sql:
+                return "not ok"
+            return real(db_path, sql)
+        buf_out = io.StringIO()
+        buf_err = io.StringIO()
+        with contextlib.redirect_stdout(buf_out), \
+                contextlib.redirect_stderr(buf_err), \
+                unittest.mock.patch.object(m, "single_value", side_effect=fake):
+            rc = m.cmd_vacuum(args)
+        self.assertEqual(rc, 4)
+        self.assertNotIn("[vacuum]", buf_out.getvalue())   # no success line
+        self.assertIn("VERIFY FAILED", buf_err.getvalue())
+
+    def test_before_read_error_fail_closed(self):
+        db = self.dir / "readerr.db"
+        mini_session_db(db, [("A", None, now_ms() - 61 * DAY_MS)])
+        before = db.read_bytes()
+        args = unittest.mock.Mock()
+        args.db = str(db)
+        with unittest.mock.patch.object(
+                m, "single_value", side_effect=sqlite3.DatabaseError("boom")):
+            with self.assertRaises(m.MaintenanceError) as cm:
+                m.cmd_vacuum(args)
+        self.assertIn("BEFORE", str(cm.exception))
+        self.assertEqual(db.read_bytes(), before)   # fail-closed, no mutation
 
 
 if __name__ == "__main__":

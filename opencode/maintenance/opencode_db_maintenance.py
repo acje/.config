@@ -1,27 +1,40 @@
 #!/usr/bin/env python3
-"""OpenCode DB offline maintenance: migration + retention tooling.
+"""OpenCode DB offline maintenance: vacuum + retention tooling.
 
 Session pruning was retired (the `apply` subcommand and native fixture
 harness were removed); no deletion route over an arbitrary target DB remains.
-The retained surface is read-only eligibility (`dry-run`), the sole real-DB
-mutation `migrate` (auto_vacuum FULL + VACUUM, requiring --offline-confirmation
-and a holder-free process inventory that FAILS CLOSED on inconclusive lsof),
-and refusal-only `schedule`.
+The retained surface is read-only eligibility (`dry-run`), the durable
+scheduled mutation `vacuum` (holder-gated, fail-closed, data-preserving
+freelist reclaim), operator-explicit `migrate` (superseded for freelist
+shrink; still present), and refusal-only `schedule`.
 
-Backup/restore verification is a REQUIRED logical fingerprint over every user
-table (all logical columns, ordered by all logical columns — rowid-excluded,
-so VACUUM renumbering and WITHOUT ROWID tables are handled) plus the schema
-definition. There is no counts-only fallback: any read/verification error
-refuses before mutation or yields non-zero after — never success. Capacity is
-checked against the same-filesystem backup volume using a coherent source
-size (max of file bytes and page_count*page_size plus WAL bytes) for
-source+backup+restore+VACUUM; backup directories that are symlinks are
-rejected before any chmod. SQLite temp-dir capacity is unknowable, so
-SQLITE_TMPDIR is scoped to the source parent around sqlite operations.
-Scheduled mode (schedule) refuses destructive execution. This tool never
-executes application delete SQL itself. Table membership decisions read
-sqlite_schema explicitly; a query error on a schema-present table
-propagates as a failure, never a clean result.
+`vacuum` is the daily job's route and the intended long-term answer to
+unbounded DB growth: cheap-first on NONE mode (record PRAGMA
+auto_vacuum=INCREMENTAL then incremental_vacuum), INCREMENTAL mode
+(incremental_vacuum only), FULL mode (the cheap pass is a documented no-op and
+is skipped). In this stdlib runtime each incremental_vacuum call removes at
+most a single freelist page, so if any material freelist remains after the
+cheap pass the full-VACUUM fallback fires (re-recording INCREMENTAL in the
+same connection so a non-empty NONE DB converts) and guarantees reclaim.
+POST-verify is fail-closed: integrity_check == "ok" AND final freelist
+decreased vs before (or already zero) or the run exits 4. All statements run
+on a stdlib sqlite3 writer connection, never the `_sqlite` sqlite3-CLI helper
+whose 120 s NATIVE_TIMEOUT_SECONDS is fatal on very large DBs; SQLITE_TMPDIR
+is scoped to the source parent around SQLite steps.
+
+Backup/restore verification (migrate) is a REQUIRED logical fingerprint over
+every user table (all logical columns, ordered by all logical columns —
+rowid-excluded, so VACUUM renumbering and WITHOUT ROWID tables are handled)
+plus the schema definition. There is no counts-only fallback: any
+read/verification error refuses before mutation or yields non-zero after —
+never success. Capacity is checked against the same-filesystem backup volume
+using a coherent source size (max of file bytes and page_count*page_size plus
+WAL bytes) for source+backup+restore+VACUUM; backup directories that are
+symlinks are rejected before any chmod. The `schedule` subcommand refuses
+destructive execution (retained diagnostics; the daily job no longer reaches
+it). This tool never executes application delete SQL itself. Table membership
+decisions read sqlite_schema explicitly; a query error on a schema-present
+table propagates as a failure, never a clean result.
 """
 
 import argparse
@@ -485,6 +498,104 @@ def cmd_migrate(args):
     return 0
 
 
+def cmd_vacuum(args):
+    """Durable scheduled freelist reclaim (holder-gated, fail-closed,
+    data-preserving). All statements run on a stdlib sqlite3 writer
+    connection, never the `_sqlite` sqlite3-CLI helper whose 120 s
+    NATIVE_TIMEOUT_SECONDS is fatal on very large DBs. Cheap-first: NONE mode
+    records PRAGMA auto_vacuum=INCREMENTAL then incremental_vacuum, INCREMENTAL
+    mode incremental_vacuum only, FULL mode skips the no-op cheap pass. In this
+    runtime incremental_vacuum removes at most a single freelist page per call,
+    so if any material freelist remains the full-VACUUM fallback fires
+    (re-recording INCREMENTAL in the SAME connection so a non-empty NONE DB
+    converts) and guarantees reclaim. POST-verify is fail-closed: integrity ==
+    "ok" and final freelist decreased (or already zero), else exit 4."""
+    db_path = str(Path(args.db).resolve())
+    refusal = _refuse_holders("vacuum", *check_holders(db_path))
+    if refusal is not None:
+        return refusal
+
+    def read_before(sql):
+        try:
+            return int(single_value(db_path, sql))
+        except (sqlite3.Error, TypeError, ValueError) as exc:
+            raise MaintenanceError(
+                f"vacuum: read BEFORE state failed ({sql}): {exc}") from exc
+
+    before_mode = read_before("PRAGMA auto_vacuum")
+    before_free = read_before("PRAGMA freelist_count")
+    before_pages = read_before("PRAGMA page_count")
+
+    saved_tmpdir = os.environ.get("SQLITE_TMPDIR")
+    os.environ["SQLITE_TMPDIR"] = str(Path(db_path).resolve().parent)
+    try:
+        method = "incremental" if before_mode in (0, 2) else None
+        conn = sqlite3.connect(db_path)
+        try:
+            if before_mode == 0:
+                # Records INCREMENTAL; on a non-empty NONE DB the header flip
+                # lands only when VACUUM compacts the file (fallback below).
+                conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
+                conn.execute("PRAGMA incremental_vacuum")
+            elif before_mode == 2:
+                conn.execute("PRAGMA incremental_vacuum")
+            # before_mode == 1 (FULL): incremental_vacuum is a documented
+            # no-op; the fallback below decides.
+            conn.commit()
+        finally:
+            conn.close()
+
+        try:
+            cheap_free = int(single_value(db_path, "PRAGMA freelist_count"))
+        except (sqlite3.Error, TypeError, ValueError) as exc:
+            raise MaintenanceError(
+                f"vacuum: re-read freelist_count after cheap pass failed: "
+                f"{exc}") from exc
+
+        # Fallback: the cheap pass only has a correct success state when the
+        # freelist is ~0. Any material remainder means reclaim is unproven
+        # (empirically each incremental_vacuum call in this runtime removes one
+        # page), so run a full VACUUM — re-recording INCREMENTAL in THIS
+        # connection so a NONE DB converts to INCREMENTAL — and commit.
+        if cheap_free != 0:
+            conn = sqlite3.connect(db_path)
+            try:
+                if before_mode == 0:
+                    conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
+                conn.execute("VACUUM")
+                conn.commit()
+            finally:
+                conn.close()
+            method = "full_vacuum"
+    finally:
+        if saved_tmpdir is None:
+            os.environ.pop("SQLITE_TMPDIR", None)
+        else:
+            os.environ["SQLITE_TMPDIR"] = saved_tmpdir
+
+    try:
+        after_mode = int(single_value(db_path, "PRAGMA auto_vacuum"))
+        after_free = int(single_value(db_path, "PRAGMA freelist_count"))
+        after_pages = int(single_value(db_path, "PRAGMA page_count"))
+        integrity = str(single_value(db_path, "PRAGMA integrity_check")).strip()
+    except (sqlite3.Error, TypeError, ValueError) as exc:
+        print(f"[vacuum] VERIFY FAILED: post-run read error: {exc}",
+              file=sys.stderr)
+        return 4
+    if integrity.lower() != "ok":
+        print(f"[vacuum] VERIFY FAILED: integrity={integrity!r}",
+              file=sys.stderr)
+        return 4
+    if not (after_free < before_free or after_free == 0 or before_free == 0):
+        print(f"[vacuum] VERIFY FAILED: freelist {before_free}->{after_free} "
+              "did not decrease; refusing success", file=sys.stderr)
+        return 4
+    print(f"[vacuum] auto_vacuum={after_mode} pages {before_pages}->{after_pages} "
+          f"freelist {before_free}->{after_free}; integrity ok; "
+          f"method={method or 'none'}")
+    return 0
+
+
 def single_value(db_path, sql):
     conn = _ro_connect(db_path)
     try:
@@ -511,13 +622,15 @@ def cmd_schedule(args):
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="opencode_db_maintenance.py",
-        description="OpenCode DB offline maintenance: prune (apply) is "
-                    "retired; migrate is the real usable mutation after "
-                    "shutdown, schedule refuses destructive execution. "
-                    "See DB-MAINTENANCE.md.",
+        description="OpenCode DB offline maintenance: vacuum is the durable "
+                    "scheduled freelist reclaim (holder-gated, fail-closed, "
+                    "data-preserving; cheap incremental path with full-VACUUM "
+                    "fallback); migrate superseded for freelist shrink, still "
+                    "operator-explicit; schedule refuses destructive "
+                    "execution. See DB-MAINTENANCE.md.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("dry-run", "migrate", "schedule"):
+    for name in ("dry-run", "migrate", "schedule", "vacuum"):
         p = sub.add_parser(name)
         p.add_argument("--db", required=True, help="explicit database path")
         if name == "migrate":
