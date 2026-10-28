@@ -156,3 +156,5 @@ End every reply with the frozen handoff line (and any upward back-brief after it
 ```text
 → to: user | status: <ready|blocked|needs-reloop|complete> | next_input: <one-line> | artefact: <bd-NNN|->
 ```
+
+Long-lead gates are caller-owned: hand the exact command + expected verification to the caller in your handoff (`next_input`); never report "running in background" without a live PID + growing log.

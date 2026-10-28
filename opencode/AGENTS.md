@@ -92,8 +92,26 @@ Full CLI mechanics live in the `beads` skill (`skills/beads/SKILL.md`). Core inv
   2. Prefix pipelines with `set -o pipefail;`. Never mistake a filter's exit code for the producer's exit code.
   3. Use dedicated tools (`read`, `glob`, `grep`, `edit`) over shell equivalents; use `rg` when shell search is required.
   4. Pipe JSON/machine data via `printf '%s'`, never `echo`.
-  5. **No background daemons**: Never background processes (`&`, `nohup`, `disown`) or leave servers running past the tool call (Graphify lex specialis: `/Users/anders.jensen/code/sf-sdlc/docs/graphify-evidence.md#native-lifecycle-policy`).
+  5. **No background daemons**: Never background processes (`&`, `nohup`, `disown`) or leave servers running past the tool call (Graphify lex specialis: `/Users/anders.jensen/code/sf-sdlc/docs/graphify-evidence.md#native-lifecycle-policy`). Sole exception: one long-lead verification gate launched via the shell tool's `background: true`, owned by the caller session, PID + log path recorded, liveness verified before any claim.
   6. Use non-interactive flags (`cp -f`, `rm -f`, `fleet-execution-methods`).
+
+## Background Work — Verifiable State, Caller-Owned
+
+- **"Running in background" is a verifiable state, not an intention.** Never
+  report work as running in the background without: the exact command, a live
+  PID (`ps -p <pid>`), and a log file with a recent mtime. Unverifiable
+  background claims are treated as not-running.
+- **Long-lead gates (> ~5 min) are caller-owned.** A subagent that needs a long
+  gate hands the exact command + expected verification to the caller in its
+  handoff (`next_input`), never launch-and-claim. The caller either:
+  - launches it as a **background subagent** (`subagent` tool, `background: true`)
+    whose whole job is to run the gate in its own foreground and report on
+    completion; or
+  - launches it as a **real OS process** (shell tool `background: true` or
+    `nohup &`), records PID + log path, and reaps on completion.
+- **Never end a turn with pending unlaunched work described as launched**, and
+  never background a shell process and end the turn while claiming it will
+  "notify" — the notification goes to the launching session, which is gone.
 
 ## Runtime Hooks & Environment Notes
 
