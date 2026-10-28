@@ -148,7 +148,7 @@
     "feynman": {
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
+      "model": "opencode-go/kimi-k3.1-pro",
       "reasoningEffort": "high"
     },
     "oracle": {
@@ -166,7 +166,7 @@
     "hamilton": {
       "prompt": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
+      "model": "opencode-go/kimi-k3.1-pro",
       "reasoningEffort": "high"
     },
     "gardener": {
