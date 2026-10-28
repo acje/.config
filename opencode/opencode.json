@@ -119,18 +119,18 @@
   "agent": {
     "build": {
       "prompt": "{file:./prompts/build.md}",
-      "model": "dramallama/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "reasoningEffort": "high"
     },
     "plan": {
       "prompt": "{file:./prompts/plan.md}",
-      "model": "dramallama/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "reasoningEffort": "high"
     },
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "reasoningEffort": "high"
     },
     "hopper": {
@@ -160,7 +160,7 @@
     "linus": {
       "prompt": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "reasoningEffort": "high"
     },
     "hamilton": {
