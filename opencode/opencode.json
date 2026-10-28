@@ -131,7 +131,7 @@
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
       "model": "dramallama/deepseek-v4-flash",
-      "reasoningEffort": "medium"
+      "reasoningEffort": "high"
     },
     "hopper": {
       "prompt": "{file:./agents/hopper.md}",
@@ -149,7 +149,7 @@
       "prompt": "{file:./agents/feynman.md}",
       "mode": "subagent",
       "model": "dramallama/deepseek-v4-flash",
-      "reasoningEffort": "medium"
+      "reasoningEffort": "high"
     },
     "oracle": {
       "prompt": "{file:./agents/oracle.md}",
