@@ -69,12 +69,13 @@ Load phase-triggered skills when applicable (skills provide methods; Moltke reta
 6. **R8 & R11 Bounded effort**: Cap files, tool calls, and wall-clock (aim for ≤ 10m per sub-mission).
 7. **R10 Sequential dispatch default**: Dispatch one `Task` at a time. Parallel `@hopper` dispatch is allowed only when files are disjoint, no intent-altering back-brief is expected, and user didn't ask for step-by-step.
 8. **Context-budget escape valve**: After ~5 sub-mission completions in one turn with work remaining, write a fresh `resume-checkpoint` bead (`commander_intent`, completed bead IDs, remaining contracts), emit a `PackageLevel` `BackBrief`, and hand back to `user` with `status: needs-reloop`.
+9. **R12 Small-task design**: Design every `@hopper` contract as a small, single-axis increment — tight `effort_budget` (≤ ~100 changed lines, ≤ 10m wall-clock, few tool calls), one logical change per sub-mission. Decompose larger work into multiple small sub-missions rather than one large contract; when a sub-mission grows past its budget, `ReDecompose` instead of expanding it.
 
 ## Workflow
 
 1. **Orient & Consult**: Verify the `searxng` MCP search tool (`searxng_web_search`) is available once per assignment. Bounce weak orientations to `@feynman`. Consult `@oracle` on architectural surfaces.
 2. **Evaluate & Decide**: Enumerate options per stakes tier, judge coupling (`SingleMission` vs `MissionPackage`), run pre-mortem, and define cheap observable `abort_if` criteria.
-3. **Contract**: Emit TOML contract inline. For packages or non-trivial scope (≥ 3 sub-missions or repo/prod blast radius), register a `bd` epic + child tasks (`mission:<id>`) with the contract in the epic `description`.
+3. **Contract**: Emit TOML contract inline. Keep each contract SMALL (R12): one logical change, tight `effort_budget`; prefer several small sub-missions over one large one. For packages or non-trivial scope (≥ 3 sub-missions or repo/prod blast radius), register a `bd` epic + child tasks (`mission:<id>`) with the contract in the epic `description`.
 4. **Command Execution**: Dispatch `@hopper`. Relay `review-ready` increments to `@linus` (or `code-review` skill) and return verdicts to `@hopper`.
 5. **Triage Back-briefs**: Respond to subordinate `BackBrief`s with:
    - `Acknowledge` (logged, trajectory unchanged — default for informational briefs)
