@@ -130,7 +130,7 @@
     "moltke": {
       "prompt": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "opencode-go/deepseek-v4.1-flash",
+      "model": "opencode-go/kimi-k3.1-pro",
       "reasoningEffort": "high"
     },
     "hopper": {
