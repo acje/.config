@@ -85,10 +85,12 @@
       "~/.cargo/registry/**": "allow",
       "~/.config/opencode/skills/**": "allow",
       "~/.agents/skills/**": "allow",
-      "~/.claude/skills/**": "allow"
+      "~/.claude/skills/**": "allow",
+      "/Users/anders.jensen/code": "allow",
+      "/Users/anders.jensen/code/**": "allow"
     }
   },
-  "model": "dramallama/deepseek-v4-flash",
+  "model": "opencode-go/deepseek-v4.1-flash",
   "experimental": {
     "subagent_depth": 4,
     "background_compaction": true
@@ -113,67 +115,72 @@
         "environment": {
           "SEARXNG_URL": "http://127.0.0.1:19217"
         }
+      },
+      "repowise": {
+        "type": "local",
+        "command": [
+          "/Users/anders.jensen/.local/bin/repowise",
+          "mcp"
+        ],
+        "environment": {
+          "REPOWISE_OFFLINE": "1",
+          "REPOWISE_SKIP_EDITOR_SETUP": "1",
+          "REPOWISE_PLUGINS": "",
+          "PYTHONPATH": "",
+          "PYTHONHOME": "",
+          "PYTHONNOUSERSITE": "1"
+        }
       }
     }
   },
-  "agent": {
+  "agents": {
     "build": {
-      "prompt": "{file:./prompts/build.md}",
-      "model": "opencode-go/deepseek-v4.1-flash",
-      "reasoningEffort": "high"
+      "system": "{file:./prompts/build.md}",
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "plan": {
-      "prompt": "{file:./prompts/plan.md}",
-      "model": "opencode-go/deepseek-v4.1-flash",
-      "reasoningEffort": "high"
+      "system": "{file:./prompts/plan.md}",
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "moltke": {
-      "prompt": "{file:./agents/moltke.md}",
+      "system": "{file:./agents/moltke.md}",
       "mode": "subagent",
-      "model": "opencode-go/deepseek-v4.1-flash",
-      "reasoningEffort": "high"
-    },
-    "hopper": {
-      "prompt": "{file:./agents/hopper.md}",
-      "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
-      "reasoningEffort": "high"
-    },
-    "copernicus": {
-      "prompt": "{file:./agents/copernicus.md}",
-      "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
-      "reasoningEffort": "high"
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "feynman": {
-      "prompt": "{file:./agents/feynman.md}",
+      "system": "{file:./agents/feynman.md}",
       "mode": "subagent",
-      "model": "opencode-go/kimi-k3.1-pro",
-      "reasoningEffort": "high"
-    },
-    "oracle": {
-      "prompt": "{file:./agents/oracle.md}",
-      "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
-      "reasoningEffort": "high"
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "linus": {
-      "prompt": "{file:./agents/linus.md}",
+      "system": "{file:./agents/linus.md}",
       "mode": "subagent",
-      "model": "opencode-go/deepseek-v4.1-flash",
-      "reasoningEffort": "high"
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "hamilton": {
-      "prompt": "{file:./agents/hamilton.md}",
+      "system": "{file:./agents/hamilton.md}",
       "mode": "subagent",
-      "model": "opencode-go/kimi-k3.1-pro",
-      "reasoningEffort": "high"
+      "model": "opencode-go/deepseek-v4.1-flash"
+    },
+    "hopper": {
+      "system": "{file:./agents/hopper.md}",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4.1-flash"
+    },
+    "copernicus": {
+      "system": "{file:./agents/copernicus.md}",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4.1-flash"
+    },
+    "oracle": {
+      "system": "{file:./agents/oracle.md}",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "gardener": {
-      "prompt": "{file:./agents/gardener.md}",
+      "system": "{file:./agents/gardener.md}",
       "mode": "subagent",
-      "model": "dramallama/deepseek-v4-flash",
-      "reasoningEffort": "high"
+      "model": "opencode-go/deepseek-v4.1-flash"
     }
   }
 }
