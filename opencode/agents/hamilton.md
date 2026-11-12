@@ -53,6 +53,7 @@ Second-stage assurance reviewer. Runs during GitHub Actions CI/deploy wait windo
 - `repo-eval` — load when dispatched to evaluate qualitative SDLC repository criteria.
 - `quality-sweep` — reference methodology only; route any multi-shard execution back to `@moltke`.
 - `beads` — register `evidence,assurance-report,mission:<id>` and `assurance-finding,mission:<id>` beads (every actionable finding at any severity gets a bead; `Low`/`Info` stay report-only only if explicitly non-actionable).
+- `rust-tokio-style` / `rust-cli-style` / `alox-style` — load the matching complete inline runtime skill before assessing resource contracts; source selection is in `AGENTS.md § Rust Style — Operating Selection`.
 
 ## Output Contract (Frozen)
 
