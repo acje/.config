@@ -1,246 +1,208 @@
 ---
 name: alox-style
-description: "Apply self-contained Alox Rust rules before writing or review in no-async service repos: repo-owned dependency contracts, preallocation, scoped budgets, and Ousterhout guidance."
+description: "Apply standalone AloxStyle for Rust services without an async runtime."
 ---
 # Skill: alox-style
-Apply the embedded common and Alox rules on load, before Rust writing or review
-in a matching no-async service repository. No follow-up source reads are needed
-for runtime use. The embedded profile is not permission to disregard
-repository-specific contracts.
 
-The documents in `/Users/anders.jensen/code/sf-sdlc/docs/` remain the authoring
-SSOT: update those documents first, then refresh the marked sections together
-in all affected skills. Embedded link paths are relative to that docs directory,
-not this skill directory.
+Apply the complete inline AloxStyle before Rust writing or review in a matching
+no-async service repository. Authoring source:
+`/Users/anders.jensen/code/aloxstyle/aloxstyle.md`;
+public: https://github.com/acje/aloxstyle/blob/main/aloxstyle.md.
 
-<!-- BEGIN INLINE: rust-style.md -->
-# Rust Style — Common House Rules (SSOT)
+<!-- BEGIN INLINE: aloxstyle.md -->
+# AloxStyle - Robust Oxidation
 
-Single source of truth for the fleet's shared Rust house rules. Adopted by every
-coding profile: `rust-cli-style` (attended-app), `rust-tokio-style` and
-`alox-style` (the two service-unattended lenses). The profiles hold what they
-distinguish; this file holds what they share. Target classes are unchanged: the
-two checker classes (`attended-app`, `service-unattended`) and the three
-documentation profiles remain separate.
+AloxStyle is a strict Rust style for latency-sensitive, unattended infrastructure
+services without an async runtime. It uses explicit ownership, bounded execution,
+and typed invariants to keep latency predictable and runtime failures explicit.
 
-**Provenance (grounded recovery, not live authority).** The original house rules
-below were recovered from the
-archived pre-slim global `references/shared-opencode/AGENTS.md.ref` sections
-House style — Rust comments (:428-464), House style — Rust control flow
-(:465-513), Rustling — selective TigerStyle adaptation (:515-528),
-Construction-path review inventory (:530-551), and Rust/Tokio resource contracts
-(:563-632). Same rules are cited by `templates/AGENTS.attended.md`,
-`templates/AGENTS.unattended.md`, `AGENTS.md`, and the `rust-design-evidence`,
-`code-review`, and `linus` guidance. The live `~/.config/opencode/AGENTS.md`
-no longer hosts these sections; this file re-homes the backed rules. Do not
-blindly restore drift — recovery claims require a backing citation above. The
-Ousterhout section is a separate, user-authorized addition, not recovered text.
+## Define outcomes and priorities
 
-## Rust comments (house)
-No plain comments in `*.rs`: no `//`, no `/* … */`, and no exceptions (`SAFETY`,
-`TODO`, `#[allow]` justification, commented-out code). Doc comments (`///`,
-`//!`) exist only where documentation is part of the code contract: `pub` API
-surfaces (`# Errors`/`# Panics`/`# Safety` where the signature warrants),
-`unsafe fn`/`unsafe trait` (mandatory `# Safety`), and in-scope doctests. A doc
-comment is not a rationale host; durable rationale lives in ADRs, commit
-messages, or beads. Code that needs a why-comment is wrong: restructure.
+Define observable success, acceptable degradation, and recovery under normal load,
+overload, and dependency failure. Align API contracts and budgets with these
+outcomes. Distinguish enforced invariants from environmental assumptions in
+service contracts; define behavior when assumptions fail. Within correctness
+and security constraints, prioritize:
 
-## Control flow (house)
-One decision must not be split between leading `if … { return … }` guards and a
-`match` deciding the rest. Fix the type first (make illegal states
-unrepresentable — sentinel `""`/`0`/magic default) so the guards have nothing
-to reject; the single match then falls out. This is **not** "always
-exhaustive": guards, `?`, `let else`, `continue` guards in loops, early-return
-short-circuits, and guards establishing scrutinee validity are exempt. No
-clippy lint or CI gate; review surfaces it as `guard-then-match-split`.
+1. **Maintainability.** Favor simple designs and small, reversible, deployable
+   changes.
+2. **Correctness by design.** Encode invariants in types. Validate untrusted
+   input at boundaries; trust validated values inward.
+3. **Response times.** Bound work and keep progress, timers, and shutdown
+   responsive to service requirements.
+4. **Energy efficiency.** Minimize redundant polling, unnecessary allocation,
+   and idle CPU or network activity.
+5. **Features.** Build only capabilities justified by requirements; choose the
+  simplest design meeting behavior, resource, and security constraints.
 
-## Construction-path inventory
-For each changed invariant-bearing type, name the invariant and caller boundary
-(including module visibility) and distinguish untrusted DTOs from validated
-values; inventory every construction route, recording valid and invalid
-evidence (artefact `illegal-state-representable`): public fields/struct
-literals, constructors/builders, `Default`, `From`/`TryFrom`, serde/custom
-deserialization, and mutation routes (setters, mutable references, `DerefMut`). Mark absent routes explicitly; a safe primary constructor
-does not excuse an unchecked alternate route; private fields constrain outside
-callers, not the defining module. For each route cite how the invariant is
-preserved or give a constructible counterexample. Record a valid boundary case,
-an invalid-state witness, the enum/newtype/private-cx remedy when needed, and
-an accept/reject verdict with a named compile-fail or runtime test —
-distinguish read-level assessment from an executed test. Incomplete
-route evidence is a review gap, not proof of safety. Do not invent artificial
-restrictions: independent booleans stay booleans, genuine optionality stays
-`Option`, and a boundary returning `None`/`Err` is valid.
+## Design deep modules
 
-## Closed error enums
-Public error enums MUST NOT carry `#[non_exhaustive]` (C4.5/C4.6): variant sets
-are complete within a major semver line, so unhandled states are unrepresentable
-at compile time. The canonical checker is `non-exhaustive-check` from the
-`tripwires` repo (derived-`Error` syntax); enforcement/integration is
-repository-owned: sf-sdlc uses its own conservative lexical gate, not that
-binary ([`../AGENTS.md`](../AGENTS.md) § Closed Error Enum Policy).
+- Give each format, configuration rule, and state transition one owner. Define
+  related constants with that owner, derive dependent values, and expose
+  operations over validated values.
+- Prefer unique ownership and borrowing; justify cloning and `Rc`/`Arc` against
+  latency and lifecycle budgets. Accept borrowed views such as `&str` and `&[T]`
+  when container ownership is irrelevant; preserve validated domain types.
+- Put specialized logic and bookkeeping behind a small interface. Hide
+  representations and algorithms; expose resource costs, failure behavior,
+  policy, and caller obligations.
+- Merge tightly coupled components and remove redundant forwarding layers.
+  Preserve boundaries that enforce validation, authorization, ownership,
+  supervision, or distinct responsibilities.
+- Keep work budgets, progress, timers, and shutdown checks visible to the event
+  loop.
+- Generalize across current, related uses. Group inputs that travel together
+  into types that enforce their invariants; keep independent values separate.
+- Where startup validation and preallocation are required, construct a validated
+  runtime plan once.
 
-## TigerStyle / TigerBeetle provenance
-Selective adaptation, never a blanket import. Sources: TigerStyle (2024)
-`https://tigerstyle.dev/` and TigerBeetle "A database without dynamic memory"
-(2022-10-12) `https://tigerbeetle.com/blog/2022-10-12-a-database-without-dynamic-memory/`,
-assessed in `docs/aspect-quality-assessment.md:22-23` and in gh-report beads
-`ghr-9e7f5`/`ghr-d4nk2` (2026-09-06). Adopted: explicit limits as scoped
-budgets (items/bytes/tasks, deadlines, ownership), assertions at validated input
-boundaries assessing both valid and invalid cases, illegal-state modelling, and
-the construction-path inventory. Rejected as blanket imports: static-memory-only,
-no-recursion, u32-preference, "zero dependencies", and new naming mandates.
-Strict no-allocation applies only when a scoped phase explicitly requires it; a
-finite run is evidence for that run, never a universal guarantee. Type
-grounding lives in `rust-design-evidence` § Type Restructuring and § Evidence
-Selection.
+## Model valid states
 
-## Ousterhout — reduce complexity at module boundaries
+Use enums, newtypes, private fields, and state machines to exclude real invalid
+states. Separate untrusted input representations from validated domain values.
+Construct validated domain values through checked constructors or `TryFrom`;
+reserve `From` for infallible, lossless conversions.
+Represent independent flags as booleans and genuine optionality as `Option`.
+Choose integer types that fit the domain and Rust APIs.
 
-Selective Rust adaptation of John Ousterhout's principles from the
-user-supplied structural refactoring checklist (2026-11-02), not verbatim
-quotations or a wholesale adoption of his coding style. Applies to all three
-profiles; each profile gives concrete applications. Existing comment rules,
-error distinctions, resource contracts, and repository-specific constraints
-remain in force. This guidance adds no checker class, lint, or mandatory gate.
+Use `const fn` for compile-time callers and const initializers or blocks to
+require compile-time evaluation. Preserve public const-callability across
+compatible releases.
 
-### Module boundaries: deep modules, not layers for their own sake
-- Pull complexity downward: let a module handle specialized logic, internal
-  configuration choices, and bookkeeping behind a small, useful interface.
-  A deep module provides substantial capability with little caller knowledge;
-  it need not be a large module. Do not hide caller obligations, resource
-  costs, externally meaningful policy choices, or failure behavior.
-- Merge shallow, tightly coupled components when one cohesive module reduces
-  the concepts and coordination callers must understand. Do not combine
-  unrelated responsibilities merely to reduce the number of types or files.
-- Remove pass-through methods and layers that only repeat another interface;
-  let callers communicate directly with the actual owning module. Preserve
-  boundaries that enforce validation, authorization, ownership, supervision,
-  or a genuine abstraction, even when their implementation is small.
+All construction and mutation paths for validated values preserve domain
+invariants, including parsing, trait implementations, and code inside the
+defining module.
 
-### Information hiding: one owner for each design decision
-- Consolidate shared knowledge of a format, representation, or configuration
-  rule in the module/type that owns it. Parse and validate at its boundary;
-  dependent modules consume meaningful operations or validated values instead
-  of repeating the rule or accessing representation details directly.
-- Hide internal data structures and changeable algorithms behind an abstract
-  API. Share the abstraction, not mutable internals; do not build a global
-  catch-all module or conceal information callers need for correctness.
+## Give each decision one owner
 
-### Interfaces and errors: fewer concepts, honest semantics
-- Define avoidable errors out of existence through simpler semantics: an empty
-  collection for a valid no-results query, or an already-completed operation
-  treated as success when the contract is genuinely idempotent. Validate once
-  and use types inward. Never turn malformed input, permission/I/O failures,
-  resource exhaustion, or Unknown into empty success; preserve meaningful
-  `Option`, `Result`, and closed error distinctions. Changes to observable
-  semantics require the normal contract approval, not just a refactoring label.
-- Prefer somewhat general-purpose operations that cover related current uses
-  without exposing implementation details. Generality should simplify today's
-  callers, not introduce speculative extension points, flag combinations, or
-  frameworks for hypothetical future requirements.
-- Bundle repeatedly co-travelling parameters into a cohesive, named request,
-  configuration, or context type. Keep invariants at its construction boundary;
-  do not replace explicit inputs with an opaque parameter bag, unrelated
-  dependencies, or fabricated relationships between independent values.
+Express each decision in one place. Replace invalid sentinel states with valid
+domain types before simplifying branches. Keep a decision together instead of
+splitting it between leading return guards and a `match` over the same cases.
 
-### Before and during structural refactoring
-- Establish passing automated tests for the affected observable behavior before
-  restructuring; add missing characterization/regression coverage first. Prefer
-  contract-level assertions that survive changes to private structure, with
-  focused unit tests where useful. Keep behavior changes separate and follow
-  the existing TDD and tier-scoped verification cadence.
-- Before a major rewrite, sketch at least two materially different designs and
-  compare caller knowledge, information leakage, failure paths, ownership, and
-  profile-specific resource costs. Record the choice and rationale in the
-  appropriate ADR or bead, not plain Rust comments; no diagram tool is required.
-- Reserve roughly 10–20% of task effort for design improvement and nearby
-  cleanup while planning the task. This is an investment guideline, not a
-  measured compliance quota or authority to expand scope. Keep cleanup relevant,
-  small, reversible, and separate from behavioral changes; defer larger work to
-  a bead rather than silently growing the task.
+Use guards for genuine preconditions and early short-circuits. Use `?`,
+`let else`, and loop `continue` where they make control flow clearer.
 
-Profile applications: [attended CLI](rust-cli-style.md#ousterhout--cli-application),
-[Tokio](rust-tokio-style.md#ousterhout--tokio-application),
-[Alox](alox-style.md#ousterhout--alox-application).
-<!-- END INLINE: rust-style.md -->
+## Make outcomes explicit
 
-<!-- BEGIN INLINE: alox-style.md -->
-# Rust Style — Alox (Service-Unattended / No-Async)
+- Preserve meaningful `Option`, `Result`, and error distinctions. Distinguish
+  acceptance from completion in success types where callers must act differently.
+  Empty results represent successful queries with no matches; idempotent success
+  represents an operation whose required outcome is already established. Keep
+  malformed input, operating failures, capacity exhaustion, and unknown outcomes
+  explicit.
+- Deny `unused_must_use`. Add `#[must_use]` where discarding a result violates its
+  contract, unless the return type already carries it.
+- Keep public error enums closed: omit `#[non_exhaustive]` and keep variant sets
+  complete within a major semver line. Avoid wildcard arms on closed error and
+  state enums where new variants require an explicit handling decision.
+- Handle malformed external input and expected operating failures as errors.
+  Use fail-stop behavior for unexpected panics. Reusing owner state after a
+  caught panic requires a demonstrated recovery contract.
+- Deny production `unwrap()`. Permit `expect()` only for a construction-proven
+  invariant with a justified per-site lint expectation.
+- Where overflow is not excluded by construction, use checked arithmetic.
+  Saturating or wrapping behavior must be part of the domain contract.
+- Enforce structural invariants, including capacity and layout relationships,
+  through types or const assertions. Keep input validation and correctness checks
+  active in release builds; reserve `debug_assert!` for diagnostics. Keep hot-path
+  assertions within execution budgets.
 
-Documentation lens for the `service-unattended` target class under
-`unattended-no-async` (`templates/AGENTS.unattended.md:86-95`). "alox" is the
-user-granted fleet name for the no-Tokio Rust style realised in `alumina-proxy`
-and `corundum`. Adopts the common rules in `rust-style.md`; the items below are
-**repo-owned contracts**, not a fleet ban — the Tokio and attended-CLI profiles
-legitimately use async runtimes, `thiserror`, and `clap`.
+## Bound execution
 
-## No async runtime — repo-owned and gate-enforced
-- `corundum/AGENTS.md:31-40`: no async runtime; no thiserror/anyhow/clap; custom
-  error enums with sysexits exit codes. Enforced by the `FORBIDDEN_DEPS` gate in
-  `corundum/scripts/verify.sh` across every tracked Cargo.toml, plus the loader
-  listener-bind rule and loader-never-runs-as-root.
-- `alumina-proxy/docs/alumina-proxy.md` §Architecture: single worker loop on
-  `mio`/epoll, no `async`/`await`, no runtime surface beyond the CONNECT listener.
-- Do NOT universalize corundum's loader gates (listener-bind, non-root identity)
-  to other repos; they are corundum-specific.
+Use explicit scheduling without an async runtime. The application owns
+scheduling, fairness, timer progress, and shutdown.
 
-## Explicit owner, state, work, budgets
-Single owner of tunnel/DNS state; cooperative, bounded work between shutdown
-checks. Alumina-only exemplars, not Corundum/fleet defaults: fair round-robin
-with at most 64 KiB or 16 I/O operations per connection visit, whichever comes
-first; recheck timers after at most 256 ready-slot visits or I/O operations
-([`../../alumina-proxy/docs/alumina-proxy.md`](../../alumina-proxy/docs/alumina-proxy.md) §Architecture:191,:185+).
-State transitions and ownership are explicit application responsibilities.
+- Use `Instant` for deadlines and elapsed time, `Duration` for intervals, and
+  `SystemTime` for wall-clock timestamps.
+- Work in bounded increments between reachable timer and shutdown checks.
+  Apply the same discipline to synchronous helpers and drain loops.
+- Prefer direct loops when they expose errors and work budgets more clearly.
+  Bound iterator work by inputs inspected, not just values yielded.
+- Bound aggregate memory and work as well as per-item and per-visit consumption.
+- Bound recursive work and depth wherever execution guarantees depend on them.
+- Preserve fair progress across active work. Evaluate batching and hot-path
+  optimizations against measured or modeled work and latency budgets.
+- Distinguish readiness and no-progress outcomes from EOF, protocol errors,
+  TLS errors, and capacity rejection.
+- Reject work when fixed capacity is exhausted. Keep retries within the same
+  storage limits and validation rules.
 
-## Preallocation & the scoped Zero-Allocation Invariant
-Preallocate where the spec requires: boot-time storage, statically fixed
-connection/buffer limits, one preallocated cache entry per configured
-name/type. The Zero-Allocation Invariant is **scoped, not universal**
-(`alumina-proxy/docs/alumina-proxy.md` §Zero-Allocation Invariant: first-party
-scope, rustls bounded seam, :627):
-- Binding scope = first-party serving/DNS-refresh paths: no post-boot heap
-  alloc/dealloc; boot initialization exempt; shutdown exits without
-  deallocating.
-- Dependency allocations are a bounded seam outside first-party scope (pinned
-  rustls, bounded per-record ~≤16-18 KiB on the warm DoT path).
-- The per-connect DoT setup seam (`build_tls_connection`) is the single
-  authorized first-party allocation point (rustls `Arc`s, SNI `String`, `Box`ed
-  `ClientConnection`).
-- "No post-boot first-party alloc/dealloc" is not a claim of constant total
-  memory use or immunity to resource exhaustion (`AGENTS.md:30-37`).
-- Alumina TLS setup and dependency allocations are scoped exceptions, never a
-  universal zero-allocation contract.
+Record each resource budget in the owning design or configuration contract:
 
-## Ousterhout — Alox application
-Applies the [common complexity-reduction guidance](rust-style.md#ousterhout--reduce-complexity-at-module-boundaries)
-within the repository's no-async and scoped allocation contracts.
+| Field | Record |
+| --- | --- |
+| Owner | Component responsible for enforcement. |
+| Scope | Resource, execution phase, and local or aggregate coverage. |
+| Units | Items, bytes, operations per visit, or time. |
+| Limit | Workload-justified maximum or deadline. |
+| Exhaustion | Rejection, yielding, or timeout behavior at the limit. |
+| Evidence | Named test or measurement of enforcement and exhaustion behavior. |
 
-- Put connection/DNS state transitions, buffer layout, and bookkeeping behind
-  the owning module's operations. Keep the event loop's work allowance, progress,
-  timer obligations, and shutdown checks explicit; a deep module must not hide
-  an unbounded drain loop or monopolize execution.
-- Consolidate format/configuration rules at their owner; where boot-time
-  validation and preallocation are required, produce a validated runtime plan
-  there rather than repeating decisions in the serving path. Bundle related
-  state/limits without adding a heap-allocated context or copying large buffers.
-- Remove forwarding wrappers or merge shallow state helpers only when ownership,
-  bounded work, and existing security boundaries remain intact. General-purpose
-  operations must fit current needs without adding a runtime, growing storage,
-  or introducing allocation outside the repository's authorized seams.
-- Represent normal readiness/no-progress outcomes explicitly when the protocol
-  allows them, rather than inventing exceptional failures. Do not confuse them
-  with EOF, protocol/TLS failures, or capacity rejection, and never retry by
-  silently enlarging a fixed pool or relaxing validation.
-- Before restructuring, test state transitions, capacity boundaries, fairness,
-  timers, and shutdown as relevant to the changed contract. Compare alternative
-  designs by caller complexity, ownership, per-visit work, and allocation seams;
-  retain scoped allocation evidence where required, not a universal memory claim.
+## Budget memory across lifecycles
 
-## Precedence
-The repository spec/section clauses govern; the fixed profile never yields to a
-feature. Limit exhaustion rejects work; it never enlarges storage or relaxes
-validation.
+Perform fallible startup setup and required preallocation explicitly before
+serving; report startup failures through `Result`. Do not run code before
+`main()`. Reserve fixed connection, buffer, and cache capacity at startup when
+required by the service contract. Account separately for future socket creation
+and kernel resource exhaustion.
 
-An applicable deliberate governance amendment governs superseded baseline
-wording ([`../../alumina-proxy/AGENTS.md`](../../alumina-proxy/AGENTS.md):51-55,:63-71).
-<!-- END INLINE: alox-style.md -->
+- Use `const` for fixed values and immutable `static` for shared program-lifetime
+  storage. Runtime copies and drops of const values remain subject to resource
+  budgets.
+- Where allocation failure must return an error, use fallible reservation such
+  as `try_reserve` and prevent implicit growth beyond reserved capacity.
+- Keep `Drop` bounded and nonblocking. Expose fallible shutdown and flush
+  operations as explicit methods returning `Result`.
+
+For each allocation or deallocation restriction, specify:
+
+- The execution phase and first-party scope.
+- Dependency behavior and authorized exceptions.
+- Ownership and retained capacity across initialization, serving, failure,
+  reconnect, teardown, and final shutdown.
+
+Define an exception across its complete lifecycle, including caller-owned
+allocations. Revalidate affected evidence after dependency changes and resolve
+implementation deviations through correction or explicit approval.
+
+## Keep feedback actionable and bounded
+
+Keep logging and metrics within the service's work, latency, and allocation
+budgets, including during overload and sink failure.
+
+- Measure service outcomes from typed results and owning state transitions,
+  not process liveness alone.
+- Make diagnostics identify the operation, typed outcome, and relevant state.
+  Use operational evidence to reproduce failures in regression tests and correct
+  the owning code or contract.
+- Bound event size, emission rate, buffering, and metric label cardinality.
+  Use stable labels rather than per-request or per-connection identifiers.
+- Rate-limit or aggregate repeated diagnostics. Account for suppressed events
+  with bounded counters.
+- Define behavior for full buffers and unavailable sinks. Keep emission and
+  flush work within timer and shutdown budgets, including final shutdown.
+- Respect phase-specific allocation restrictions in formatting, aggregation,
+  and export. Verify worst-case telemetry load alongside serving work.
+
+## Explain through structure and contracts
+
+Restructure code that needs explanatory commentary. Keep rationale in design
+decisions, commit messages, or issues.
+
+Use doc comments only for code contracts: public APIs, unsafe functions and
+traits, and in-scope doctests. Include `# Errors`, `# Panics`, and `# Safety`
+where required; unsafe functions and traits require `# Safety`. Follow the
+project's restrictions on unsafe code.
+
+Plain line and block comments are prohibited, including safety notes, TODOs,
+lint justifications, and commented-out code.
+
+## Choose dependencies and tools deliberately
+
+Compare dependencies with equivalent in-house code on maintenance cost,
+complexity, supply-chain risk, allocation behavior, and update cost. Honor
+project dependency restrictions.
+
+Use the project's formatter and lint configuration. Give lint exceptions
+specific reasons and preserve coherent logic when satisfying size limits.
+<!-- END INLINE: aloxstyle.md -->

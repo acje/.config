@@ -108,9 +108,10 @@ The software factory operates under the **Ratchet Doctrine**: new audits and con
 
 ## Target Classifications
 
-- **Two House Styles**:
+- **Checker target classes** (the two unchanged classes the checker enumerates; not style names):
   - `attended-app`: Interactive CLI/TUI applications (e.g. `adr-fmt`, `comment-free`, `tripwires`, `sf-sdlc`).
   - `service-unattended`: Background daemons, async engines, M2M services (e.g. `gh-report`), and supporting libraries (e.g. `pardosa`, `cherry-pit`). For libraries, selects a requirements profile without asserting that the library is a deployed service.
+- **Coding profiles / inline skills** (three documentation profiles; no new class or control): `rust-cli-style` (attended-app) and `rust-tokio-style` (service-unattended async/Tokio) derive from `sf-sdlc/docs/rust-style.md` + the matching profile doc. `alox-style` (service-unattended no-async) derives from standalone `/Users/anders.jensen/code/aloxstyle/aloxstyle.md` ([public](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md)).
 - **Supporting Classifications**:
   - `specification`: Specifications, decision maps, and formal models (e.g. `spandrel`).
   - `shared-config`: Shared repository-neutral configuration scope (e.g. `~/.config/opencode`).

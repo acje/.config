@@ -13,13 +13,17 @@ SSOT: update those documents first, then refresh the marked sections together
 in all affected skills. Embedded link paths are relative to that docs directory,
 not this skill directory.
 
+The inline common source deliberately corrects its profile-applicability claims
+and Alox link: Alox uses standalone AloxStyle, not sf-sdlc common rules. These
+source-reference corrections do not change the CLI or Tokio rules.
+
 <!-- BEGIN INLINE: rust-style.md -->
 # Rust Style — Common House Rules (SSOT)
 
-Single source of truth for the fleet's shared Rust house rules. Adopted by every
-coding profile: `rust-cli-style` (attended-app), `rust-tokio-style` and
-`alox-style` (the two service-unattended lenses). The profiles hold what they
-distinguish; this file holds what they share. Target classes are unchanged: the
+Source of truth for the shared CLI and Tokio Rust house rules. Adopted by
+`rust-cli-style` (attended-app) and `rust-tokio-style` (service-unattended).
+The profiles hold what they distinguish; this file holds what they share. Target
+classes are unchanged: the
 two checker classes (`attended-app`, `service-unattended`) and the three
 documentation profiles remain separate.
 
@@ -98,8 +102,8 @@ Selection.
 
 Selective Rust adaptation of John Ousterhout's principles from the
 user-supplied structural refactoring checklist (2026-11-02), not verbatim
-quotations or a wholesale adoption of his coding style. Applies to all three
-profiles; each profile gives concrete applications. Existing comment rules,
+quotations or a wholesale adoption of his coding style. Applies to CLI and Tokio;
+each profile gives concrete applications. Existing comment rules,
 error distinctions, resource contracts, and repository-specific constraints
 remain in force. This guidance adds no checker class, lint, or mandatory gate.
 
@@ -160,8 +164,8 @@ remain in force. This guidance adds no checker class, lint, or mandatory gate.
   a bead rather than silently growing the task.
 
 Profile applications: [attended CLI](rust-cli-style.md#ousterhout--cli-application),
-[Tokio](rust-tokio-style.md#ousterhout--tokio-application),
-[Alox](alox-style.md#ousterhout--alox-application).
+[Tokio](rust-tokio-style.md#ousterhout--tokio-application). Alox uses
+[standalone AloxStyle](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md#design-deep-modules).
 <!-- END INLINE: rust-style.md -->
 
 <!-- BEGIN INLINE: rust-cli-style.md -->

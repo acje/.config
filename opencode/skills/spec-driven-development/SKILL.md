@@ -17,7 +17,6 @@ Write a structured specification before writing code. The spec is the shared sou
 - Requirements are ambiguous or incomplete
 - The change touches multiple files or modules
 - You're about to make an architectural decision
-- The task would take more than 30 minutes to implement
 
 When NOT to use: single-line fixes, typo corrections, or changes where requirements are unambiguous and self-contained.
 
