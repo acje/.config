@@ -106,7 +106,7 @@ mandatory gate from a preference. A Low finding can block when a mandatory
 invariant really applies. Known correctness, security, unsafe soundness, and
 enforcement failures remain blocking; mandatory hooks, CI, and
 changed-guard four-step proof requirements remain mandatory. Cite the guard
-scope in AGENTS.md § Code-quality methods (enforcement gates only) rather than
+scope in AGENTS.md § Verification State & Cadence (enforcement gates only) rather than
 applying an unconditional plant/fail/revert/clean ledger to ordinary runtime
 checks. Tracking or acknowledging a failure does not discharge them. Do not
 import security mode's

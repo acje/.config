@@ -40,7 +40,7 @@ Unconditional fleet default, not an optional side-note (scar `GIT-WORKFLOW.md:11
 
 ## Inspection-Gated Git Protocol & Scoped Staging
 
-Consolidates scar `GIT-WORKFLOW.md` with build Rule 3 and AGENTS.md § Bash hygiene item 6.
+Consolidates scar `GIT-WORKFLOW.md` with build Rule 3 and AGENTS.md § Bash hygiene item 5.
 
 ### Observe & frame before any Git state mutation
 

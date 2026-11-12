@@ -22,6 +22,8 @@ Exactly two loops pivot on `moltke` (the standing mission commander):
 - **Role discipline is doctrinal**: Permissions in `opencode.json` are broad for tempo, but stepping outside role boundaries (e.g., `copernicus` hypothesizing, `feynman` proposing fixes, `moltke` editing code, `linus` running builds) is a doctrine violation.
 - **Trivial autonomy**: Any agent may close low-risk, in-role, reversible tasks with a named verification check inside its own internal OODA without escalation (`prompts/build.md`).
 
+- **Star topology & permitted access**: The `@moltke`-hub star governs *execution missions* (tactical OODA; strategic dispatch during missions). Documented exceptions to the hub: plan mode dispatches the strategic specialists (`@copernicus`, `@feynman`, `@oracle`) directly for planning evidence, and `@hopper` may delegate scoped worker sub-tasks to the general-purpose `general` subagent (never fleet-role peers/self, never mission orchestration). General workers receive no fleet authority; every mission result and escalation returns to `@moltke` only.
+
 ## Fleet Engineering Priorities (Strict Order)
 
 Evaluate all architecture, implementation, and review tradeoffs in this exact order:
@@ -30,6 +32,30 @@ Evaluate all architecture, implementation, and review tradeoffs in this exact or
 3. **Response times (Priority 3)**: Optimize read paths and prompt event/fact propagation first; measure against mission requirements.
 4. **Energy efficiency (Priority 4)**: Avoid redundant polling, unnecessary allocations, hot loops, and idle CPU/network burn based on workload demand.
 5. **Features (Priority 5)**: Build only what is justified by explicit requirements without compromising Priorities 1–4.
+
+## Rust Style — Operating Selection
+
+CLI and Tokio authoring sources are the sf-sdlc common and matching profile documents. Alox uses the standalone `/Users/anders.jensen/code/aloxstyle/aloxstyle.md` ([public source](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md)), not the sf-sdlc common rules. Global AGENTS provides discovery/selection guidance only, not full style bodies.
+
+Load the matching skill before Rust writing/review based on the repo's profile: a complete, usable loaded skill supplies the runtime rules without a mandatory second read of canonical documents. If usable embedded rules are unavailable, fall back to readable canonical source; if neither is available, report Unknown and stop rather than inventing rules. Unavailable source documents alone do not make that style Unknown.
+
+| Repo profile | Load skill | Authoring source |
+|---|---|---|
+| attended Rust/CLI | `rust-cli-style` | sf-sdlc/docs/rust-style.md + rust-cli-style.md |
+| service-unattended (Tokio/async) | `rust-tokio-style` | sf-sdlc/docs/rust-style.md + rust-tokio-style.md |
+| service-unattended (no-async/alox) | `alox-style` | `/Users/anders.jensen/code/aloxstyle/aloxstyle.md` ([public](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md)) |
+
+## Rust Style — Topic Pointers
+
+Anchor names below are cited verbatim by `agents/linus.md`, `agents/hamilton.md`, `skills/code-review`, and `skills/rust-design-evidence`; keep them stable. Each topic: the sf-sdlc document owns the rule, the profile skill supplies it at runtime.
+
+- **House style — Rust comments**: sf-sdlc `docs/rust-style.md` § Rust comments (house). Alox: [Explain through structure and contracts](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md#explain-through-structure-and-contracts).
+- **House style — Rust control flow**: sf-sdlc `docs/rust-style.md` § Control flow (house). Alox: [Give each decision one owner](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md#give-each-decision-one-owner).
+- **Rustling — selective TigerStyle adaptation**: sf-sdlc `docs/rust-style.md` § TigerStyle/TigerBeetle provenance (selective, never blanket). Alox uses its standalone profile.
+- **Construction-path review inventory**: sf-sdlc `docs/rust-style.md` § Construction-path inventory. Alox: [Model valid states](https://github.com/acje/aloxstyle/blob/main/aloxstyle.md#model-valid-states). Technique: `rust-design-evidence` § Type Restructuring.
+- **Rust/Tokio resource contracts**: sf-sdlc `docs/rust-tokio-style.md`; common invariants in `docs/rust-style.md`.
+
+All five operate via the profile skill selected in the table above.
 
 ## Autonomy — Act, Don't Ask
 
@@ -64,7 +90,7 @@ Subordinates append a `BackBrief` after the handoff line **only** when a `Surpri
   confidence: <high | medium | low>
 ```
 
-- **Fleet Opportunity (`fleet-opportunity`)**: Cross-repo architectural smells, tooling gaps, or overconstrained assumptions are registered via `bd create "fleet: [<domain>] <summary>" --type task --labels "fleet-opportunity,opportunity:fleet,mission:${mission_id}"` (with Observation, Fleet Scope, Proposed Remedy, Priority Alignment in `description`) plus a `SystemLevel` `Opportunity` back-brief to `moltke`.
+- **Fleet Opportunity Protocol (`fleet-opportunity`)**: Cross-repo architectural smells, tooling gaps, or overconstrained assumptions are registered as a `bd` bead (Observation, Fleet Scope, Proposed Remedy, Priority Alignment in `description`) plus a `SystemLevel` `Opportunity` back-brief to `moltke`. Creation command and label set live in the `beads` skill.
 
 ## Verification State & Cadence
 
@@ -81,8 +107,7 @@ Subordinates append a `BackBrief` after the handoff line **only** when a `Surpri
 Full CLI mechanics live in the `beads` skill (`skills/beads/SKILL.md`). Core invariants:
 - **Pointer over body (Tier 1)**: Cross-agent bodies (> ~20 lines) live in `bd` bead `description` fields (`evidence`, `oracle-summary`, `review-report`, `assurance-report`, `mission-brief`). Handoffs pass `artefact: bd-NNN`. Verify non-empty `description` before handoff.
 - **`.ooda/` (Tier 2 escape hatch)**: Gitignored user-facing reports/PRDs and workspace-local ephemeral scratch (`.ooda/tmp/<mission_id>/`, self-cleaned before mission end). Never use `$TMPDIR` for cross-agent coordination.
-- **Review tiers (`review:tier=<tidy|standard|adversarial>`)**: `hopper` labels every `review-request` bead; missing label defaults to `adversarial`. Adversarial triggers: `unsafe`, guards/tripwires/CI gates, public API changes, machine-record parsers, path handling, verdict modelling, enforcement tooling.
-- **Circuit-breaker (> 3 review rounds or > 2× defensive scaffolding)**: Halt execution; `moltke` dispatches `feynman` to reframe the overconstrained assumption into ≥ 2 clean architectural seams, then escalates a structured choice to the user.
+- **Review tiers & circuit-breaker (`review:tier=<tidy|standard|adversarial>`)**: `hopper` labels every `review-request` bead; missing label defaults to `adversarial`. Adversarial triggers: `unsafe`, guards/tripwires/CI gates, public API changes, machine-record parsers, path handling, verdict modelling, enforcement tooling. More than 3 review rounds, or > 2× defensive scaffolding, is a circuit-breaker: halt execution, `moltke` dispatches `feynman` to reframe the overconstrained assumption into ≥ 2 clean architectural seams, then escalates a structured choice to the user. (`feynman`'s circuit-breaker mandate: `agents/feynman.md`.)
 
 ## Commits & Bash Hygiene
 
@@ -92,30 +117,14 @@ Full CLI mechanics live in the `beads` skill (`skills/beads/SKILL.md`). Core inv
   2. Prefix pipelines with `set -o pipefail;`. Never mistake a filter's exit code for the producer's exit code.
   3. Use dedicated tools (`read`, `glob`, `grep`, `edit`) over shell equivalents; use `rg` when shell search is required.
   4. Pipe JSON/machine data via `printf '%s'`, never `echo`.
-  5. **No background daemons**: Never background processes (`&`, `nohup`, `disown`) or leave servers running past the tool call (Graphify lex specialis: `/Users/anders.jensen/code/sf-sdlc/docs/graphify-evidence.md#native-lifecycle-policy`). Sole exception: one long-lead verification gate launched via the shell tool's `background: true`, owned by the caller session, PID + log path recorded, liveness verified before any claim.
-  6. Use non-interactive flags (`cp -f`, `rm -f`, `fleet-execution-methods`).
+  5. Use non-interactive flags (`cp -f`, `rm -f`, `fleet-execution-methods`).
 
-## Background Work — Verifiable State, Caller-Owned
+## Background Work — Verifiable State
 
-- **"Running in background" is a verifiable state, not an intention.** Never
-  report work as running in the background without: the exact command, a live
-  PID (`ps -p <pid>`), and a log file with a recent mtime. Unverifiable
-  background claims are treated as not-running.
-- **Long-lead gates (> ~5 min) are caller-owned.** A subagent that needs a long
-  gate hands the exact command + expected verification to the caller in its
-  handoff (`next_input`), never launch-and-claim. The caller either:
-  - launches it as a **background subagent** (`subagent` tool, `background: true`)
-    whose whole job is to run the gate in its own foreground and report on
-    completion; or
-  - launches it as a **real OS process** (shell tool `background: true` or
-    `nohup &`), records PID + log path, and reaps on completion.
-- **Never end a turn with pending unlaunched work described as launched**, and
-  never background a shell process and end the turn while claiming it will
-  "notify" — the notification goes to the launching session, which is gone.
+- **"Running in background" is a verifiable state, not an intention.** Never report work as running in the background without the exact command, a live PID (`ps -p <pid>`), and a log file with a recent mtime. Unverifiable claims are treated as not-running; never end a turn describing launched-but-unlaunched work as launched.
+- **Long-lead gates (> ~5 min) are caller-owned.** A subagent that needs one hands the exact command + expected verification to the caller in its handoff (`next_input`) and never launch-and-claims. The caller owns launch, PID/log record, and reaping.
 
 ## Runtime Hooks & Environment Notes
 
 - **External research**: Owned by `copernicus` (and `feynman` for narrow falsifier unblocking). `moltke` and `hopper` never perform web research.
 - **Web search**: Backed by self-hosted SearxNG via the `searxng` stdio MCP server (`opencode.json` → `mcp.servers.searxng`, `SEARXNG_URL=http://127.0.0.1:19217`). Search tools surface as `searxng_web_search`. If the server is unreachable, proceed degraded on non-research work or report blocked if web research is load-bearing.
-- **Tracing**: The v1 `tracer.mjs` plugin was removed (2026-10-24); per-session `.ooda/traces/` output is no longer written. Session history lives in the global `~/.local/share/opencode/opencode.db`.
-- **Restart-staleness**: Agent model and prompt bindings in `opencode.json` resolve at opencode startup; edits take effect after restarting opencode.

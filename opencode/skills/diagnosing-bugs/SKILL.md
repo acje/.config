@@ -38,7 +38,7 @@ Spend disproportionate effort here. Be aggressive, be creative, refuse to give u
 7. **Property / fuzz loop.** For "sometimes wrong output", run 1000 random inputs and look for the failure mode.
 8. **Bisection harness.** If the bug appeared between two known states (commit, dataset, version), automate "boot at state X, check, repeat" so you can `git bisect run` it.
 9. **Differential loop.** Run the same input through old-version vs new-version (or two configs) and diff outputs.
-10. **Structured HITL replay.** Last resort. If a human must click, drive them through a captured, repeatable human-in-the-loop sequence so the loop is still structured and its output feeds back to you. Never start or keep a long-lived service/daemon outside mission authority (global Bash hygiene: no silent background daemons).
+10. **Structured HITL replay.** Last resort. If a human must click, drive them through a captured, repeatable human-in-the-loop sequence so the loop is still structured and its output feeds back to you. Never start or keep a long-lived service/daemon outside mission authority.
 
 Build the right feedback loop and the bug is 90% fixed.
 

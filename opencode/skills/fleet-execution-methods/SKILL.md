@@ -31,10 +31,9 @@ require quiet when output is itself the evidence.
   this section owns the generic technique, the repo owns the concrete contract.
 
 Deeper bash hygiene — exit handling and `set -o pipefail`, file-tool/search
-practice, secret protection, git cadence, machine data, no background daemons,
-filter-vs-producer verdicts — is canonical in global `AGENTS.md` § Bash hygiene
-and is not restated here. Global Cargo native aliases remain owned by global
-§ Bash hygiene → Cargo command noise (canonical).
+practice, secret protection, git cadence, machine data, filter-vs-producer
+verdicts — is canonical in global `AGENTS.md` § Bash hygiene and is not
+restated here.
 
 ## TDD (red → green → refactor)
 
@@ -51,8 +50,7 @@ TDD rules — hopper R5/R18 — which remain self-contained obligations).
    *tidying* (Tidy First) — a separate commit. Re-run tests after each tidying.
 
 One assertion-of-intent per cycle. Many small green commits beat one big green
-commit. Cycle dragging > ~5 min without green ⇒ slice too big; back the slice
-off, not the test.
+commit. If a cycle is too large to reach green, back the slice off, not the test.
 
 For cargo work, red/green/refactor uses INNER-LOOP scope for fast crate-local
 feedback; the completion done-claim is tier-scoped (global AGENTS §

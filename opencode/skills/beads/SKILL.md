@@ -81,6 +81,13 @@ Use agent-local planning tools only for the current turn's execution checklist. 
 
 ## Fleet Coordination Mechanics
 
+- **Fleet Opportunity Protocol (`fleet-opportunity`)**: cross-repo architectural smells, tooling gaps, and overconstrained assumptions:
+  ```bash
+  bd create "fleet: [<domain>] <summary>" --type task \
+    --labels "fleet-opportunity,opportunity:fleet,mission:${mission_id}"
+  ```
+  `description` carries Observation, Fleet Scope, Proposed Remedy, Priority Alignment. Pair every bead with a `SystemLevel` `Opportunity` back-brief to `moltke`. Doctrine owner: `AGENTS.md § Back-Brief Protocol & Fleet Opportunities`.
+
 - **Database discovery (`bd where`)**:
   - If `bd where` fails inside a git repo (`git rev-parse --show-toplevel` succeeds), run `bd init` at the repo root.
   - If outside a git repo (including `$HOME`), **never run `bd init`** — report and halt.
